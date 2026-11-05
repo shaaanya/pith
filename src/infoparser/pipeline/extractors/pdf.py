@@ -1,16 +1,19 @@
+"""PDF extractor: pypdf if installed, else poppler's pdftotext."""
 from __future__ import annotations
 
 import shutil
 import subprocess
 
-from infoparser.pipeline.extractors.base import Extracted, ExtractCtx, NeedsClarificationError, register
+from infoparser.pipeline.extractors.base import (
+    Extracted, ExtractCtx, NeedsClarificationError, register)
 
 HINT = "no PDF reader; install pypdf (pip install pypdf) or poppler (pdftotext)"
 
 
 def _pypdf_pages(path) -> list[str] | None:
     try:
-        from pypdf import PdfReader  # optional extra, never imported at module top level
+        # optional extra, never imported at module top level
+        from pypdf import PdfReader  # pylint: disable=import-outside-toplevel
     except ImportError:
         return None
     return [(pg.extract_text() or "") for pg in PdfReader(str(path)).pages]
@@ -20,7 +23,8 @@ def _pdftotext_pages(path) -> list[str] | None:
     exe = shutil.which("pdftotext")
     if not exe:
         return None
-    r = subprocess.run([exe, "-enc", "UTF-8", str(path), "-"], capture_output=True, timeout=120)
+    r = subprocess.run([exe, "-enc", "UTF-8", str(path), "-"], capture_output=True, timeout=120,
+                       check=False)
     if r.returncode != 0:
         raise RuntimeError(f"pdftotext failed: {r.stderr.decode(errors='replace').strip()[:200]}")
     pages = r.stdout.decode("utf-8", errors="replace").split("\f")
@@ -28,8 +32,10 @@ def _pdftotext_pages(path) -> list[str] | None:
 
 
 def available() -> bool:
+    """True when pypdf imports or pdftotext is on PATH."""
     try:
-        import pypdf  # noqa: F401
+        # probe only: the optional dependency is imported lazily
+        import pypdf  # noqa: F401  # pylint: disable=import-outside-toplevel,unused-import
         return True
     except ImportError:
         return shutil.which("pdftotext") is not None
@@ -37,20 +43,25 @@ def available() -> bool:
 
 @register("pdf")
 def extract(ctx: ExtractCtx) -> Extracted:
+    """Extract per-page text from the stored PDF (size-capped)."""
     sha = ctx.row["blob_sha256"]
     if not sha:
         raise NeedsClarificationError("pdf item has no file")
     path = ctx.blobs.path(sha)
     if path.stat().st_size > ctx.cfg.max_fetch_bytes:
-        raise NeedsClarificationError(f"file larger than max_fetch_bytes ({ctx.cfg.max_fetch_bytes})")
+        raise NeedsClarificationError(
+            f"file larger than max_fetch_bytes ({ctx.cfg.max_fetch_bytes})")
     pages = _pypdf_pages(path)
     if pages is None:
         pages = _pdftotext_pages(path)
     if pages is None:
         raise NeedsClarificationError(HINT)
-    sections = [(f"page={i}", t.replace("\x00", "").strip()) for i, t in enumerate(pages, 1) if t.strip()]
+    sections = [(f"page={i}", t.replace("\x00", "").strip())
+                for i, t in enumerate(pages, 1) if t.strip()]
     if not sections:
-        raise NeedsClarificationError("PDF has no text layer (scanned?); OCR for PDFs is not supported", pasteable=True)
+        raise NeedsClarificationError(
+            "PDF has no text layer (scanned?); OCR for PDFs is not supported", pasteable=True)
     name = ctx.row["original_filename"] or "Untitled PDF"
-    return Extracted(name, None, ctx.row["canonical_url"], "pdf", "\n\n".join(t for _, t in sections),
-                     sections=sections, metadata={"pages": len(pages)}, original_sha=sha)
+    return Extracted(name, None, ctx.row["canonical_url"], "pdf",
+                     "\n\n".join(t for _, t in sections), sections=sections,
+                     metadata={"pages": len(pages)}, original_sha=sha)
