@@ -1,10 +1,28 @@
+"""Search: FTS (items + segments) and, when an embedder with vectors exists, cosine (items + segments),
+fused with RRF, per-source capped, optionally reranked. Every optional stage degrades, never raises:
+`SearchResult.mode` is "hybrid" only if the vector path actually ran; failures land in `warnings`.
+`egress` lists remote backends that received query text. `search()` returns just the hits."""
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from infoparser.domain.text import normalize
+from infoparser.retrieval import vectors
+from infoparser.retrieval.fusion import RRF_K, rrf
 
 _TOKEN = re.compile(r"\w+")
+CANDIDATES = 50     # per ranked list (FTS / cosine, items / segments)
+RERANK_TOP = 20
+PER_SOURCE_CAP = 2
+TEXT_CAP = 1500
+
+
+@dataclass
+class SearchResult:
+    hits: list
+    mode: str = "fts"  # "hybrid" | "fts"
+    warnings: list[str] = field(default_factory=list)
+    egress: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -19,6 +37,8 @@ class SearchHit:
     score: float
     segment_id: int | None = None
     source_id: str | None = None
+    text: str = ""  # fuller text (item body / segment text, capped) for answer excerpts
+    platform: str | None = None
 
 
 def fts_query(q: str) -> str | None:
@@ -32,47 +52,193 @@ def fts_query(q: str) -> str | None:
 _FILTERS = {"kind": "k.kind", "provenance": "k.provenance", "platform": "s.platform"}
 
 
-def search(services, query: str, *, limit: int = 10, filters: dict | None = None) -> list[SearchHit]:
-    match = fts_query(query)
-    if match is None:
-        return []
-    filters = {k: v for k, v in (filters or {}).items() if v}
+def _item_where(filters):
     where, args = "", []
     for name, col in _FILTERS.items():
         if name in filters:
             where += f" AND {col}=?"
             args.append(filters[name])
+    if "since" in filters:
+        where += " AND k.created_at>=?"
+        args.append(filters["since"])
     if "topic" in filters:
         where += (" AND EXISTS (SELECT 1 FROM item_topics it JOIN topics t ON t.id=it.topic_id"
                   " WHERE it.item_id=k.id AND t.name=?)")
         args.append(normalize(filters["topic"]))
+    return where, args
+
+
+def _seg_where(filters):
+    where, args = "", []
+    if "platform" in filters:
+        where += " AND s.platform=?"
+        args.append(filters["platform"])
+    if "since" in filters:
+        where += " AND s.fetched_at>=?"
+        args.append(filters["since"])
+    return where, args
+
+
+_ITEM_ONLY = {"kind", "provenance", "topic"}  # filters that exclude raw segments
+
+_ITEM_COLS = ("k.id, k.title, k.body, k.provenance, k.kind, k.segment_refs, k.source_id, s.url, s.platform")
+
+
+def _item_hit(services, r, snip, score):
+    refs = json.loads(r["segment_refs"] or "[]")
+    loc = None
+    if refs:
+        seg = services.conn.execute("SELECT locator FROM segments WHERE id=?", (refs[0],)).fetchone()
+        loc = seg["locator"] if seg else None
+    return SearchHit(r["id"], r["title"], snip, r["url"], loc, r["provenance"], r["kind"], score,
+                     source_id=r["source_id"], text=f"{r['title']}\n{r['body'] or ''}"[:TEXT_CAP], platform=r["platform"])
+
+
+def _seg_hit(r, snip, score):
+    return SearchHit(None, r["title"] or "", snip, r["url"], r["locator"], None, "segment", score, r["id"],
+                     r["source_id"], text=(r["text"] or "")[:TEXT_CAP], platform=r["platform"])
+
+
+def _fts_items(services, match, filters, n):
+    where, args = _item_where(filters)
     rows = services.conn.execute(
-        "SELECT k.id, k.title, k.provenance, k.kind, k.segment_refs, k.source_id, s.url, bm25(items_fts) AS r,"
-        " snippet(items_fts, 1, '[', ']', '...', 16) AS snip"
+        f"SELECT {_ITEM_COLS}, bm25(items_fts) AS r, snippet(items_fts, 1, '[', ']', '...', 16) AS snip"
         " FROM items_fts JOIN knowledge_items k ON k.rowid = items_fts.rowid"
         " LEFT JOIN sources s ON s.id = k.source_id"
         f" WHERE items_fts MATCH ? AND k.deleted_at IS NULL{where} ORDER BY r LIMIT ?",
-        (match, *args, limit)).fetchall()
-    out = []
-    for r in rows:
-        refs = json.loads(r["segment_refs"] or "[]")
-        loc = None
-        if refs:
-            seg = services.conn.execute("SELECT locator FROM segments WHERE id=?", (refs[0],)).fetchone()
-            loc = seg["locator"] if seg else None
-        out.append(SearchHit(r["id"], r["title"], r["snip"], r["url"], loc, r["provenance"], r["kind"],
-                             -r["r"], source_id=r["source_id"]))
-    if filters or len(out) >= limit:  # item-only filters exclude raw segments
+        (match, *args, n)).fetchall()
+    return [_item_hit(services, r, r["snip"], -r["r"]) for r in rows]
+
+
+def _fts_segments(services, match, filters, n):
+    where, args = _seg_where(filters)
+    rows = services.conn.execute(
+        "SELECT g.id, g.source_id, g.locator, g.text, s.url, s.title, s.platform, bm25(segments_fts) AS r,"
+        " snippet(segments_fts, 0, '[', ']', '...', 16) AS snip"
+        " FROM segments_fts JOIN segments g ON g.id = segments_fts.rowid"
+        f" JOIN sources s ON s.id = g.source_id WHERE segments_fts MATCH ?{where} ORDER BY r LIMIT ?",
+        (match, *args, n)).fetchall()
+    return [_seg_hit(r, r["snip"], -r["r"]) for r in rows]
+
+
+def _fts_only(services, match, filters, limit):
+    """FTS path: item hits, then at most one raw-segment hit per source not already represented by an item."""
+    out = _fts_items(services, match, filters, limit)
+    if (set(filters) & _ITEM_ONLY) or len(out) >= limit:
         return out
-    seen = {h.source_id for h in out}
-    best: dict[str, SearchHit] = {}
-    for r in services.conn.execute(
-            "SELECT g.id, g.source_id, g.locator, s.url, s.title, bm25(segments_fts) AS r,"
-            " snippet(segments_fts, 0, '[', ']', '...', 16) AS snip"
-            " FROM segments_fts JOIN segments g ON g.id = segments_fts.rowid"
-            " JOIN sources s ON s.id = g.source_id WHERE segments_fts MATCH ? ORDER BY r", (match,)):
-        if r["source_id"] in seen or r["source_id"] in best:
-            continue
-        best[r["source_id"]] = SearchHit(None, r["title"] or "", r["snip"], r["url"], r["locator"], None,
-                                         "segment", -r["r"], r["id"], r["source_id"])
+    seen, best = {h.source_id for h in out}, {}
+    for h in _fts_segments(services, match, filters, CANDIDATES):
+        if h.source_id not in seen and h.source_id not in best:
+            best[h.source_id] = h
     return out + list(best.values())[: limit - len(out)]
+
+
+def _hydrate_items(services, ids, filters):
+    if not ids:
+        return {}
+    where, args = _item_where(filters)
+    q = ",".join("?" * len(ids))
+    rows = services.conn.execute(
+        f"SELECT {_ITEM_COLS} FROM knowledge_items k LEFT JOIN sources s ON s.id=k.source_id"
+        f" WHERE k.id IN ({q}) AND k.deleted_at IS NULL{where}", (*ids, *args)).fetchall()
+    return {r["id"]: _item_hit(services, r, (r["body"] or "")[:200], 0.0) for r in rows}
+
+
+def _hydrate_segments(services, ids, filters):
+    if not ids or (set(filters) & _ITEM_ONLY):
+        return {}
+    where, args = _seg_where(filters)
+    q = ",".join("?" * len(ids))
+    rows = services.conn.execute(
+        "SELECT g.id, g.source_id, g.locator, g.text, s.url, s.title, s.platform FROM segments g"
+        f" JOIN sources s ON s.id=g.source_id WHERE g.id IN ({q}){where}", (*[int(i) for i in ids], *args)).fetchall()
+    return {str(r["id"]): _seg_hit(r, (r["text"] or "")[:200], 0.0) for r in rows}
+
+
+def _vector_lists(services, query, filters, res):
+    """-> (item_hits_ranked, segment_hits_ranked) or None when the vector path is unavailable."""
+    emb = services.registry.first("embed")
+    if emb is None:
+        return None
+    try:
+        er = emb.embed([query])
+        if emb.locality == "remote":
+            res.egress.append(emb.name)
+        qv = er.vectors[0]
+        iv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, CANDIDATES, "item") if sc > 0]
+        sv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, CANDIDATES, "segment") if sc > 0]
+    except Exception as e:  # embedder down, bad vectors, ...: FTS still answers
+        res.warnings.append(f"vector search unavailable ({type(e).__name__}: {e}); using FTS only")
+        return None
+    if not services.conn.execute("SELECT 1 FROM embeddings WHERE model_id=? LIMIT 1", (er.model_id,)).fetchone():
+        res.warnings.append(f"no vectors for embedding model {er.model_id!r}; run `infoparser reindex`; using FTS only")
+        return None
+    items = _hydrate_items(services, [i for i, _ in iv], filters)
+    segs = _hydrate_segments(services, [i for i, _ in sv], filters)
+    return [items[i] for i, _ in iv if i in items], [segs[i] for i, _ in sv if i in segs]
+
+
+def _cap_per_source(hits, cap):
+    n, out = {}, []
+    for h in hits:
+        key = h.source_id or id(h)
+        if n.get(key, 0) < cap:
+            n[key] = n.get(key, 0) + 1
+            out.append(h)
+    return out
+
+
+def _rerank(services, query, hits, res):
+    rr = services.registry.first("rerank")
+    if rr is None or not hits:
+        return hits
+    top = hits[:RERANK_TOP]
+    try:
+        scores = rr.rerank(query, [f"{h.title}\n{h.text or h.snippet}" for h in top])
+        if len(scores) != len(top):
+            raise ValueError("rerank returned wrong number of scores")
+    except Exception as e:
+        res.warnings.append(f"rerank skipped ({type(e).__name__}: {e})")
+        return hits
+    if rr.locality == "remote":
+        res.egress.append(rr.name)
+    order = sorted(range(len(top)), key=lambda i: (-scores[i], i))
+    for i in order:
+        top[i].score = float(scores[i])
+    return [top[i] for i in order] + hits[RERANK_TOP:]
+
+
+def _key(h):
+    return f"i:{h.item_id}" if h.item_id else f"s:{h.segment_id}"
+
+
+def search_ex(services, query: str, *, limit: int = 10, filters: dict | None = None,
+              mode: str = "hybrid", per_source: int = PER_SOURCE_CAP) -> SearchResult:
+    res = SearchResult([])
+    match = fts_query(query)
+    filters = {k: v for k, v in (filters or {}).items() if v}
+    vec = _vector_lists(services, query, filters, res) if mode == "hybrid" else None
+    if vec is None:
+        if match is not None:
+            res.hits = _cap_per_source(_fts_only(services, match, filters, limit * 2), per_source)
+            res.hits = _rerank(services, query, res.hits, res)[:limit]
+        return res
+    res.mode = "hybrid"
+    fi = _fts_items(services, match, filters, CANDIDATES) if match else []
+    fs = _fts_segments(services, match, filters, CANDIDATES) if match and not (set(filters) & _ITEM_ONLY) else []
+    by_key = {}
+    for h in [*vec[1], *vec[0], *fs, *fi]:  # FTS hits last: their highlighted snippets win
+        by_key[_key(h)] = h
+    fused = rrf([[_key(h) for h in lst] for lst in (fi, fs, *vec)], k=RRF_K)
+    ranked = []
+    for key, score in fused:
+        by_key[key].score = score
+        ranked.append(by_key[key])
+    ranked = _rerank(services, query, _cap_per_source(ranked, per_source), res)
+    res.hits = ranked[:limit]
+    return res
+
+
+def search(services, query: str, *, limit: int = 10, filters: dict | None = None,
+           mode: str = "hybrid") -> list[SearchHit]:
+    return search_ex(services, query, limit=limit, filters=filters, mode=mode).hits

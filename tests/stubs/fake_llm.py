@@ -5,6 +5,8 @@ import sys
 
 
 def reply_for(prompt: str) -> str:
+    if '<excerpt n="1">' in prompt:  # `ask` prompt: answer with a citation
+        return "The saved excerpts address this question [1]."
     digest = hashlib.sha256(prompt.encode()).hexdigest()[:8]
     return json.dumps({"summary": f"stub summary {digest}",
                        "insights": [{"text": prompt.strip()[:60], "quote": prompt.strip()[:60]}]})

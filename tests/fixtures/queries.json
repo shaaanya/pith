@@ -1,0 +1,72 @@
+[
+ {
+  "q": "nash equilibrium firms price",
+  "doc": "gametheory.md",
+  "type": "lexical"
+ },
+ {
+  "q": "sourdough starter feeding",
+  "doc": "sourdough.md",
+  "type": "lexical"
+ },
+ {
+  "q": "kubernetes schedules pods",
+  "doc": "kubernetes.md",
+  "type": "lexical"
+ },
+ {
+  "q": "melatonin circadian rhythm",
+  "doc": "sleep.md",
+  "type": "lexical"
+ },
+ {
+  "q": "rust ownership data races",
+  "doc": "rust.md",
+  "type": "lexical"
+ },
+ {
+  "q": "espresso ground beans",
+  "doc": "coffee.md",
+  "type": "lexical"
+ },
+ {
+  "q": "strategic rivals competitors theory",
+  "doc": "gametheory.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "leaven fermentation bread",
+  "doc": "sourdough.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "container orchestration scheduler",
+  "doc": "kubernetes.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "insomnia rest dreams",
+  "doc": "sleep.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "caffeine brew coffee",
+  "doc": "coffee.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "cosmos astronomy",
+  "doc": "astronomy.md",
+  "type": "paraphrase"
+ },
+ {
+  "q": "tomato seedlings frost",
+  "doc": "gardening.md",
+  "type": "lexical"
+ },
+ {
+  "q": "index funds fees",
+  "doc": "investing.md",
+  "type": "lexical"
+ }
+]

@@ -52,9 +52,9 @@ class _H(BaseHTTPRequestHandler):
 
 
 class OpenAIStub:
-    def __init__(self, fail_with: int | None = None):
+    def __init__(self, fail_with: int | None = None, chat_reply=None):
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), _H)
-        self.server.requests, self.server.fail_with = [], fail_with
+        self.server.requests, self.server.fail_with, self.server.chat_reply = [], fail_with, chat_reply
         self.requests = self.server.requests
 
     @property
