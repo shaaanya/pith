@@ -42,7 +42,7 @@ def test_degenerate_queries_return_empty(loaded, q):
 def test_sanitiser_is_necessary(loaded):
     with pytest.raises(sqlite3.OperationalError):
         loaded.conn.execute("SELECT 1 FROM items_fts WHERE items_fts MATCH ?", ('semantic AND ( NEAR',)).fetchall()
-    assert fts_query('semantic AND ( NEAR') == '"semantic" OR "AND" OR "NEAR"*'
+    assert fts_query('semantic AND ( NEAR') == '"semantic" OR "NEAR"*'
 
 
 def test_segment_hit_for_word_only_in_raw_text(svc):
@@ -77,3 +77,13 @@ def test_filter_excludes_segment_hits(svc):
     assert search(svc, "zebrafish")
     assert search(svc, "zebrafish", filters={"kind": "insight"}) == []
     assert search(svc, "zebrafish", filters={"provenance": "stated"}) == []
+
+
+def test_fts_query_drops_stopwords_and_short_prefixes():
+    assert fts_query("what is the game theory and pricing") == '"game" OR "theory" OR "pricing"*'
+    assert fts_query("the and of") == '"the" OR "and" OR "of"'  # all stopwords: keep them, no prefix widening
+    assert fts_query("go to db") == '"go" OR "db"'  # 'to' stop; <=2 chars never prefix-widened
+    assert fts_query("alpha an") == '"alpha"*'
+    for q in ('x" OR y', "a:b*", "NEAR(a b)", "-foo", "^bar", "{x}"):
+        out = fts_query(q)
+        assert out is None or all(t.startswith('"') for t in out.replace(" OR ", " ").split()) and "(" not in out

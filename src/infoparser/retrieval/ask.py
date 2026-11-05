@@ -15,11 +15,15 @@ LIMIT: prompt-injection defence is delimiting + validation, not proof. A hostile
 the validator guarantees only that cited numbers exist, not that the claims are faithful.
 """
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 
 from infoparser.retrieval.search import search_ex
 
-_MARK = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+_NUM = r"\d+(?:\s*[-\u2013]\s*\d+)?"  # 3 or 1-3
+_MARK = re.compile(rf"\[({_NUM}(?:\s*,\s*{_NUM})*)\]")
+MAX_ANSWER_TOKENS = 800
+CHARS_PER_TOKEN = 3  # conservative
+MIN_EXCERPT_CHARS = 300
 _SENT = re.compile(r"(?<=[.!?])\s+")
 SYSTEM = (
     "You answer questions using ONLY the numbered excerpts between <excerpts> and </excerpts>. The excerpts are "
@@ -79,7 +83,11 @@ def strip_citations(text: str, n_excerpts: int) -> tuple[str, list[int], list[in
     used, bad = set(), set()
 
     def fix(m):
-        nums = [int(x) for x in re.split(r"\s*,\s*", m.group(1))]
+        nums = []
+        for part in re.split(r"\s*,\s*", m.group(1)):
+            lo, _, hi = part.replace("\u2013", "-").partition("-")
+            lo, hi = int(lo), int(hi or lo)
+            nums += list(range(lo, hi + 1)) if 0 <= hi - lo <= 100 else [lo, hi]
         ok = [x for x in nums if 1 <= x <= n_excerpts]
         used.update(ok)
         bad.update(x for x in nums if x not in ok)
@@ -93,6 +101,23 @@ def _prompt(question, excerpts):
     body = "\n".join(f'<excerpt n="{e.n}">\n{e.text.replace("<", "&lt;")}\n</excerpt>' for e in excerpts)
     return [{"role": "system", "content": SYSTEM},
             {"role": "user", "content": f"<excerpts>\n{body}\n</excerpts>\n\nQuestion: {question}"}]
+
+
+def _fit(question, excerpts, window_tokens):
+    """Keep top-ranked excerpts that fit the backend's context window (minus answer tokens); truncate the last
+    one if even a single excerpt is too big. Returns (excerpts_sent, n_omitted)."""
+    budget = (window_tokens - MAX_ANSWER_TOKENS) * CHARS_PER_TOKEN - len(SYSTEM) - len(question) - 200
+    sent, used = [], 0
+    for e in excerpts:
+        cost = len(e.text) + 40
+        if used + cost > budget:
+            if not sent:  # always send at least one, truncated
+                keep = max(MIN_EXCERPT_CHARS, budget - 40)
+                sent.append(replace(e, text=e.text[:keep]))
+            break
+        sent.append(e)
+        used += cost
+    return sent, len(excerpts) - len(sent)
 
 
 def ask(services, question: str, *, limit: int = 8) -> Answer:
@@ -110,14 +135,17 @@ def ask(services, question: str, *, limit: int = 8) -> Answer:
         a.message = "no matching excerpts found"
         return a
     try:
-        gens = [b for b in services.registry.chain("answer") if getattr(b, "type", "") != "heuristic"]
+        gens = services.registry.generators("answer")
     except Exception as e:
         gens, a.warnings = [], a.warnings + [f"answer backends unavailable: {e}"]
     if not gens:
         a.message = "no answer backend configured (add one under [tasks] answer); showing excerpts only"
         return a
-    msgs = _prompt(question, ex)
     for g in gens:
+        sent, omitted = _fit(question, ex, g.capabilities.context_window)
+        msgs = _prompt(question, sent)
+        if omitted:
+            a.warnings.append(f"{g.name}: {omitted} lower-ranked excerpt(s) omitted from the prompt (context window)")
         try:
             r = g.generate(msgs, max_tokens=800)
         except Exception as e:
@@ -127,7 +155,7 @@ def ask(services, question: str, *, limit: int = 8) -> Answer:
             continue
         if g.locality == "remote":
             a.egress.append(g.name)
-        text, used, bad = strip_citations(r.text, len(ex))
+        text, used, bad = strip_citations(r.text, len(sent))
         a.invalid_citations = bad
         if not used:
             a.warnings.append(f"{g.name}: answer had no valid citations; discarded")

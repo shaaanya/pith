@@ -110,6 +110,10 @@ class Registry:
                     self._skips[(b.name, task)] = {"name": b.name, "task": task, "reason": BLOCKED}
         return allowed
 
+    def generators(self, task: str) -> list[Backend]:
+        """chain(task) minus the extractive heuristic backend (it cannot answer questions)."""
+        return [b for b in self.chain(task) if b.type != "heuristic"]
+
     def first(self, task: str) -> Backend | None:
         c = self.chain(task)
         return c[0] if c else None

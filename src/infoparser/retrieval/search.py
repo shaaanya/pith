@@ -11,6 +11,7 @@ from infoparser.retrieval import vectors
 from infoparser.retrieval.fusion import RRF_K, rrf
 
 _TOKEN = re.compile(r"\w+")
+OVERFETCH = 4       # vector over-fetch factor before post-filtering
 CANDIDATES = 50     # per ranked list (FTS / cosine, items / segments)
 RERANK_TOP = 20
 PER_SOURCE_CAP = 2
@@ -41,12 +42,25 @@ class SearchHit:
     platform: str | None = None
 
 
+STOPWORDS = frozenset("""a about above after again all also am an and any are as at be because been before being below
+between both but by can could did do does doing down during each few for from further had has have having he her here
+hers him his how i if in into is it its just me more most my no nor not of off on once only or other our out over own
+same she should so some such than that the their them then there these they this those through to too under until up
+very was we were what when where which while who whom why will with would you your""".split())
+
+
 def fts_query(q: str) -> str | None:
-    """Quote every word (neutralises FTS operators/syntax), OR them (bm25 ranks), prefix-match the last."""
+    """Quote every \\w+ token (neutralises FTS operators/syntax) and OR them (bm25 ranks). English stopwords are
+    dropped unless every token is one; the last kept token is prefix-matched only if it is a content word
+    longer than 2 chars (so "and"* can never widen to "android")."""
     toks = _TOKEN.findall(q)
     if not toks:
         return None
-    return " OR ".join([f'"{t}"' for t in toks[:-1]] + [f'"{toks[-1]}"*'])
+    content = [t for t in toks if t.lower() not in STOPWORDS]
+    use = content or toks
+    last = use[-1]
+    prefix = bool(content) and len(last) > 2
+    return " OR ".join([f'"{t}"' for t in use[:-1]] + [f'"{last}"' + ("*" if prefix else "")])
 
 
 _FILTERS = {"kind": "k.kind", "provenance": "k.provenance", "platform": "s.platform"}
@@ -68,8 +82,15 @@ def _item_where(filters):
     return where, args
 
 
+# a source whose items all got soft-deleted must not leak through its raw segments
+_LIVE_SOURCE = (" AND NOT (EXISTS (SELECT 1 FROM knowledge_items x WHERE x.source_id=g.source_id)"
+                " AND NOT EXISTS (SELECT 1 FROM knowledge_items x WHERE x.source_id=g.source_id"
+                " AND x.deleted_at IS NULL))")
+
+
 def _seg_where(filters):
-    where, args = "", []
+    """`since` = ingestion time: items use created_at, raw segments use their source's fetched_at."""
+    where, args = _LIVE_SOURCE, []
     if "platform" in filters:
         where += " AND s.platform=?"
         args.append(filters["platform"])
@@ -155,18 +176,23 @@ def _hydrate_segments(services, ids, filters):
     return {str(r["id"]): _seg_hit(r, (r["text"] or "")[:200], 0.0) for r in rows}
 
 
+def _egress(res, backend):
+    if backend.locality == "remote" and backend.name not in res.egress:
+        res.egress.append(backend.name)
+
+
 def _vector_lists(services, query, filters, res):
     """-> (item_hits_ranked, segment_hits_ranked) or None when the vector path is unavailable."""
     emb = services.registry.first("embed")
     if emb is None:
         return None
+    _egress(res, emb)  # recorded before the call: text leaves even if the call then fails
     try:
         er = emb.embed([query])
-        if emb.locality == "remote":
-            res.egress.append(emb.name)
         qv = er.vectors[0]
-        iv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, CANDIDATES, "item") if sc > 0]
-        sv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, CANDIDATES, "segment") if sc > 0]
+        over = CANDIDATES * OVERFETCH  # filters apply after cosine, so over-fetch
+        iv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, over, "item") if sc > 0]
+        sv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, over, "segment") if sc > 0]
     except Exception as e:  # embedder down, bad vectors, ...: FTS still answers
         res.warnings.append(f"vector search unavailable ({type(e).__name__}: {e}); using FTS only")
         return None
@@ -175,7 +201,7 @@ def _vector_lists(services, query, filters, res):
         return None
     items = _hydrate_items(services, [i for i, _ in iv], filters)
     segs = _hydrate_segments(services, [i for i, _ in sv], filters)
-    return [items[i] for i, _ in iv if i in items], [segs[i] for i, _ in sv if i in segs]
+    return ([items[i] for i, _ in iv if i in items][:CANDIDATES], [segs[i] for i, _ in sv if i in segs][:CANDIDATES])
 
 
 def _cap_per_source(hits, cap):
@@ -193,6 +219,7 @@ def _rerank(services, query, hits, res):
     if rr is None or not hits:
         return hits
     top = hits[:RERANK_TOP]
+    _egress(res, rr)
     try:
         scores = rr.rerank(query, [f"{h.title}\n{h.text or h.snippet}" for h in top])
         if len(scores) != len(top):
@@ -200,8 +227,6 @@ def _rerank(services, query, hits, res):
     except Exception as e:
         res.warnings.append(f"rerank skipped ({type(e).__name__}: {e})")
         return hits
-    if rr.locality == "remote":
-        res.egress.append(rr.name)
     order = sorted(range(len(top)), key=lambda i: (-scores[i], i))
     for i in order:
         top[i].score = float(scores[i])

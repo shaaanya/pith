@@ -22,7 +22,7 @@ def titles(hits):
 def test_hybrid_beats_fts_on_paraphrase_query(svc, use_embedder):
     use_embedder(svc, ConceptEmbedder())
     load(svc, NASH, BREAD)
-    q = "game theory pricing"  # (stopwords like "and" would lexically match unrelated text)
+    q = "game theory and pricing"
     assert not [h for h in search(svc, q, mode="fts") if "nash" in h.text.lower()]
     r = search_ex(svc, q)
     assert r.mode == "hybrid" and r.hits and "nash" in r.hits[0].text.lower()
@@ -132,3 +132,58 @@ def test_soft_deleted_items_never_returned(svc, use_embedder):
     for r in svc.conn.execute("SELECT id FROM knowledge_items").fetchall():
         delete_item(svc.conn, r[0])
     assert [h for h in search(svc, "game theory pricing") if h.item_id] == []
+
+
+def _many(svc, n, platform=None, extra=""):
+    for i in range(n):
+        svc.inbox.submit(adapter="t", text=f"Oligopoly equilibrium note {i}. {extra}", platform=platform)
+
+
+def test_vector_prefilter_narrow_platform_still_yields_hits(svc, use_embedder, drain):
+    use_embedder(svc, ConceptEmbedder())
+    _many(svc, 70)
+    svc.inbox.submit(adapter="t", text="Oligopoly equilibrium outlier with many unrelated words here "
+                     "alpha beta gamma delta epsilon zeta eta theta iota kappa", platform="special")
+    drain(svc)
+    assert svc.conn.execute("SELECT count(*) FROM sources WHERE platform='special'").fetchone()[0] == 1
+    r = search_ex(svc, "game theory strategic rivals", filters={"platform": "special"})
+    assert r.mode == "hybrid" and r.hits and all(h.platform == "special" for h in r.hits)
+
+
+def test_egress_recorded_before_remote_call_even_on_failure(svc, use_embedder):
+    class Remote(ConceptEmbedder):
+        locality = "remote"
+
+        def embed(self, texts):
+            raise RuntimeError("net down")
+    use_embedder(svc, Remote(name="cloudembed"))
+    load(svc, NASH)
+    r = search_ex(svc, "oligopoly")
+    assert r.egress == ["cloudembed"] and r.warnings
+    rr = Reranker()
+    rr.locality, rr.name = "remote", "cloudrank"
+    rr.rerank = lambda q, d: (_ for _ in ()).throw(RuntimeError("x"))
+    use_embedder(svc, None)
+    orig = svc.registry.first
+    svc.registry.first = lambda t: rr if t == "rerank" else orig(t)
+    assert search_ex(svc, "oligopoly").egress == ["cloudrank"]
+
+
+def test_since_applies_to_segments_and_items_alike(svc):
+    load(svc, "Alpha beta gamma delta one. Alpha beta gamma delta two. Alpha beta gamma delta three. "
+              "Alpha beta gamma delta four. Alpha beta gamma delta five. Alpha beta gamma delta six. "
+              "Alpha beta gamma delta seven. Trailing remark about zebrafish only.")
+    assert search(svc, "zebrafish", filters={"since": "2000-01-01T00:00:00Z"})
+    assert search(svc, "zebrafish", filters={"since": "2999-01-01T00:00:00Z"}) == []
+
+
+def test_segments_of_fully_deleted_source_not_returned(svc):
+    from infoparser.store.knowledge import delete_item
+    load(svc, "Alpha beta gamma delta one. Alpha beta gamma delta two. Alpha beta gamma delta three. "
+              "Alpha beta gamma delta four. Alpha beta gamma delta five. Alpha beta gamma delta six. "
+              "Alpha beta gamma delta seven. Trailing remark about zebrafish only.")
+    assert search(svc, "zebrafish")
+    for r in svc.conn.execute("SELECT id FROM knowledge_items").fetchall():
+        delete_item(svc.conn, r[0])
+    assert search(svc, "zebrafish") == []
+    assert search(svc, "zebrafish", mode="fts") == []
