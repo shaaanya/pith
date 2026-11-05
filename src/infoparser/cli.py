@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import cast
 
-from infoparser.config import load_config
+from infoparser.config import ConfigError, load_config
 from infoparser.domain.display import inbox_label
 from infoparser.services import build
 
@@ -424,7 +424,10 @@ def build_parser():
 def main(argv=None):
     """Entry point."""
     args = build_parser().parse_args(argv)
-    args.f(args)
+    try:
+        args.f(args)
+    except ConfigError as e:
+        sys.exit(f"error: {e}")
 
 
 if __name__ == "__main__":

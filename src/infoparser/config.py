@@ -6,6 +6,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+class ConfigError(ValueError):
+    """A configuration value is unusable."""
+
+
+def _int(data: dict, section: str, key: str, default: int, minimum: int = 0) -> int:
+    """data[section][key] as an int >= minimum (a quoted integer is coerced), else ConfigError."""
+    v = data.get(section, {}).get(key, default)
+    if isinstance(v, str) and v.strip().isdigit():
+        v = int(v)
+    if isinstance(v, bool) or not isinstance(v, int) or v < minimum:
+        raise ConfigError(f"{section}.{key} must be an integer >= {minimum}, got {v!r}")
+    return v
+
+
 @dataclass
 class Config:  # pylint: disable=too-many-instance-attributes  # flat settings record
     """All settings, resolved from file and environment."""
@@ -38,7 +52,6 @@ def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
     if not home.is_absolute():
         home = Path.home() / home
     watch = data.get("watch", {}).get("dirs", [str(home / "inbox")])
-    limits = data.get("limits", {})
     tasks = {k: [v] if isinstance(v, str) else list(v) for k, v in data.get("tasks", {}).items()}
     return Config(
         home=home,
@@ -49,14 +62,14 @@ def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
         backends={k: dict(v) for k, v in data.get("backends", {}).items()},
         tasks=tasks,
         allow_remote=bool(data.get("privacy", {}).get("allow_remote", False)),
-        max_attempts=limits.get("max_attempts", 5),
-        lease_seconds=limits.get("lease_seconds", 300),
+        max_attempts=_int(data, "limits", "max_attempts", 5, 1),
+        lease_seconds=_int(data, "limits", "lease_seconds", 300, 1),
         http_bind=data.get("http", {}).get("bind", "127.0.0.1"),
-        http_port=int(data.get("http", {}).get("port", 8787)),
+        http_port=_int(data, "http", "port", 8787),
         http_token=env.get("INFOPARSER_HTTP_TOKEN") or data.get("http", {}).get("token"),
-        digest_interval_days=int(data.get("digest", {}).get("interval_days", 7)),
-        digest_max_items=int(data.get("digest", {}).get("max_items", 20)),
-        max_fetch_bytes=limits.get("max_fetch_bytes", 50_000_000),
+        digest_interval_days=_int(data, "digest", "interval_days", 7),
+        digest_max_items=_int(data, "digest", "max_items", 20),
+        max_fetch_bytes=_int(data, "limits", "max_fetch_bytes", 50_000_000, 1),
         yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or data.get("media", {}).get("yt_dlp", "yt-dlp"),
         ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or data.get("media", {}).get("ffmpeg", "ffmpeg"),
     )
