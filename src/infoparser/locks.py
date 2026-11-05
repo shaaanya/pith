@@ -28,10 +28,18 @@ def new_worker_id() -> str:
     return f"{socket.gethostname()}-{os.getpid()}-{secrets.token_hex(3)}"
 
 
+def ensure_private_home(home: Path) -> None:
+    """Create `home` as 0700 when it does not exist (the database holds the user's notes); an
+    existing directory keeps its mode."""
+    if not home.exists():
+        home.mkdir(parents=True, exist_ok=True, mode=0o700)
+        home.chmod(0o700)
+
+
 @contextmanager
 def _flock(home: Path, mode: int, busy: str):
     home = Path(home)
-    home.mkdir(parents=True, exist_ok=True)
+    ensure_private_home(home)
     with open(home / LOCK_NAME, "a+", encoding="utf-8") as f:
         try:
             fcntl.flock(f, mode | fcntl.LOCK_NB)

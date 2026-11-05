@@ -14,6 +14,7 @@ import threading
 import traceback
 from pathlib import Path
 
+from infoparser import locks
 from infoparser.adapters.fs import FsAdapter
 from infoparser.dashboard.server import make_server
 from infoparser.pipeline import runner
@@ -31,7 +32,7 @@ class _Lock:  # pylint: disable=too-few-public-methods  # acquire in __init__, r
     """The per-home run.lock, held with flock until release()."""
 
     def __init__(self, home: Path):
-        home.mkdir(parents=True, exist_ok=True)
+        locks.ensure_private_home(home)
         self.path = home / "run.lock"
         # held for the lifetime of the run, closed in release(): a `with` block cannot express that
         self.f = open(self.path, "a+", encoding="utf-8")  # pylint: disable=consider-using-with
