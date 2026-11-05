@@ -7,9 +7,11 @@ from infoparser.ids import utcnow
 from infoparser.pipeline import extractors  # noqa: F401  (registers extractors)
 from infoparser.pipeline.chunk import chunk_text, chunk_timed
 from infoparser.pipeline.detect import detect
+from infoparser.pipeline import dedupe, entities
 from infoparser.pipeline.distill import distill
 from infoparser.pipeline.schemas import profile_for
 from infoparser.pipeline.extractors.base import EXTRACTORS, ExtractCtx, NeedsClarificationError
+from infoparser.retrieval import index
 from infoparser.store import knowledge
 from infoparser.store.db import transaction
 from infoparser.worker import Failed, NeedsClarification, Processed
@@ -39,6 +41,18 @@ def process(services, inbox_id: str):
         t0 = time.monotonic()
         ex = EXTRACTORS[ct](ExtractCtx(row, s.blobs, s.registry, s.cfg))
         _stage(s.conn, inbox_id, "extract", t0, f"{len(ex.text)} chars")
+        text_sha = hashlib.sha256(ex.text.encode()).hexdigest()
+        if not row["source_id"]:  # same text already ingested (e.g. via another URL): share the source
+            twin = s.conn.execute("SELECT id FROM sources WHERE text_sha256=? ORDER BY fetched_at LIMIT 1",
+                                  (text_sha,)).fetchone()
+            if twin:
+                with transaction(s.conn):
+                    s.conn.execute("INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
+                                   (twin["id"], inbox_id, ex.url, utcnow()))
+                    s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?",
+                                   (twin["id"], ct, inbox_id))
+                _stage(s.conn, inbox_id, "duplicate", t0, f"same text as source {twin['id']}; no new source")
+                return Processed()
         t0 = time.monotonic()
         if ex.timed:
             pieces = chunk_timed(ex.timed)
@@ -54,7 +68,6 @@ def process(services, inbox_id: str):
         _stage(s.conn, inbox_id, "distill", t0, f"{len(cands)} items", model=by)
         t0 = time.monotonic()
         with transaction(s.conn):
-            text_sha = hashlib.sha256(ex.text.encode()).hexdigest()
             sid = row["source_id"]
             if sid:
                 s.conn.execute("UPDATE sources SET title=?, author=?, content_type=?, text_sha256=?, extractor=?,"
@@ -64,10 +77,21 @@ def process(services, inbox_id: str):
                     s.conn, url=ex.url, title=ex.title, author=ex.author, platform=row["platform"],
                     content_type=ct, blob_sha256=ex.original_sha or row["blob_sha256"],
                     text_sha256=text_sha, extractor=ct)
+                s.conn.execute("INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
+                               (sid, inbox_id, ex.url, utcnow()))
             seg_ids = knowledge.save_segments(s.conn, sid, segs)
-            knowledge.save_items(s.conn, sid, cands, by, seg_ids)
+            item_ids = knowledge.save_items(s.conn, sid, cands, by, seg_ids)
+            entities.apply(s.conn, item_ids, cands)
             s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?", (sid, ct, inbox_id))
         _stage(s.conn, inbox_id, "save", t0, sid)
+        for stage, fn in (("embed", lambda: index.embed_pending(s)),
+                          ("dedupe", lambda: dedupe.find_near_duplicates(s.conn, item_ids, s))):
+            t0 = time.monotonic()  # best-effort enrichment: a failure is logged, never fails the item
+            try:
+                r = fn()
+                _stage(s.conn, inbox_id, stage, t0, str(r if isinstance(r, int) else len(r)))
+            except Exception as e:  # noqa: BLE001
+                _stage(s.conn, inbox_id, stage, t0, f"{type(e).__name__}: {e}", level="error")
         return Processed()
     except NeedsClarificationError as e:
         return NeedsClarification(e.reason)

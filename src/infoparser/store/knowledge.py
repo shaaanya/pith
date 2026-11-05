@@ -74,8 +74,8 @@ def save_items(conn, source_id, candidates: list[Candidate], extracted_by, segme
             conn.execute("DELETE FROM items_fts WHERE rowid=?", (r["rid"],))
         for c in candidates:
             iid = new_id()
-            data = {**c.data, **({"evidence": c.evidence} if c.evidence else {}),
-                    **({"entities": c.entities} if c.entities else {}), **({"topics": c.topics} if c.topics else {})}
+            # entities/topics live in their tables (pipeline.entities.apply), not in data_json
+            data = {**c.data, **({"evidence": c.evidence} if c.evidence else {})}
             ref = [by_idx[c.segment_idx]] if c.segment_idx in by_idx else []
             cur = conn.execute(
                 "INSERT INTO knowledge_items(id,kind,title,body,data_json,provenance,confidence,source_id,segment_refs,"
@@ -97,12 +97,12 @@ def get_item(conn, item_id) -> dict | None:
     return d
 
 
-_KEEP = ("evidence", "entities", "topics")
+_KEEP = ("evidence",)
 
 
 def update_item(conn, item_id, **fields) -> None:
-    """Edit title/body/data. `data` is MERGED over the stored data: evidence/entities/topics are kept
-    unless the new data names them explicitly; other stored keys are replaced by the new dict."""
+    """Edit title/body/data. `data` is MERGED over the stored data: evidence is kept
+    unless the new data names it explicitly; other stored keys are replaced by the new dict."""
     if bad := set(fields) - _EDITABLE:
         raise ValueError(f"cannot edit {sorted(bad)}")
     now = utcnow()

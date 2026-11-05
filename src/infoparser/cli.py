@@ -93,6 +93,12 @@ def _show(a):
         print(f"  event {e['stage']} {e['status']} {e['detail'] or ''}")
 
 
+def _reindex(a):
+    from infoparser.retrieval.index import reindex
+    n = reindex(_services(a), prune_old=a.prune_old)
+    print(f"reindexed {n} vectors" if n else "nothing to reindex (no embedding backend configured?)")
+
+
 def _doctor(a):
     s = _services(a)
     print(f"home: {s.cfg.home}\ndb: {s.cfg.db_path}\nallow_remote: {s.cfg.allow_remote}")
@@ -131,6 +137,9 @@ def main(argv=None):
     c = sub.add_parser("show", parents=[common])
     c.add_argument("id")
     c.set_defaults(f=_show)
+    c = sub.add_parser("reindex", parents=[common])
+    c.add_argument("--prune-old", action="store_true")
+    c.set_defaults(f=_reindex)
     sub.add_parser("doctor", parents=[common]).set_defaults(f=_doctor)
     a = p.parse_args(argv)
     a.f(a)

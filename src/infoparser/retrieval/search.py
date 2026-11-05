@@ -2,6 +2,8 @@ import json
 import re
 from dataclasses import dataclass
 
+from infoparser.pipeline.entities import normalize
+
 _TOKEN = re.compile(r"\w+")
 
 
@@ -40,6 +42,10 @@ def search(services, query: str, *, limit: int = 10, filters: dict | None = None
         if name in filters:
             where += f" AND {col}=?"
             args.append(filters[name])
+    if "topic" in filters:
+        where += (" AND EXISTS (SELECT 1 FROM item_topics it JOIN topics t ON t.id=it.topic_id"
+                  " WHERE it.item_id=k.id AND t.name=?)")
+        args.append(normalize(filters["topic"]))
     rows = services.conn.execute(
         "SELECT k.id, k.title, k.provenance, k.kind, k.segment_refs, k.source_id, s.url, bm25(items_fts) AS r,"
         " snippet(items_fts, 1, '[', ']', '...', 16) AS snip"

@@ -108,7 +108,7 @@ def test_update_item_data_merge_preserves_evidence_entities_topics(conn):
     sid, segs = setup(conn)
     [iid] = K.save_items(conn, sid, [cand("x", evidence="ev", entities=["E"], topics=["T"])], "m", segs)
     K.update_item(conn, iid, data={"note": "n", "topics": ["T2"]})
-    assert K.get_item(conn, iid)["data"] == {"evidence": "ev", "entities": ["E"], "topics": ["T2"], "note": "n"}
+    assert K.get_item(conn, iid)["data"] == {"evidence": "ev", "topics": ["T2"], "note": "n"}  # entities/topics now live in tables
 
 
 def test_edit_and_delete_on_deleted_item(conn):
