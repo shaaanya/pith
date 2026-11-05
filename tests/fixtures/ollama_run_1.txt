@@ -1,0 +1,22 @@
+```json
+{
+  "summary": "Vector search finds nearest neighbours of an embedding. It is[2D[K
+is the backbone of modern retrieval systems and works well with chunked doc[3D[K
+documents.",
+  "insights": [
+    {
+      "text": "Small chunks keep each embedding focused.",
+      "quote": "Vector search finds nearest neighbours of an embedding. It [K
+is the backbone of modern retrieval systems and works well with chunked doc[3D[K
+documents."
+    }
+  ],
+  "topics": [
+    "Retrieval Systems",
+    "Embeddings"
+  ],
+  "entities": [],
+  "key_points": []
+}
+```
+
