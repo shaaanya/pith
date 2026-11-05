@@ -5,6 +5,7 @@ then INFOPARSER_HOME / INFOPARSER_CONFIG, then the defaults.
 """
 # pylint: disable=import-outside-toplevel  # lazy imports keep CLI start-up fast
 import argparse
+import functools
 import json
 import os
 import sqlite3
@@ -69,11 +70,27 @@ def _retry(a):
     print(f"requeued {a.id}")
 
 
+def _in_use(fn):
+    """Hold the shared in-use lock while a long-running command runs (restore refuses meanwhile)."""
+    @functools.wraps(fn)
+    def guarded(a):
+        from infoparser import locks
+        try:
+            with locks.in_use(_cfg(a).home):
+                fn(a)
+        except locks.InUseError as e:
+            sys.exit(f"error: {e}")
+    return guarded
+
+
+@_in_use
 def _worker(a):
+    from infoparser import locks
     from infoparser.pipeline import runner
     from infoparser.worker import Worker
     s = _services(a)
-    w = Worker(s.conn, s.inbox, s.queue, lambda i: runner.process(s, i))
+    w = Worker(s.conn, s.inbox, s.queue, lambda i: runner.process(s, i),
+               worker_id=locks.new_worker_id())
     if a.once:
         n = 0
         while w.run_once():
@@ -189,11 +206,12 @@ def _backup(a):
 
 
 def _restore(a):
-    from infoparser import backup
+    from infoparser import backup, locks
     cfg = _cfg(a)
     try:
-        backup.restore(Path(a.archive), cfg.home, force=a.force)
-    except (backup.RestoreError, OSError) as e:
+        with locks.restore_guard(cfg.home, cfg.db_path):
+            backup.restore(Path(a.archive), cfg.home, force=a.force)
+    except (backup.RestoreError, locks.InUseError, OSError) as e:
         sys.exit(f"error: {e}")
     print(f"restored {a.archive} into {cfg.home}")
 
@@ -227,6 +245,7 @@ def _adapters_list(_args):
         print(n)
 
 
+@_in_use
 def _watch(a):
     from infoparser.adapters.fs import FsAdapter
     s = _services(a)
@@ -259,6 +278,7 @@ def _import_telegram(a):
     print(f"submitted {r.submitted}, duplicates {r.duplicates}, skipped {r.skipped}")
 
 
+@_in_use
 def _serve_http(a):
     from infoparser.adapters.http_ingest import IngestServer
     s = _services(a)
@@ -298,6 +318,7 @@ def _run(a):
         sys.exit(f"error: {e}")
 
 
+@_in_use
 def _dashboard(a):
     from infoparser.dashboard.server import make_server
     s = _services(a)

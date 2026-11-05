@@ -1,0 +1,105 @@
+"""Standalone workers get unique ids and hold a lock that makes `restore --force` refuse."""
+
+import fcntl
+import re
+
+import pytest
+
+from infoparser import backup, cli, locks
+from infoparser.config import load_config
+from infoparser.services import build
+
+QUOKKA = "Quokkas are small marsupials from Australia."
+
+
+def _home(tmp_path):
+    return tmp_path / "home"
+
+
+def _populated(tmp_path):
+    """A home with one queued item and a backup archive of it."""
+    cfg = load_config(env={"INFOPARSER_HOME": str(_home(tmp_path))})
+    svc = build(cfg)
+    svc.inbox.submit(adapter="t", text=QUOKKA)
+    archive = tmp_path / "a.tar.gz"
+    backup.backup(cfg, archive)
+    return svc, archive
+
+
+def _restore(tmp_path, archive):
+    cli.main(["--home", str(_home(tmp_path)), "restore", str(archive), "--force"])
+
+
+def test_worker_ids_are_unique_per_call_and_name_the_process():
+    """host-pid-random: two workers in one process still differ."""
+    ids = {locks.new_worker_id() for _ in range(50)}
+    assert len(ids) == 50
+    assert all(re.search(r"-\d+-[0-9a-f]{6}$", i) for i in ids)
+
+
+def test_cli_worker_uses_a_unique_id_not_w1(tmp_path, monkeypatch):
+    """`infoparser worker` passes a fresh id to Worker."""
+    seen = []
+
+    class Fake:  # pylint: disable=too-few-public-methods  # stands in for Worker
+        """Records the worker id and has no work."""
+
+        def __init__(self, *_args, worker_id="w1"):
+            seen.append(worker_id)
+
+        def run_once(self):
+            """No job."""
+            return False
+
+        def run_forever(self):
+            """Never used by --once."""
+
+    monkeypatch.setattr("infoparser.worker.Worker", Fake)
+    for _ in range(2):
+        cli.main(["--home", str(_home(tmp_path)), "worker", "--once"])
+    assert len(set(seen)) == 2 and "w1" not in seen
+
+
+def test_restore_refuses_while_a_standalone_process_holds_the_lock(tmp_path, capsys):
+    """A worker/dashboard/watch/serve-http holds in-use.lock; restore --force must not proceed."""
+    svc, archive = _populated(tmp_path)
+    svc.conn.close()
+    before = (_home(tmp_path) / "infoparser.db").read_bytes()
+    with locks.in_use(_home(tmp_path)):
+        with pytest.raises(SystemExit) as ex:
+            _restore(tmp_path, archive)
+        assert "is using" in str(ex.value)
+    assert (_home(tmp_path) / "infoparser.db").read_bytes() == before
+    _restore(tmp_path, archive)  # lock released: restore works
+    assert "restored" in capsys.readouterr().out
+
+
+def test_restore_refuses_while_a_job_lease_is_live(tmp_path):
+    """A running job with an unexpired lease means a worker is mid-flight."""
+    svc, archive = _populated(tmp_path)
+    assert svc.queue.claim("some-worker") is not None
+    svc.conn.close()
+    with pytest.raises(SystemExit) as ex:
+        _restore(tmp_path, archive)
+    assert "live lease" in str(ex.value)
+
+
+def test_expired_lease_does_not_block_restore(tmp_path, capsys):
+    """After the lease runs out the worker is presumed dead and restore may proceed."""
+    svc, archive = _populated(tmp_path)
+    svc.queue.claim("some-worker")
+    svc.conn.execute("UPDATE jobs SET lease_expires_at='2000-01-01T00:00:00Z'")
+    svc.conn.close()
+    _restore(tmp_path, archive)
+    assert "restored" in capsys.readouterr().out
+
+
+def test_long_running_commands_refuse_to_start_during_a_restore(tmp_path):
+    """While restore holds the exclusive lock, a new worker/dashboard exits with a clear error."""
+    _populated(tmp_path)[0].conn.close()
+    with open(_home(tmp_path) / locks.LOCK_NAME, "a+", encoding="utf-8") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        for cmd in (["worker", "--once"], ["watch", "--once"]):
+            with pytest.raises(SystemExit) as ex:
+                cli.main(["--home", str(_home(tmp_path)), *cmd])
+            assert "restore is running" in str(ex.value)

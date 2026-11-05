@@ -69,8 +69,10 @@ embeddings, digests) can be regenerated or is a report.
   discarded. Failures retry with exponential backoff (5 s base, 1 h cap) up to `max_attempts` (default 5),
   then the item is `failed` and the original is untouched.
 - `infoparser run` holds an `flock` on `<home>/run.lock` so only one `run` exists per home. The
-  standalone `worker`, `dashboard` and `watch` commands do not take that lock (see
-  [limitations](limitations.md)).
+  standalone `worker`, `dashboard`, `watch` and `serve-http` commands hold a shared `flock` on
+  `<home>/in-use.lock` (they can run side by side and next to `run`); `restore` takes it exclusively and
+  also refuses while a job lease is live. Standalone workers get ids like `host-pid-random`, so the
+  stale-completion fence works across processes (`run` uses the fixed id `run`).
 
 ## Model independence
 
