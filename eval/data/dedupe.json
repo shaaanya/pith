@@ -1,0 +1,1042 @@
+[
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "b": "Mount Halden, at an altitude of 2,400 metres, is home to the Veyra Observatory and its 1.8 metre reflector. Operations started on 12 June 1987, and the telescope's main job is following dim asteroids."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "Every 76 years Comet Tarsis-Ono comes back to the inner solar system. It last reached perihelion in February 1986, and forecasts put its next close approach in July 2062."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "A lunar eclipse happens when the Earth moves between the Sun and the Moon, so our planet's shadow darkens the lunar surface. Totality can last up to about 100 minutes.",
+  "b": "During a lunar eclipse the Earth sits between the Sun and the Moon and its shadow falls across the Moon's face. The total phase may continue for as long as roughly 100 minutes."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Sourdough bread needs a starter of flour and water that has fermented for about a week. Bake at 230 degrees Celsius for 40 minutes in a covered pot for a crisp crust.",
+  "b": "Make a sourdough starter by letting flour and water ferment for around seven days. Bake the loaf in a lidded pot at 230 degrees Celsius for forty minutes to get a crunchy crust."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Chef Anselm Brandt's famous goulash uses two kilograms of beef shoulder, paprika, and a long three-hour simmer. He opened his restaurant Brandt's Table in Vienna in 1999.",
+  "b": "Anselm Brandt's celebrated goulash calls for two kilos of beef shoulder and paprika, simmered for three hours. His Vienna restaurant, Brandt's Table, opened in 1999."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "To keep guacamole from browning, press cling film directly onto its surface; acid from lime juice also slows the oxidation of the avocado flesh.",
+  "b": "Cling film pressed straight against the surface of guacamole prevents browning, and the acid in lime juice also slows the avocado flesh from oxidising."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "An emergency fund should cover three to six months of living expenses and be kept in an easily accessible savings account.",
+  "b": "Keep enough in an easy-to-reach savings account to cover three to six months of living costs as an emergency fund."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "The Halvorsen Credit Union raised its savings rate to 4.35 percent on 1 September 2025, applying to balances up to 50,000 euros.",
+  "b": "From 1 September 2025 the Halvorsen Credit Union pays 4.35 percent on savings, for balances of up to 50,000 euros."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Compound interest means you earn returns on previous returns: 1,000 euros at 5 percent a year grows to about 1,629 euros after ten years.",
+  "b": "With compound interest you earn returns on earlier returns; 1,000 euros growing at 5 percent annually reaches roughly 1,629 euros in ten years."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Correct tyre pressure for a road bike is usually between 80 and 110 psi; wider tyres on rough roads run lower for comfort and grip.",
+  "b": "Road bike tyres are normally inflated to between 80 and 110 psi, while wider tyres used on bumpy roads are run at lower pressure for comfort and grip."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "The Alderwick Gran Fondo takes place on 21 September and covers 142 kilometres with 2,100 metres of climbing, starting from the village green.",
+  "b": "The Alderwick Gran Fondo is held on 21 September: 142 kilometres with 2,100 metres of ascent, setting off from the village green."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "A chain should be cleaned and lubricated every 200 kilometres or after riding in the rain, otherwise it wears out the cassette quickly.",
+  "b": "Clean and oil your chain every 200 kilometres, and after wet rides too; neglecting it quickly wears down the cassette."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Tomato seedlings should be planted outside only after the last frost, when night temperatures stay above ten degrees Celsius.",
+  "b": "Wait until after the final frost, when nights stay warmer than ten degrees Celsius, before putting tomato seedlings outdoors."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Gardener Pilar Quintana's rose collection at Hollin House includes 214 varieties, and the garden opens to visitors from 1 May to 30 September.",
+  "b": "Hollin House, the garden of Pilar Quintana, grows 214 rose varieties and welcomes visitors between 1 May and 30 September."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Compost needs a balance of green material such as grass clippings and brown material such as dry leaves, turned every few weeks to stay aerated.",
+  "b": "Good compost mixes green matter like grass clippings with brown matter like dry leaves, and is turned every couple of weeks to keep air in it."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "A database index speeds up lookups by keeping a sorted structure of column values, at the price of slower writes and more disk space.",
+  "b": "An index makes lookups faster by maintaining a sorted structure over column values, but it makes writes slower and takes extra disk space."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "SQLite stores an entire database in a single file and runs inside the application process, so no separate server needs to be installed.",
+  "b": "SQLite keeps a whole database in one file and runs within the application's own process, so there is no separate server to install."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Version 4.2 of the Quillon library, released on 8 January 2025, deprecated the synchronous client and added native async support.",
+  "b": "Quillon 4.2, published on 8 January 2025, deprecated its synchronous client and introduced built-in async support."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "The town of Marlbury received its market charter in 1247, allowing traders to hold a weekly fair every Thursday.",
+  "b": "Marlbury was granted a market charter in 1247, which let merchants hold a fair each Thursday."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Marlbury Bridge, built of local sandstone in 1389, has five arches and was widened in 1851 to carry carts.",
+  "b": "Built from local sandstone in 1389, Marlbury Bridge has five arches; in 1851 it was widened so carts could cross."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "A great fire in 1666 destroyed most timber houses in the old quarter, and the council afterwards required new buildings to use brick or stone.",
+  "b": "In 1666 a huge fire burned down most of the timber houses in the old quarter, after which the council insisted new buildings be made of brick or stone."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Walls reduce Wi-Fi strength, so put the router in a central spot, up high on a shelf, for better coverage."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "The Vantage X300 router supports speeds of up to 2.4 gigabits per second and costs 189 euros, with firmware update 3.1 released in March 2025.",
+  "b": "The Vantage X300 router costs 189 euros and supports up to 2.4 gigabits per second; firmware 3.1 came out in March 2025."
+ },
+ {
+  "label": "duplicate",
+  "kind": "reworded",
+  "a": "A VPN encrypts traffic between your device and a remote server, hiding your browsing from other people on a public network.",
+  "b": "A VPN encrypts the traffic between your device and a remote server, so others on a public network cannot see what you browse."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Saturn's rings are made mostly of water ice particles, from dust grains to boulders the size of houses. They are remarkably thin, often only ten metres thick.",
+  "b": "Home | News | Share on social media\n\nSaturn's rings are made mostly of water ice particles, from dust grains to boulders the size of houses. They are remarkably thin, often only ten metres thick.\n\nRead more articles. Subscribe to our newsletter. (c) Example Site. All rights reserved."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Dr. Marit Lindqvist discovered the exoplanet Kepla-9b in 2019 using the transit method, watching its star dim by 0.4 percent each time the planet crossed its face.",
+  "b": "Posted by admin on a weekday. 3 comments.\n\nDr. Marit Lindqvist discovered the exoplanet Kepla-9b in 2019 using the transit method, watching its star dim by 0.4 percent each time the planet crossed its face.\n\nRelated posts: see also our archive. Follow us on social media."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Risotto rice such as arborio releases starch when stirred slowly with warm stock added a ladle at a time. The dish is done after roughly eighteen minutes.",
+  "b": "Advertisement. Skip to main content. Menu.\n\nRisotto rice such as arborio releases starch when stirred slowly with warm stock added a ladle at a time. The dish is done after roughly eighteen minutes.\n\nCookie settings | Privacy | Terms of use | Contact us."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "A cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.",
+  "b": "Reader tip of the day:\n\nA cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.\n\nThanks for reading! Share this page with a friend."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Index funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.",
+  "b": "Home | News | Share on social media\n\nIndex funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.\n\nRead more articles. Subscribe to our newsletter. (c) Example Site. All rights reserved."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Late payments on a credit card typically trigger a penalty fee and can lower your credit score for several years.",
+  "b": "Posted by admin on a weekday. 3 comments.\n\nLate payments on a credit card typically trigger a penalty fee and can lower your credit score for several years.\n\nRelated posts: see also our archive. Follow us on social media."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Cadence is the rate at which a cyclist turns the pedals. Most riders are efficient between 80 and 100 revolutions per minute.",
+  "b": "Advertisement. Skip to main content. Menu.\n\nCadence is the rate at which a cyclist turns the pedals. Most riders are efficient between 80 and 100 revolutions per minute.\n\nCookie settings | Privacy | Terms of use | Contact us."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Coach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.",
+  "b": "Reader tip of the day:\n\nCoach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.\n\nThanks for reading! Share this page with a friend."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Slugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.",
+  "b": "Home | News | Share on social media\n\nSlugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.\n\nRead more articles. Subscribe to our newsletter. (c) Example Site. All rights reserved."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Lavender prefers poor, well-drained soil and full sun; overwatering causes root rot and shortens the life of the shrub.",
+  "b": "Posted by admin on a weekday. 3 comments.\n\nLavender prefers poor, well-drained soil and full sun; overwatering causes root rot and shortens the life of the shrub.\n\nRelated posts: see also our archive. Follow us on social media."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "b": "Advertisement. Skip to main content. Menu.\n\nA transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.\n\nCookie settings | Privacy | Terms of use | Contact us."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "b": "Reader tip of the day:\n\nDeveloper Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.\n\nThanks for reading! Share this page with a friend."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Mayor Eleanor Whitcombe founded the Marlbury Free Library in 1903 with a donation of 4,000 books from her private collection.",
+  "b": "Home | News | Share on social media\n\nMayor Eleanor Whitcombe founded the Marlbury Free Library in 1903 with a donation of 4,000 books from her private collection.\n\nRead more articles. Subscribe to our newsletter. (c) Example Site. All rights reserved."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "The Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.",
+  "b": "Posted by admin on a weekday. 3 comments.\n\nThe Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.\n\nRelated posts: see also our archive. Follow us on social media."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Changing the default administrator password on a router is the first step, because factory credentials are published online.",
+  "b": "Advertisement. Skip to main content. Menu.\n\nChanging the default administrator password on a router is the first step, because factory credentials are published online.\n\nCookie settings | Privacy | Terms of use | Contact us."
+ },
+ {
+  "label": "duplicate",
+  "kind": "boilerplate",
+  "a": "Network engineer Sunniva Berg recommends splitting guest devices onto a separate VLAN so visitors cannot reach the file server.",
+  "b": "Reader tip of the day:\n\nNetwork engineer Sunniva Berg recommends splitting guest devices onto a separate VLAN so visitors cannot reach the file server.\n\nThanks for reading! Share this page with a friend."
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "Amateur stargazers should use a red torch at night, because red light keeps the eyes adapted to darkness. Full dark adaptation takes roughly twenty minutes.",
+  "ids": [
+   "astro-2",
+   "astro-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "b": "Amateur stargazers should use a red torch at night, because red light keeps the eyes adapted to darkness. Full dark adaptation takes roughly twenty minutes.",
+  "ids": [
+   "astro-1",
+   "astro-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "Neutron stars are the collapsed cores of massive stars; a teaspoon of their material would weigh about a billion tonnes.",
+  "ids": [
+   "astro-2",
+   "astro-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Saturn's rings are made mostly of water ice particles, from dust grains to boulders the size of houses. They are remarkably thin, often only ten metres thick.",
+  "b": "The Orlov Space Telescope launched in March 2021 and orbits a million and a half kilometres from Earth. Its gold-coated mirror has a diameter of 6.5 metres.",
+  "ids": [
+   "astro-4",
+   "astro-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "b": "A lunar eclipse happens when the Earth moves between the Sun and the Moon, so our planet's shadow darkens the lunar surface. Totality can last up to about 100 minutes.",
+  "ids": [
+   "astro-1",
+   "astro-3"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "The Marlow Street Bakery sells 300 croissants every morning, each made with 27 layers of laminated butter dough, and closes at 2 pm on Sundays.",
+  "ids": [
+   "astro-2",
+   "cook-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "b": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "ids": [
+   "astro-1",
+   "db-4"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "Boiling pasta in heavily salted water, about ten grams of salt per litre, seasons the noodles from within. Reserve a cup of the cooking liquid for the sauce.",
+  "ids": [
+   "astro-2",
+   "cook-7"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Comet Tarsis-Ono returns to the inner solar system every 76 years. Its last perihelion passage was in February 1986, and the next is predicted for July 2062.",
+  "b": "Slugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.",
+  "ids": [
+   "astro-2",
+   "gar-4"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Orlov Space Telescope launched in March 2021 and orbits a million and a half kilometres from Earth. Its gold-coated mirror has a diameter of 6.5 metres.",
+  "b": "Sourdough bread needs a starter of flour and water that has fermented for about a week. Bake at 230 degrees Celsius for 40 minutes in a covered pot for a crisp crust.",
+  "ids": [
+   "astro-7",
+   "cook-1"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Marlow Street Bakery sells 300 croissants every morning, each made with 27 layers of laminated butter dough, and closes at 2 pm on Sundays.",
+  "b": "Fermenting cabbage with two percent salt by weight produces sauerkraut in about two weeks at room temperature, as lactic acid bacteria sour it.",
+  "ids": [
+   "cook-6",
+   "cook-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Risotto rice such as arborio releases starch when stirred slowly with warm stock added a ladle at a time. The dish is done after roughly eighteen minutes.",
+  "b": "A cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.",
+  "ids": [
+   "cook-4",
+   "cook-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Sourdough bread needs a starter of flour and water that has fermented for about a week. Bake at 230 degrees Celsius for 40 minutes in a covered pot for a crisp crust.",
+  "b": "A cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.",
+  "ids": [
+   "cook-1",
+   "cook-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Chef Anselm Brandt's famous goulash uses two kilograms of beef shoulder, paprika, and a long three-hour simmer. He opened his restaurant Brandt's Table in Vienna in 1999.",
+  "b": "To keep guacamole from browning, press cling film directly onto its surface; acid from lime juice also slows the oxidation of the avocado flesh.",
+  "ids": [
+   "cook-2",
+   "cook-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Risotto rice such as arborio releases starch when stirred slowly with warm stock added a ladle at a time. The dish is done after roughly eighteen minutes.",
+  "b": "Boiling pasta in heavily salted water, about ten grams of salt per litre, seasons the noodles from within. Reserve a cup of the cooking liquid for the sauce.",
+  "ids": [
+   "cook-4",
+   "cook-7"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Sourdough bread needs a starter of flour and water that has fermented for about a week. Bake at 230 degrees Celsius for 40 minutes in a covered pot for a crisp crust.",
+  "b": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "ids": [
+   "cook-1",
+   "hist-7"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Risotto rice such as arborio releases starch when stirred slowly with warm stock added a ladle at a time. The dish is done after roughly eighteen minutes.",
+  "b": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "ids": [
+   "cook-4",
+   "astro-1"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "To keep guacamole from browning, press cling film directly onto its surface; acid from lime juice also slows the oxidation of the avocado flesh.",
+  "b": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "ids": [
+   "cook-3",
+   "db-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "To keep guacamole from browning, press cling film directly onto its surface; acid from lime juice also slows the oxidation of the avocado flesh.",
+  "b": "Gardener Pilar Quintana's rose collection at Hollin House includes 214 varieties, and the garden opens to visitors from 1 May to 30 September.",
+  "ids": [
+   "cook-3",
+   "gar-2"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "A cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.",
+  "b": "Version 4.2 of the Quillon library, released on 8 January 2025, deprecated the synchronous client and added native async support.",
+  "ids": [
+   "cook-5",
+   "db-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "An emergency fund should cover three to six months of living expenses and be kept in an easily accessible savings account.",
+  "b": "Late payments on a credit card typically trigger a penalty fee and can lower your credit score for several years.",
+  "ids": [
+   "fin-1",
+   "fin-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Index funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.",
+  "b": "Late payments on a credit card typically trigger a penalty fee and can lower your credit score for several years.",
+  "ids": [
+   "fin-4",
+   "fin-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Index funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.",
+  "b": "The mortgage deadline for the Brisley First-Home Grant is 30 April 2026; applicants must have a deposit of at least 10 percent.",
+  "ids": [
+   "fin-4",
+   "fin-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "An emergency fund should cover three to six months of living expenses and be kept in an easily accessible savings account.",
+  "b": "Budgeting by the 50/30/20 rule sends half of take-home pay to needs, thirty percent to wants and twenty percent to saving or debt repayment.",
+  "ids": [
+   "fin-1",
+   "fin-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Halvorsen Credit Union raised its savings rate to 4.35 percent on 1 September 2025, applying to balances up to 50,000 euros.",
+  "b": "The mortgage deadline for the Brisley First-Home Grant is 30 April 2026; applicants must have a deposit of at least 10 percent.",
+  "ids": [
+   "fin-2",
+   "fin-7"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Halvorsen Credit Union raised its savings rate to 4.35 percent on 1 September 2025, applying to balances up to 50,000 euros.",
+  "b": "The Veyra Observatory sits at 2,400 metres on Mount Halden and houses a 1.8 metre reflecting telescope. It began operating on 12 June 1987 and mostly tracks faint asteroids.",
+  "ids": [
+   "fin-2",
+   "astro-1"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Index funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.",
+  "b": "Caching stores the results of expensive computations in memory; the hardest part is deciding when a cached value becomes stale.",
+  "ids": [
+   "fin-4",
+   "db-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The mortgage deadline for the Brisley First-Home Grant is 30 April 2026; applicants must have a deposit of at least 10 percent.",
+  "b": "Archaeologists excavating the castle moat in 2014 uncovered a trove of 112 silver pennies from the reign of an early king.",
+  "ids": [
+   "fin-7",
+   "hist-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Budgeting by the 50/30/20 rule sends half of take-home pay to needs, thirty percent to wants and twenty percent to saving or debt repayment.",
+  "b": "Garlic cloves are pushed into the soil in October, pointed end up, and harvested the following July once the leaves yellow.",
+  "ids": [
+   "fin-8",
+   "gar-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Index funds track a market benchmark and charge low annual fees, often below 0.2 percent, which is why many long-term savers prefer them over active managers.",
+  "b": "A chain should be cleaned and lubricated every 200 kilometres or after riding in the rain, otherwise it wears out the cassette quickly.",
+  "ids": [
+   "fin-4",
+   "cyc-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Coach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.",
+  "b": "Disc brakes stop more reliably than rim brakes in wet weather, but need regular bleeding of hydraulic fluid and pad replacement.",
+  "ids": [
+   "cyc-5",
+   "cyc-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Coach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.",
+  "b": "The Corran Valley cycle path opened in May 2022; it is 38 kilometres long, fully paved, and follows a disused railway line.",
+  "ids": [
+   "cyc-5",
+   "cyc-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Alderwick Gran Fondo takes place on 21 September and covers 142 kilometres with 2,100 metres of climbing, starting from the village green.",
+  "b": "A chain should be cleaned and lubricated every 200 kilometres or after riding in the rain, otherwise it wears out the cassette quickly.",
+  "ids": [
+   "cyc-2",
+   "cyc-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Correct tyre pressure for a road bike is usually between 80 and 110 psi; wider tyres on rough roads run lower for comfort and grip.",
+  "b": "Cadence is the rate at which a cyclist turns the pedals. Most riders are efficient between 80 and 100 revolutions per minute.",
+  "ids": [
+   "cyc-1",
+   "cyc-4"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Cadence is the rate at which a cyclist turns the pedals. Most riders are efficient between 80 and 100 revolutions per minute.",
+  "b": "Coach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.",
+  "ids": [
+   "cyc-4",
+   "cyc-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Corran Valley cycle path opened in May 2022; it is 38 kilometres long, fully paved, and follows a disused railway line.",
+  "b": "Ruth Okafor, treasurer of the Eastgate Allotment Society, reported a budget surplus of 2,310 euros for the 2024 fiscal year.",
+  "ids": [
+   "cyc-8",
+   "fin-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Corran Valley cycle path opened in May 2022; it is 38 kilometres long, fully paved, and follows a disused railway line.",
+  "b": "The Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.",
+  "ids": [
+   "cyc-8",
+   "hist-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The Alderwick Gran Fondo takes place on 21 September and covers 142 kilometres with 2,100 metres of climbing, starting from the village green.",
+  "b": "SQLite stores an entire database in a single file and runs inside the application process, so no separate server needs to be installed.",
+  "ids": [
+   "cyc-2",
+   "db-2"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Cyclists should signal turns early with a clearly extended arm and ride at least one metre from parked cars to avoid opening doors.",
+  "b": "Version 4.2 of the Quillon library, released on 8 January 2025, deprecated the synchronous client and added native async support.",
+  "ids": [
+   "cyc-7",
+   "db-3"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Disc brakes stop more reliably than rim brakes in wet weather, but need regular bleeding of hydraulic fluid and pad replacement.",
+  "b": "A VPN encrypts traffic between your device and a remote server, hiding your browsing from other people on a public network.",
+  "ids": [
+   "cyc-6",
+   "net-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Compost needs a balance of green material such as grass clippings and brown material such as dry leaves, turned every few weeks to stay aerated.",
+  "b": "Garlic cloves are pushed into the soil in October, pointed end up, and harvested the following July once the leaves yellow.",
+  "ids": [
+   "gar-3",
+   "gar-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Compost needs a balance of green material such as grass clippings and brown material such as dry leaves, turned every few weeks to stay aerated.",
+  "b": "Slugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.",
+  "ids": [
+   "gar-3",
+   "gar-4"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Tomato seedlings should be planted outside only after the last frost, when night temperatures stay above ten degrees Celsius.",
+  "b": "Compost needs a balance of green material such as grass clippings and brown material such as dry leaves, turned every few weeks to stay aerated.",
+  "ids": [
+   "gar-1",
+   "gar-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Slugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.",
+  "b": "Pruning apple trees in late winter, while they are dormant, encourages strong spring growth and better fruit yield.",
+  "ids": [
+   "gar-4",
+   "gar-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Tomato seedlings should be planted outside only after the last frost, when night temperatures stay above ten degrees Celsius.",
+  "b": "Slugs can be deterred without chemicals by laying crushed eggshells or copper tape around vulnerable seedlings.",
+  "ids": [
+   "gar-1",
+   "gar-4"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Garlic cloves are pushed into the soil in October, pointed end up, and harvested the following July once the leaves yellow.",
+  "b": "Ethernet cables of category 6 carry gigabit traffic up to 100 metres, and are less prone to interference than wireless links.",
+  "ids": [
+   "gar-6",
+   "net-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Garlic cloves are pushed into the soil in October, pointed end up, and harvested the following July once the leaves yellow.",
+  "b": "Each autumn the town celebrates the Apple Fair, a tradition in which growers parade the heaviest fruit through the high street.",
+  "ids": [
+   "gar-6",
+   "hist-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Pruning apple trees in late winter, while they are dormant, encourages strong spring growth and better fruit yield.",
+  "b": "SQLite stores an entire database in a single file and runs inside the application process, so no separate server needs to be installed.",
+  "ids": [
+   "gar-8",
+   "db-2"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Gardener Pilar Quintana's rose collection at Hollin House includes 214 varieties, and the garden opens to visitors from 1 May to 30 September.",
+  "b": "Network engineer Sunniva Berg recommends splitting guest devices onto a separate VLAN so visitors cannot reach the file server.",
+  "ids": [
+   "gar-2",
+   "net-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Gardener Pilar Quintana's rose collection at Hollin House includes 214 varieties, and the garden opens to visitors from 1 May to 30 September.",
+  "b": "Correct tyre pressure for a road bike is usually between 80 and 110 psi; wider tyres on rough roads run lower for comfort and grip.",
+  "ids": [
+   "gar-2",
+   "cyc-1"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "b": "Unit tests check small pieces of code in isolation, and run in milliseconds, so they can be executed on every commit.",
+  "ids": [
+   "db-5",
+   "db-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "b": "Normalising a schema removes duplicated data by splitting it into related tables joined with foreign keys.",
+  "ids": [
+   "db-5",
+   "db-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "SQLite stores an entire database in a single file and runs inside the application process, so no separate server needs to be installed.",
+  "b": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "ids": [
+   "db-2",
+   "db-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "b": "Unit tests check small pieces of code in isolation, and run in milliseconds, so they can be executed on every commit.",
+  "ids": [
+   "db-4",
+   "db-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "b": "Developer Idris Calloway wrote the Pellucid parser in 2023; it handles 40 megabytes of JSON per second on a single core.",
+  "ids": [
+   "db-4",
+   "db-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Caching stores the results of expensive computations in memory; the hardest part is deciding when a cached value becomes stale.",
+  "b": "The Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.",
+  "ids": [
+   "db-8",
+   "hist-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Unit tests check small pieces of code in isolation, and run in milliseconds, so they can be executed on every commit.",
+  "b": "Archaeologists excavating the castle moat in 2014 uncovered a trove of 112 silver pennies from the reign of an early king.",
+  "ids": [
+   "db-7",
+   "hist-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Caching stores the results of expensive computations in memory; the hardest part is deciding when a cached value becomes stale.",
+  "b": "Amateur stargazers should use a red torch at night, because red light keeps the eyes adapted to darkness. Full dark adaptation takes roughly twenty minutes.",
+  "ids": [
+   "db-8",
+   "astro-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "SQLite stores an entire database in a single file and runs inside the application process, so no separate server needs to be installed.",
+  "b": "Fermenting cabbage with two percent salt by weight produces sauerkraut in about two weeks at room temperature, as lactic acid bacteria sour it.",
+  "ids": [
+   "db-2",
+   "cook-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "b": "Dr. Marit Lindqvist discovered the exoplanet Kepla-9b in 2019 using the transit method, watching its star dim by 0.4 percent each time the planet crossed its face.",
+  "ids": [
+   "db-4",
+   "astro-5"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The town of Marlbury received its market charter in 1247, allowing traders to hold a weekly fair every Thursday.",
+  "b": "Archaeologists excavating the castle moat in 2014 uncovered a trove of 112 silver pennies from the reign of an early king.",
+  "ids": [
+   "hist-1",
+   "hist-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.",
+  "b": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "ids": [
+   "hist-5",
+   "hist-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Marlbury Bridge, built of local sandstone in 1389, has five arches and was widened in 1851 to carry carts.",
+  "b": "A great fire in 1666 destroyed most timber houses in the old quarter, and the council afterwards required new buildings to use brick or stone.",
+  "ids": [
+   "hist-2",
+   "hist-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Marlbury Bridge, built of local sandstone in 1389, has five arches and was widened in 1851 to carry carts.",
+  "b": "Each autumn the town celebrates the Apple Fair, a tradition in which growers parade the heaviest fruit through the high street.",
+  "ids": [
+   "hist-2",
+   "hist-8"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "b": "Each autumn the town celebrates the Apple Fair, a tradition in which growers parade the heaviest fruit through the high street.",
+  "ids": [
+   "hist-7",
+   "hist-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Marlbury Bridge, built of local sandstone in 1389, has five arches and was widened in 1851 to carry carts.",
+  "b": "A chain should be cleaned and lubricated every 200 kilometres or after riding in the rain, otherwise it wears out the cassette quickly.",
+  "ids": [
+   "hist-2",
+   "cyc-3"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "b": "Coach Tomasz Wrede designed a six-week hill training plan: two interval sessions weekly plus one long ride of at least three hours.",
+  "ids": [
+   "hist-7",
+   "cyc-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "b": "A cast iron skillet should be dried right after washing and rubbed with a thin coat of oil, otherwise rust spots appear on the pan.",
+  "ids": [
+   "hist-7",
+   "cook-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "b": "Normalising a schema removes duplicated data by splitting it into related tables joined with foreign keys.",
+  "ids": [
+   "hist-7",
+   "db-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "The railway reached Marlbury on 4 August 1862, cutting the journey to the capital from a full day by coach to three hours.",
+  "b": "A transaction groups several statements so they either all succeed or all roll back, which keeps data consistent after a crash.",
+  "ids": [
+   "hist-7",
+   "db-4"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Ethernet cables of category 6 carry gigabit traffic up to 100 metres, and are less prone to interference than wireless links.",
+  "ids": [
+   "net-1",
+   "net-6"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Changing the default administrator password on a router is the first step, because factory credentials are published online.",
+  "ids": [
+   "net-1",
+   "net-4"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "A DNS server translates a website's name into a numeric address; switching to a faster resolver can shave tens of milliseconds off page loads.",
+  "ids": [
+   "net-1",
+   "net-7"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "The Vantage X300 router supports speeds of up to 2.4 gigabits per second and costs 189 euros, with firmware update 3.1 released in March 2025.",
+  "b": "A VPN encrypts traffic between your device and a remote server, hiding your browsing from other people on a public network.",
+  "ids": [
+   "net-2",
+   "net-3"
+  ]
+ },
+ {
+  "label": "related",
+  "kind": "same-topic",
+  "a": "Changing the default administrator password on a router is the first step, because factory credentials are published online.",
+  "b": "Backups should follow the 3-2-1 rule: three copies of data, on two different media, with one copy kept offsite.",
+  "ids": [
+   "net-4",
+   "net-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Fermenting cabbage with two percent salt by weight produces sauerkraut in about two weeks at room temperature, as lactic acid bacteria sour it.",
+  "ids": [
+   "net-1",
+   "cook-8"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "A VPN encrypts traffic between your device and a remote server, hiding your browsing from other people on a public network.",
+  "b": "The Marlbury woollen mill employed about 600 workers at its peak in 1880 before closing in 1957.",
+  "ids": [
+   "net-3",
+   "hist-5"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Compound interest means you earn returns on previous returns: 1,000 euros at 5 percent a year grows to about 1,629 euros after ten years.",
+  "ids": [
+   "net-1",
+   "fin-3"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Ethernet cables of category 6 carry gigabit traffic up to 100 metres, and are less prone to interference than wireless links.",
+  "b": "Disc brakes stop more reliably than rim brakes in wet weather, but need regular bleeding of hydraulic fluid and pad replacement.",
+  "ids": [
+   "net-6",
+   "cyc-6"
+  ]
+ },
+ {
+  "label": "unrelated",
+  "kind": "cross-topic",
+  "a": "Wi-Fi signal weakens through thick walls, so placing the router centrally and high on a shelf gives better coverage.",
+  "b": "Fermenting cabbage with two percent salt by weight produces sauerkraut in about two weeks at room temperature, as lactic acid bacteria sour it.",
+  "ids": [
+   "net-1",
+   "cook-8"
+  ]
+ }
+]
