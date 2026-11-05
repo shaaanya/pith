@@ -127,6 +127,8 @@ def _search(a):
     for n, h in enumerate(r.hits, 1):
         cite = _cite_line(n, h.title, h.source_url, h.locator)
         print(f"{cite}\n    {h.item_id or 'segment'} [{h.kind}/{h.provenance}] {h.snippet}")
+    if r.egress:
+        print(f"egress: text sent to remote backend(s): {', '.join(r.egress)}", file=sys.stderr)
 
 
 def _ask(a):
@@ -177,8 +179,13 @@ def _show(a):
 
 
 def _reindex(a):
+    from infoparser.providers import egress
     from infoparser.retrieval.index import reindex
-    n = reindex(_services(a), prune_old=a.prune_old)
+    s = _services(a)
+    with egress.collect() as sent:
+        n = reindex(s, prune_old=a.prune_old)
+    for name, size in sent.items():
+        print(f"egress: {size} bytes of text sent to remote backend {name}", file=sys.stderr)
     print(f"reindexed {n} vectors" if n
           else "nothing to reindex (no embedding backend configured?)")
 

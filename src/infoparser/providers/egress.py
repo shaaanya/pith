@@ -5,6 +5,7 @@ a sink that writes a processing_events row (stage='egress', backend, egress=1,
 detail={"bytes_sent": N}) for the inbox item being processed. ask/search have no inbox item
 (processing_events.inbox_id is NOT NULL), so they report egress inline instead (Answer.egress /
 SearchResult.egress). Only configured routes can be reported, never what a provider logs."""
+import contextlib
 import functools
 import inspect
 import sys
@@ -76,3 +77,15 @@ def wrap_remote(b):
             return inner
         setattr(b, m, make(fn))
     return b
+
+
+@contextlib.contextmanager
+def collect():
+    """Total bytes sent per remote backend by the code inside the block (for commands that have
+    no inbox item to attach egress rows to, such as `reindex`)."""
+    sent: dict[str, int] = {}
+    token = sink.set(lambda name, n: sent.__setitem__(name, sent.get(name, 0) + n))
+    try:
+        yield sent
+    finally:
+        sink.reset(token)
