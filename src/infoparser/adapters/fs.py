@@ -1,0 +1,111 @@
+"""Filesystem drop-folder adapter (iCloud-safe).
+
+A file is submitted only when: not hidden / `.icloud` stub / `.part|.tmp|.crdownload`, not a symlink escaping
+the folder, within max_fetch_bytes, mtime older than MIN_AGE seconds and size unchanged across `stable_polls`
+consecutive polls. It is moved to `<dir>/.processed/` only AFTER submit() returned; a crash in between leaves
+the file, and the next poll re-submits it harmlessly (Inbox dedupes by canonical URL / content sha).
+`.url`, `.webloc` and `.txt/.md` files whose every non-empty line is a URL become one URL submission per URL.
+"""
+from __future__ import annotations
+
+import logging
+import plistlib
+import re
+import shutil
+import time
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+MIN_AGE = 2.0
+_SKIP_SUFFIX = (".icloud", ".part", ".tmp", ".crdownload")
+_URL = re.compile(r"https?://\S+")
+
+
+def _link_urls(p: Path) -> list[str] | None:
+    """URLs if `p` is a link file, else None (-> submitted as a plain file)."""
+    ext = p.suffix.lower()
+    try:
+        if ext == ".webloc":
+            u = plistlib.loads(p.read_bytes()).get("URL")
+            return [u] if isinstance(u, str) and _URL.fullmatch(u) else None
+        if ext == ".url":
+            m = re.search(r"^URL=(\S+)\s*$", p.read_text("utf-8", "replace"), re.M)
+            return [m[1]] if m and _URL.fullmatch(m[1]) else None
+        if ext in (".txt", ".md") and p.stat().st_size <= 1_000_000:
+            lines = [ln.strip() for ln in p.read_text("utf-8").splitlines() if ln.strip()]
+            return lines if lines and all(_URL.fullmatch(ln) for ln in lines) else None
+    except (OSError, ValueError, plistlib.InvalidFileException):
+        return None
+    return None
+
+
+class FsAdapter:
+    name = "fs"
+
+    def __init__(self, inbox, dirs: list[Path], stable_polls: int = 2):
+        self.inbox, self.dirs, self.stable_polls = inbox, [Path(d) for d in dirs], stable_polls
+        self._seen: dict[Path, tuple[int, int]] = {}  # path -> (size, consecutive stable polls)
+        self.skipped: dict[Path, str] = {}
+
+    def _eligible(self, d: Path, p: Path) -> bool:
+        if p.name.startswith(".") or p.name.endswith(_SKIP_SUFFIX):
+            return False
+        try:
+            if p.is_symlink() and not p.resolve().is_relative_to(d.resolve()):
+                self.skipped[p] = "symlink outside folder"
+                return False
+            if not p.is_file():
+                return False
+            st = p.stat()
+        except OSError:
+            return False
+        if st.st_size > self.inbox.cfg.max_fetch_bytes:
+            self.skipped[p] = "larger than max_fetch_bytes"
+            return False
+        if time.time() - st.st_mtime < MIN_AGE:
+            self._seen.pop(p, None)
+            return False
+        size, n = self._seen.get(p, (-1, 0))
+        n = n + 1 if size == st.st_size else 1
+        self._seen[p] = (st.st_size, n)
+        return n >= self.stable_polls
+
+    def poll(self) -> int:
+        done = 0
+        for d in self.dirs:
+            if not d.is_dir():
+                continue
+            for p in sorted(d.iterdir()):
+                if not self._eligible(d, p):
+                    continue
+                try:
+                    self._submit(p)
+                    self._move(d, p)
+                except Exception:  # noqa: BLE001 - leave the file in place; retried next poll
+                    log.warning("fs adapter: %s not processed", p, exc_info=True)
+                    continue
+                self._seen.pop(p, None)
+                done += 1
+        return done
+
+    def _submit(self, p: Path) -> None:
+        urls = _link_urls(p)
+        if urls:
+            for u in urls:
+                self.inbox.submit(adapter=self.name, text=u, user_context=f"from {p.name}")
+        else:
+            self.inbox.submit(adapter=self.name, file=p, filename=p.name)
+
+    @staticmethod
+    def _move(d: Path, p: Path) -> None:
+        dest = d / ".processed"
+        dest.mkdir(exist_ok=True)
+        target = dest / p.name
+        if target.exists():
+            target = dest / f"{int(time.time())}-{p.name}"
+        shutil.move(str(p), str(target))
+
+    def run_forever(self, interval: float = 5.0, stop=None) -> None:
+        while not (stop and stop.is_set()):
+            self.poll()
+            time.sleep(interval) if stop is None else stop.wait(interval)

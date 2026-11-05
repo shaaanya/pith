@@ -1,0 +1,117 @@
+{
+ "name": "Saved",
+ "type": "saved_messages",
+ "id": 777,
+ "messages": [
+  {
+   "id": 1,
+   "type": "service",
+   "date": "2024-01-01T10:00:00",
+   "action": "create_group",
+   "text": ""
+  },
+  {
+   "id": 2,
+   "type": "message",
+   "date": "2024-01-02T10:00:00",
+   "from": "Me",
+   "text": "plain note about sourdough",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "plain note about sourdough"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "message",
+   "date": "2024-01-03T10:00:00",
+   "text": [
+    "see ",
+    {
+     "type": "link",
+     "text": "https://example.com/a?utm_source=x"
+    },
+    " and ",
+    {
+     "type": "text_link",
+     "text": "this",
+     "href": "https://example.org/b"
+    },
+    {
+     "type": "bold",
+     "text": " bold"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "see "
+    },
+    {
+     "type": "link",
+     "text": "https://example.com/a?utm_source=x"
+    },
+    {
+     "type": "plain",
+     "text": " and "
+    },
+    {
+     "type": "text_link",
+     "text": "this",
+     "href": "https://example.org/b"
+    },
+    {
+     "type": "bold",
+     "text": " bold"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "message",
+   "date": "2024-01-04T10:00:00",
+   "text": [
+    {
+     "type": "link",
+     "text": "https://example.net/only"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "link",
+     "text": "https://example.net/only"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "message",
+   "date": "2024-01-05T10:00:00",
+   "forwarded_from": "Some Channel",
+   "text": "forwarded wisdom"
+  },
+  {
+   "id": 6,
+   "type": "message",
+   "date": "2024-01-06T10:00:00",
+   "text": "a photo caption",
+   "photo": "photos/p1.jpg"
+  },
+  {
+   "id": 7,
+   "type": "message",
+   "date": "2024-01-07T10:00:00",
+   "text": "gone file",
+   "photo": "photos/missing.jpg"
+  },
+  {
+   "id": 8,
+   "type": "message",
+   "date": "2024-01-08T10:00:00",
+   "text": "",
+   "file": "../../etc/passwd"
+  }
+ ]
+}

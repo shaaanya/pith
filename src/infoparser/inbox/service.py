@@ -33,7 +33,10 @@ class Inbox:
         mime: str | None = None,
         user_context: str | None = None,
         platform: str | None = None,
+        external_id: str | None = None,
     ) -> SubmitResult:
+        """external_id: adapter-scoped stable id (e.g. Telegram chat:message). A repeat with the same
+        (adapter, external_id) is a pure no-op duplicate: no new row, no context appended, no requeue."""
         if (text is None) == (file is None):
             raise ValueError("exactly one of text or file is required")
         sha = url = None
@@ -47,6 +50,11 @@ class Inbox:
             kind = "text"
         now = utcnow()
         with self._tx():
+            if external_id:
+                seen = self.conn.execute("SELECT id FROM inbox_items WHERE adapter=? AND external_id=?",
+                                         (adapter, external_id)).fetchone()
+                if seen:
+                    return SubmitResult(seen["id"], seen["id"], False)
             if url:
                 q, key = "canonical_url=?", url
             elif sha:
@@ -70,10 +78,10 @@ class Inbox:
             iid = new_id()
             self.conn.execute(
                 "INSERT INTO inbox_items(id, adapter, platform, submitted_at, kind_hint, payload_text,"
-                " blob_sha256, original_filename, mime, canonical_url, user_context, status, updated_at)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " blob_sha256, original_filename, mime, canonical_url, user_context, status, updated_at, external_id)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (iid, adapter, platform or detect_platform(url), now, kind, text, sha, filename,
-                 mime, url, user_context or None, Status.PENDING, now),
+                 mime, url, user_context or None, Status.PENDING, now, external_id),
             )
             self._insert_job(iid)
         return SubmitResult(iid)

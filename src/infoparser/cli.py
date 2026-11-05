@@ -135,6 +135,58 @@ def _doctor(a):
         print(f"skipped: {k}")
 
 
+ADAPTERS = ("fs", "telegram_export", "http")
+
+
+def _adapters_list(a):
+    for n in ADAPTERS:
+        print(n)
+
+
+def _watch(a):
+    from infoparser.adapters.fs import FsAdapter
+    s = _services(a)
+    fa = FsAdapter(s.inbox, s.cfg.watch_dirs)
+    if a.once:
+        fa.poll()  # first sighting only records sizes; use two polls for a one-shot scan
+        print(f"submitted {fa.poll()} file(s)")
+        return
+    try:
+        fa.run_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+def _adapters_run(a):
+    if a.name == "fs":
+        return _watch(a)
+    if a.name == "http":
+        return _serve_http(a)
+    sys.exit(f"error: adapter {a.name} is not a long-running adapter (use import-telegram)")
+
+
+def _import_telegram(a):
+    from infoparser.adapters.telegram_export import import_export
+    r = import_export(_services(a).inbox, Path(a.path), since=a.since)
+    print(f"submitted {r.submitted}, duplicates {r.duplicates}, skipped {r.skipped}")
+
+
+def _serve_http(a):
+    from infoparser.adapters.http_ingest import IngestServer
+    s = _services(a)
+    try:
+        srv = IngestServer(s.cfg)
+    except ValueError as e:
+        sys.exit(f"error: {e}")
+    print(f"listening on http://{srv.server_address[0]}:{srv.server_address[1]} (token in {s.cfg.home}/http_token)")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+
+
 def main(argv=None):
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--home", default=argparse.SUPPRESS)
@@ -174,6 +226,21 @@ def main(argv=None):
     c.add_argument("--prune-old", action="store_true")
     c.set_defaults(f=_reindex)
     sub.add_parser("doctor", parents=[common]).set_defaults(f=_doctor)
+    c = sub.add_parser("adapters", parents=[common])
+    asub = c.add_subparsers(dest="acmd", required=True)
+    asub.add_parser("list", parents=[common]).set_defaults(f=_adapters_list)
+    r = asub.add_parser("run", parents=[common])
+    r.add_argument("name", choices=ADAPTERS)
+    r.add_argument("--once", action="store_true")
+    r.set_defaults(f=_adapters_run)
+    c = sub.add_parser("watch", parents=[common])
+    c.add_argument("--once", action="store_true")
+    c.set_defaults(f=_watch)
+    c = sub.add_parser("import-telegram", parents=[common])
+    c.add_argument("path")
+    c.add_argument("--since")
+    c.set_defaults(f=_import_telegram)
+    sub.add_parser("serve-http", parents=[common]).set_defaults(f=_serve_http)
     a = p.parse_args(argv)
     a.f(a)
     return 0
