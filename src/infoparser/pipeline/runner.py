@@ -123,6 +123,10 @@ def _save(s, row, ex, ct, distilled):
     segs, cands, by = distilled
     with transaction(s.conn):
         sid = row["source_id"]
+        now = s.conn.execute("SELECT source_id FROM inbox_items WHERE id=?", (inbox_id,)).fetchone()
+        if now is None or now["source_id"] != sid:  # another worker saved since we started
+            raise RuntimeError("lost the lease: the item was saved by another worker; "
+                               "result discarded")
         if sid:
             s.conn.execute(
                 "UPDATE sources SET title=?, author=?, content_type=?, text_sha256=?, extractor=?,"
