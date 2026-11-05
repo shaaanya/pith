@@ -66,7 +66,11 @@ embeddings, digests) can be regenerated or is a report.
   extraction. A crash after the blob write leaves at most an unreferenced blob.
 - A worker claims a job with a lease (`lease_seconds`, default 300) and a heartbeat thread keeps it alive.
   If the worker dies, the lease expires and the job is reclaimed; a stale worker's late completion is
-  discarded. Failures retry with exponential backoff (5 s base, 1 h cap) up to `max_attempts` (default 5),
+  discarded, and its late WRITES are too: the worker publishes (job, worker id, attempt) in a context
+  variable, and the source/segment/item save and the twin-sharing step verify inside their own
+  transaction that the jobs row is still running under that worker and attempt (a stale worker raises
+  "lost the lease" and writes nothing). Heartbeats only extend a lease still owned by the sender.
+  Direct library calls outside a Worker are not fenced. Failures retry with exponential backoff (5 s base, 1 h cap) up to `max_attempts` (default 5),
   then the item is `failed` and the original is untouched.
 - `infoparser run` holds an `flock` on `<home>/run.lock` so only one `run` exists per home. The
   standalone `worker`, `dashboard`, `watch` and `serve-http` commands hold a shared `flock` on
