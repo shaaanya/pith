@@ -49,7 +49,7 @@ class Inbox:
         kind, sha, url = self._classify(text, file, as_note)
         now = utcnow()
         with self._tx():
-            dup = self._existing((adapter, external_id), url, sha, user_context, now)
+            dup = self._existing((adapter, external_id), (url, text), sha, user_context, now)
             if dup:
                 return dup
             iid = new_id()
@@ -84,10 +84,12 @@ class Inbox:
             (adapter, external_id)).fetchone()
         return seen["id"] if seen else None
 
-    def _existing(self, ext: tuple, url, sha, user_context, now) -> SubmitResult | None:
+    def _existing(self, ext: tuple, urls: tuple, sha, user_context, now) -> SubmitResult | None:
         """A repeat submission: no-op for a known external id, else folded into the original.
 
-        ext is (adapter, external_id)."""
+        ext is (adapter, external_id); urls is (canonical url or None, submitted text); the
+        canonical form is only the lookup key, provenance records the URL as submitted."""
+        url, text = urls
         adapter, external_id = ext
         seen = self._seen_external(adapter, external_id)
         if seen:
@@ -99,7 +101,7 @@ class Inbox:
         self._append_context(old["id"], user_context, now)
         self.conn.execute(
             "INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
-            (old["source_id"], old["id"], url, now),
+            (old["source_id"], old["id"], text.strip() if url else None, now),
         )
         if requeue:
             self._requeue(old["id"], now)
