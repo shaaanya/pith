@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 
@@ -22,3 +22,24 @@ class SubmitResult:
     id: str  # the record that holds this submission (existing one on duplicate)
     duplicate_of: str | None = None
     requeued: bool = False
+
+
+@dataclass(frozen=True)
+class SegmentIn:
+    idx: int
+    text: str
+    locator: str
+
+
+@dataclass
+class Candidate:
+    kind: str
+    title: str
+    body: str
+    data: dict = field(default_factory=dict)
+    provenance: str = "inferred"
+    evidence: str | None = None
+    segment_idx: int | None = None
+    confidence: float | None = None
+    entities: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
