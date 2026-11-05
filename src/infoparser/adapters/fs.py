@@ -1,14 +1,15 @@
 """Filesystem drop-folder adapter (iCloud-safe).
 
-A file is submitted only when: not hidden / `.icloud` stub / `.part|.tmp|.crdownload`, not a symlink escaping
-the folder, within max_fetch_bytes, mtime older than MIN_AGE seconds and size unchanged across `stable_polls`
-consecutive polls. It is moved to `<dir>/.processed/` only AFTER submit() returned; a crash in between leaves
-the file, and the next poll re-submits it harmlessly (Inbox dedupes by canonical URL / content sha).
-`.url`, `.webloc` and `.txt/.md` files whose every non-empty line is a URL become one URL submission per URL.
-"""
+A file is submitted only when: not hidden / `.icloud` stub / `.part|.tmp|.crdownload`, not a
+symlink escaping the folder, within max_fetch_bytes, mtime older than MIN_AGE seconds and size
+unchanged across `stable_polls` consecutive polls. It is moved to `<dir>/.processed/` only AFTER
+submit() returned; a crash in between leaves the file, and the next poll re-submits it harmlessly
+(Inbox dedupes by canonical URL / content sha). `.url`, `.webloc` and `.txt/.md` files whose every
+non-empty line is a URL become one URL submission per URL."""
 from __future__ import annotations
 
 import logging
+import os
 import plistlib
 import re
 import shutil
@@ -41,6 +42,8 @@ def _link_urls(p: Path) -> list[str] | None:
 
 
 class FsAdapter:
+    """Polls drop folders and submits settled files to the inbox."""
+
     name = "fs"
 
     def __init__(self, inbox, dirs: list[Path], stable_polls: int = 2):
@@ -48,20 +51,26 @@ class FsAdapter:
         self._seen: dict[Path, tuple[int, int]] = {}  # path -> (size, consecutive stable polls)
         self.skipped: dict[Path, str] = {}
 
-    def _eligible(self, d: Path, p: Path) -> bool:
+    def _candidate(self, d: Path, p: Path) -> os.stat_result | None:
+        """stat of `p` if it is a regular, in-folder, not oversize file; else None."""
         if p.name.startswith(".") or p.name.endswith(_SKIP_SUFFIX):
-            return False
+            return None
         try:
             if p.is_symlink() and not p.resolve().is_relative_to(d.resolve()):
                 self.skipped[p] = "symlink outside folder"
-                return False
-            if not p.is_file():
-                return False
-            st = p.stat()
+                return None
+            st = p.stat() if p.is_file() else None
         except OSError:
-            return False
-        if st.st_size > self.inbox.cfg.max_fetch_bytes:
+            return None
+        if st and st.st_size > self.inbox.cfg.max_fetch_bytes:
             self.skipped[p] = "larger than max_fetch_bytes"
+            return None
+        return st
+
+    def _eligible(self, d: Path, p: Path) -> bool:
+        """True once `p` is old enough and its size was stable for `stable_polls` polls."""
+        st = self._candidate(d, p)
+        if st is None:
             return False
         if time.time() - st.st_mtime < MIN_AGE:
             self._seen.pop(p, None)
@@ -72,6 +81,7 @@ class FsAdapter:
         return n >= self.stable_polls
 
     def poll(self) -> int:
+        """One scan of every folder; returns how many files were submitted and moved."""
         done = 0
         for d in self.dirs:
             if not d.is_dir():
@@ -82,7 +92,8 @@ class FsAdapter:
                 try:
                     self._submit(p)
                     self._move(d, p)
-                except Exception:  # noqa: BLE001 - leave the file in place; retried next poll
+                except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                    # leave the file in place; retried next poll
                     log.warning("fs adapter: %s not processed", p, exc_info=True)
                     continue
                 self._seen.pop(p, None)
@@ -91,7 +102,8 @@ class FsAdapter:
 
     def _submit(self, p: Path) -> None:
         st = p.stat()
-        key = f"{p.name}:{st.st_size}:{st.st_mtime_ns}"  # same unchanged file re-seen after a crash = no-op
+        # the same unchanged file re-seen after a crash is a no-op
+        key = f"{p.name}:{st.st_size}:{st.st_mtime_ns}"
         urls = _link_urls(p)
         if urls:
             for u in urls:
@@ -110,6 +122,10 @@ class FsAdapter:
         shutil.move(str(p), str(target))
 
     def run_forever(self, interval: float = 5.0, stop=None) -> None:
+        """Poll until `stop` (a threading.Event) is set; forever when it is None."""
         while not (stop and stop.is_set()):
             self.poll()
-            time.sleep(interval) if stop is None else stop.wait(interval)
+            if stop is None:
+                time.sleep(interval)
+            else:
+                stop.wait(interval)
