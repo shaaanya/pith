@@ -1,4 +1,5 @@
-"""Embedding index maintenance. Best-effort: no embedder configured -> everything is a no-op (FTS still works)."""
+"""Embedding index maintenance. Best-effort: no embedder configured -> everything is a no-op
+(FTS still works)."""
 from infoparser.retrieval import vectors
 from infoparser.store.db import transaction
 
@@ -9,7 +10,7 @@ def _model_id(embedder) -> str:
     if mid is None:
         mid = embedder.embed(["."]).model_id
         try:
-            embedder._ip_model_id = mid
+            setattr(embedder, "_ip_model_id", mid)  # our own cache attribute on the backend
         except AttributeError:  # slotted/frozen backend: just re-probe next time
             pass
     return mid
@@ -19,11 +20,12 @@ def _owners(conn, model_id: str, only_missing: bool):
     q = ("SELECT 'segment' AS t, CAST(g.id AS TEXT) AS id, g.text AS text FROM segments g"
          " UNION ALL SELECT 'item', k.id, k.title || char(10) || k.body FROM knowledge_items k"
          " WHERE k.deleted_at IS NULL")
-    rows = [r for r in conn.execute(q) if (r["text"] or "").strip()]  # nothing to embed in blank text
+    # nothing to embed in blank text
+    rows = [r for r in conn.execute(q) if (r["text"] or "").strip()]
     if not only_missing:
         return rows
-    have = {(r[0], r[1]) for r in conn.execute("SELECT owner_type, owner_id FROM embeddings WHERE model_id=?",
-                                                (model_id,))}
+    have = {(r[0], r[1]) for r in conn.execute(
+        "SELECT owner_type, owner_id FROM embeddings WHERE model_id=?", (model_id,))}
     return [r for r in rows if (r["t"], r["id"]) not in have]
 
 
@@ -45,7 +47,8 @@ def _store(conn, computed) -> None:
 
 
 def embed_pending(services, batch: int = 32) -> int:
-    """Embed segments and live items lacking a vector for the active model. Returns count embedded."""
+    """Embed segments and live items lacking a vector for the active model.
+    Returns the count embedded."""
     emb = services.registry.first("embed")
     if emb is None:
         return 0
@@ -56,7 +59,8 @@ def embed_pending(services, batch: int = 32) -> int:
 
 def reindex(services, *, prune_old: bool = False) -> int:
     """Rebuild every vector for the active embedding model; optionally delete other models' rows.
-    New vectors are computed first; the swap is one transaction, so a failing embedder loses nothing."""
+    New vectors are computed first; the swap is one transaction, so a failing embedder
+    loses nothing."""
     emb = services.registry.first("embed")
     if emb is None:
         return 0
