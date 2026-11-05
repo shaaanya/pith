@@ -36,10 +36,12 @@ def test_registry_unknown_task_ref_raises(make_cfg):
         Registry.from_config(make_cfg({"a": H}, {"distill": ["ghost"]}))
 
 
-def test_registry_unshipped_type_errors_only_when_configured(make_cfg):
-    Registry.from_config(make_cfg({"a": H}))  # tesseract etc. never imported
+def test_registry_unshipped_type_errors_only_when_configured(make_cfg, monkeypatch):
+    from infoparser.providers import registry as R
+    monkeypatch.setitem(R.TYPES, "ghost", "infoparser.providers.nonexistent:Ghost")
+    Registry.from_config(make_cfg({"a": H}))  # never imported unless configured
     with pytest.raises(ValueError, match="unavailable"):
-        Registry.from_config(make_cfg({"t": {"type": "tesseract"}}))
+        Registry.from_config(make_cfg({"t": {"type": "ghost"}}))
 
 
 def test_registry_name_model_override_and_describe(make_cfg, stub):

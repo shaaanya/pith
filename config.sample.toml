@@ -26,7 +26,26 @@ model = "REPLACE_WITH_LOCAL_MODEL"
 [backends.heuristic]
 type = "heuristic"
 
+# Optional backends (placeholders only; model names live here, never in code).
+# [backends.ocr]
+# type = "tesseract"            # keys: binary = "tesseract", lang = "eng"
+#
+# [backends.stt]
+# type = "whisper_cpp"          # UNVERIFIED against a real binary
+# binary = "whisper-cli"
+# model_path = "REPLACE_WITH_PATH_TO_GGML_MODEL"
+# language = "en"               # optional
+# threads = 4                   # optional
+#
+# [backends.cloud]
+# type = "anthropic"            # remote: needs [privacy] allow_remote = true; live calls UNVERIFIED
+# model = "REPLACE_WITH_MODEL"
+# api_key_env = "ANTHROPIC_API_KEY"   # env var NAME, never the key itself
+# max_tokens = 4096
+
 # Task routing: ordered fallback lists, "name" or "name:model".
 [tasks]
 distill = ["local", "heuristic"]
 classify = ["local", "heuristic"]
+# ocr = ["ocr"]
+# transcribe = ["stt"]

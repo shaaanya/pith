@@ -28,7 +28,16 @@ def make_cfg(tmp_path):
 
 
 @pytest.fixture
-def backends(stub):
+def anthropic_stub():
+    from stubs.anthropic_stub import AnthropicStub
+    with AnthropicStub() as s:
+        yield s
+
+
+@pytest.fixture
+def backends(stub, anthropic_stub, monkeypatch):
+    from infoparser.providers.anthropic import AnthropicBackend
+    monkeypatch.setenv("IP_CONTRACT_KEY", "k")
     from infoparser.providers.cli_backend import CliBackend
     from infoparser.providers.heuristic import HeuristicBackend
     from infoparser.providers.openai_compat import OpenAICompatBackend
@@ -38,4 +47,5 @@ def backends(stub):
         "openai_compat": OpenAICompatBackend("oa", stub.base_url, "m", embed_model="e",
                                              capabilities=Capabilities(json_mode=True)),
         "cli": CliBackend("cli", [sys.executable, FAKE_LLM]),
+        "anthropic": AnthropicBackend("an", "m", "IP_CONTRACT_KEY", base_url=anthropic_stub.base_url),
     }

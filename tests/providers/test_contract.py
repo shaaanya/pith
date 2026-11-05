@@ -4,7 +4,7 @@ import pytest
 
 from infoparser.providers.ports import CapabilityError
 
-KINDS = ["heuristic", "openai_compat", "cli"]
+KINDS = ["heuristic", "openai_compat", "cli", "anthropic"]
 MSGS = [{"role": "user", "content": "Rust ownership rules prevent data races at compile time. "
                                     "Borrowing lets code read data without taking ownership of it."}]
 SCHEMA = {"type": "object", "properties": {"summary": {"type": "string"}}}
