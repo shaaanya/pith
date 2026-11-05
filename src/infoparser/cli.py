@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import cast
 
 from infoparser.config import load_config
+from infoparser.domain.display import inbox_label
 from infoparser.services import build
 
 
@@ -55,8 +56,7 @@ def _submit(a):
 
 def _inbox(a):
     for r in _services(a).inbox.list(a.status):
-        what = (r["canonical_url"] or r["original_filename"]
-                or (r["payload_text"] or "")[:50].replace("\n", " "))
+        what = inbox_label(r, 50)
         err = f"  !{r['error']}" if r["error"] else ""
         print(f"{r['id']}  {r['status']:<19} {r['content_type'] or '-':<8} {what}{err}")
 

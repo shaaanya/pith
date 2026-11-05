@@ -8,8 +8,8 @@ Adapters never touch the database or the blob store themselves.
 `submit(adapter=..., text=... | file=..., filename=, mime=, user_context=, platform=, external_id=)`:
 exactly one of `text` or `file`.
 
-- `text` that is a single `http(s)://` URL becomes a URL submission (`kind_hint = url`, canonical URL
-  stored). Any other text is a note (`kind_hint = text`) and is never deduplicated.
+- `text` that is a single `http(s)://` URL becomes a URL submission (`kind_hint = url`; the URL is kept exactly as
+  submitted in `payload_text`, and the canonical form is stored only as the dedupe key). Any other text is a note (`kind_hint = text`) and is never deduplicated.
 - `file` (path or bytes) is written to the blob store (content-addressed) and becomes a file submission.
 - `user_context` is free text from you ("why I saved this"). It is passed to distillation as a hint and
   kept on the record.
