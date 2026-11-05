@@ -13,12 +13,14 @@ The whole JSON is loaded in memory (ponytail: use a streaming parser for multi-G
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 NAME = "telegram_export"
 _URL = re.compile(r"https?://\S+")
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -52,7 +54,7 @@ def _urls(msg: dict) -> list[str]:
 
 def _load(export_json: Path) -> dict:
     try:
-        data = json.loads(export_json.read_text("utf-8"))
+        data = json.loads(export_json.read_text("utf-8-sig"))  # utf-8-sig: tolerate a BOM
     except (OSError, ValueError) as e:  # missing, unreadable, empty, truncated, not UTF-8
         raise ValueError(f"not a Telegram export: {export_json}: {e}") from e
     if not isinstance(data, dict) or not isinstance(data.get("messages"), list):
@@ -61,11 +63,16 @@ def _load(export_json: Path) -> dict:
     return data
 
 
-def _resolve_media(media, root: Path, text: str) -> tuple[Path | None, str]:
-    """-> (existing file inside the export dir or None, text with a note when it is missing)."""
+def _resolve_media(media, root: Path, text: str, limit: int) -> tuple[Path | None, str]:
+    """-> (existing file inside the export dir or None, text with a note when it is missing).
+
+    Files over `limit` (max_fetch_bytes) are not ingested: exports hold multi-GB videos."""
     if isinstance(media, str):
         cand = (root / media).resolve()
         if cand.is_relative_to(root) and cand.is_file():
+            if cand.stat().st_size > limit:
+                log.warning("telegram import: skipping %s (larger than max_fetch_bytes)", cand)
+                return None, (text + f"\n[media larger than max_fetch_bytes: {media}]").strip()
             return cand, text
         return None, (text + f"\n[missing media: {media}]").strip()
     if media is not None:
@@ -73,7 +80,7 @@ def _resolve_media(media, root: Path, text: str) -> tuple[Path | None, str]:
     return None, text
 
 
-def _content(m: dict, root: Path, since: str | None):
+def _content(m: dict, root: Path, since: str | None, limit: int):
     """-> (text, file path or None, context lines) for a message, or None to skip it."""
     if not isinstance(m, dict) or m.get("type") != "message" or "id" not in m:
         return None
@@ -87,7 +94,7 @@ def _content(m: dict, root: Path, since: str | None):
     if fwd:
         ctx.append(f"forwarded from {fwd}")
     media = m.get("photo") or m.get("file")
-    path, text = _resolve_media(media, root, text)
+    path, text = _resolve_media(media, root, text, limit)
     if media is not None and path is None and not flatten_text(m.get("text")).strip() and not urls:
         return None  # nothing but media we cannot find
     for u in urls:  # text_link hrefs not visible in the text
@@ -111,7 +118,7 @@ def import_export(inbox, export_json: Path, *, since: str | None = None,
     chat = data.get("id", data.get("name", "chat"))
     rep = ImportReport()
     for m in data["messages"]:
-        content = _content(m, root, since)
+        content = _content(m, root, since, inbox.cfg.max_fetch_bytes)
         if content is None:
             rep.skipped += 1
             continue
