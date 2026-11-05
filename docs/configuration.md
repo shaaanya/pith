@@ -20,7 +20,7 @@ is resolved against your user home.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `allow_remote` | `false` | Remote-tagged backends are removed from every task chain until this is `true` |
+| `allow_remote` | `false` | Remote-tagged backends are removed from every task chain until this is `true`. Must be a real TOML boolean: `"false"` (a string) is a configuration error, not `true` |
 
 ## `[limits]`
 
@@ -106,3 +106,7 @@ is honoured (a LAN server you trust), and `infoparser doctor` warns about it.
 `--home` and `--config` (global); `search --mode {fts,hybrid} --limit N`; `ask --k N --json`;
 `doctor --full --json`; `egress --json`; `digest --since --dry-run --force`; `export --keep`;
 `reindex --prune-old`; `run --port --no-dashboard --no-watch`. Use `infoparser <command> --help`.
+
+A configuration problem (missing `--config` file, TOML syntax error, a value of the wrong type such as a string for
+`[watch] dirs` or a number for a task route, an unknown backend `type`, a bad spec or a task naming an unknown
+backend) ends every command with one `error: ...` line and a non-zero exit, never a traceback.
