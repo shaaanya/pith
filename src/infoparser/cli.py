@@ -35,6 +35,19 @@ def _services(a):
     return build(_cfg(a))
 
 
+def _in_use(fn):
+    """Hold the shared in-use lock while a long-running command runs (restore refuses meanwhile)."""
+    @functools.wraps(fn)
+    def guarded(a):
+        from infoparser import locks
+        try:
+            with locks.in_use(_cfg(a).home):
+                fn(a)
+        except locks.InUseError as e:
+            sys.exit(f"error: {e}")
+    return guarded
+
+
 def _init(a):
     s = _services(a)
     for d in (s.cfg.blobs_dir, s.cfg.vault_dir, *s.cfg.watch_dirs[:1]):
@@ -43,6 +56,7 @@ def _init(a):
     print(f"initialized {s.cfg.home}")
 
 
+@_in_use
 def _submit(a):
     s = _services(a)
     if a.file:
@@ -62,25 +76,13 @@ def _inbox(a):
         print(f"{r['id']}  {r['status']:<19} {r['content_type'] or '-':<8} {what}{err}")
 
 
+@_in_use
 def _retry(a):
     try:
         _services(a).inbox.retry(a.id)
     except KeyError:
         sys.exit(f"error: unknown id {a.id}")
     print(f"requeued {a.id}")
-
-
-def _in_use(fn):
-    """Hold the shared in-use lock while a long-running command runs (restore refuses meanwhile)."""
-    @functools.wraps(fn)
-    def guarded(a):
-        from infoparser import locks
-        try:
-            with locks.in_use(_cfg(a).home):
-                fn(a)
-        except locks.InUseError as e:
-            sys.exit(f"error: {e}")
-    return guarded
 
 
 @_in_use
@@ -103,6 +105,7 @@ def _worker(a):
             pass
 
 
+@_in_use
 def _clarify(a):
     """Attach the user clarification to an item and re-queue it (CLI twin of the dashboard)."""
     text = " ".join(a.text).strip()
@@ -178,6 +181,7 @@ def _show(a):
         print(f"  event {e['stage']} {e['status']} {e['detail'] or ''}")
 
 
+@_in_use
 def _reindex(a):
     from infoparser.providers import egress
     from infoparser.retrieval.index import reindex
@@ -208,6 +212,7 @@ def _egress(a):
         print("cli backends are trusted as declared: their locality cannot be detected.")
 
 
+@_in_use
 def _export(a):
     from infoparser.export import export_vault
     s = _services(a)
@@ -244,6 +249,7 @@ def _verify(a):
           f"created {m['created_at']}, {m['counts']}")
 
 
+@_in_use
 def _digest(a):
     from infoparser import digest
     try:
@@ -287,6 +293,7 @@ def _adapters_run(a):
     sys.exit(f"error: adapter {a.name} is not a long-running adapter (use import-telegram)")
 
 
+@_in_use
 def _import_telegram(a):
     from infoparser.adapters.telegram_export import import_export
     try:
@@ -319,7 +326,7 @@ def _run(a):
     import signal
     import threading
     from infoparser import run_all
-    cfg = _services(a).cfg
+    cfg = _cfg(a)
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
 
