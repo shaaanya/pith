@@ -14,6 +14,19 @@ _EXT = {
 }
 _MAGIC = [(b"%PDF", "pdf"), (b"\x89PNG", "image"), (b"\xff\xd8\xff", "image"), (b"GIF8", "image"),
           (b"PK\x03\x04", "document")]
+_AUDIO_BRANDS = (b"M4A ", b"M4B ", b"M4P ")
+
+
+def _sniff_media(head: bytes) -> str | None:
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE" or head[:3] == b"ID3" or head[:4] in (b"OggS", b"fLaC"):
+        return "audio"
+    if head[4:8] == b"ftyp":
+        return "audio" if head[8:12] in _AUDIO_BRANDS else "video"
+    if head[:4] == b"\x1a\x45\xdf\xa3":  # EBML: mkv/webm
+        return "video"
+    return None
+
+
 _CODE = re.compile(r"```|^\s*(def |class |import |function |#include|public class )", re.M)
 
 
@@ -37,7 +50,7 @@ def detect(row, blobs) -> str:
             with open(blobs.path(row["blob_sha256"]), "rb") as f:
                 head = f.read(4096)
         if ct is None:
-            ct = next((c for m, c in _MAGIC if head.startswith(m)), None)
+            ct = next((c for m, c in _MAGIC if head.startswith(m)), None) or _sniff_media(head)
         if ct is None and row["mime"]:
             ct = {"application/pdf": "pdf"}.get(row["mime"]) or (
                 row["mime"].split("/")[0] if row["mime"].split("/")[0] in ("audio", "video", "image") else None)

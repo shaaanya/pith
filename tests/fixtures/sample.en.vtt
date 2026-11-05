@@ -1,0 +1,22 @@
+WEBVTT
+Kind: captions
+Language: en
+
+NOTE rolling auto captions
+
+00:00:00.000 --> 00:00:02.000 align:start position:0%
+hello and welcome<00:00:00.500><c> to the</c><00:00:01.000><c> channel</c>
+
+00:00:02.000 --> 00:00:02.010 align:start position:0%
+hello and welcome to the channel
+ 
+00:00:02.010 --> 00:00:04.000 align:start position:0%
+hello and welcome to the channel
+today we talk about <c.colorE5E5E5>search</c> &amp; ranking
+
+00:00:04.000 --> 00:00:04.010 align:start position:0%
+today we talk about search & ranking
+
+00:00:04.010 --> 00:00:06.000 align:start position:0%
+today we talk about search & ranking
+and embedding models

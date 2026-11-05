@@ -18,6 +18,8 @@ class Config:
     max_attempts: int = 5
     lease_seconds: int = 300
     max_fetch_bytes: int = 50_000_000
+    yt_dlp_binary: str = "yt-dlp"
+    ffmpeg_binary: str = "ffmpeg"
 
 
 def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
@@ -41,4 +43,6 @@ def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
         max_attempts=limits.get("max_attempts", 5),
         lease_seconds=limits.get("lease_seconds", 300),
         max_fetch_bytes=limits.get("max_fetch_bytes", 50_000_000),
+        yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or data.get("media", {}).get("yt_dlp", "yt-dlp"),
+        ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or data.get("media", {}).get("ffmpeg", "ffmpeg"),
     )
