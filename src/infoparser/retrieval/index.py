@@ -46,14 +46,26 @@ def _store(conn, computed) -> None:
             vectors.put(conn, t, [o for o, _ in sel], mid, [v for _, v in sel])
 
 
+def _unchanged(conn, mid, rows, computed, only_missing):
+    """The computed vectors whose owner still exists with the very text that was embedded
+    (the embedder is slow: an edit or a reprocess may have landed meanwhile)."""
+    now = {(r["t"], r["id"]): r["text"] for r in _owners(conn, mid, only_missing)}
+    sent = {(r["t"], r["id"]): r["text"] for r in rows}
+    return [c for c in computed if now.get(c[:2]) == sent[c[:2]]]
+
+
 def embed_pending(services, batch: int = 32) -> int:
     """Embed segments and live items lacking a vector for the active model.
     Returns the count embedded."""
     emb = services.registry.first("embed")
     if emb is None:
         return 0
-    computed = _compute(emb, _owners(services.conn, _model_id(emb), True), batch)
-    _store(services.conn, computed)
+    mid = _model_id(emb)
+    rows = _owners(services.conn, mid, True)
+    computed = _compute(emb, rows, batch)
+    with transaction(services.conn):
+        computed = _unchanged(services.conn, mid, rows, computed, True)
+        _store(services.conn, computed)
     return len(computed)
 
 
@@ -65,8 +77,10 @@ def reindex(services, *, prune_old: bool = False) -> int:
     if emb is None:
         return 0
     mid = _model_id(emb)
-    computed = _compute(emb, _owners(services.conn, mid, False), 32)
+    rows = _owners(services.conn, mid, False)
+    computed = _compute(emb, rows, 32)
     with transaction(services.conn):
+        computed = _unchanged(services.conn, mid, rows, computed, False)
         services.conn.execute("DELETE FROM embeddings WHERE model_id=?", (mid,))
         if prune_old:
             services.conn.execute("DELETE FROM embeddings WHERE model_id<>?", (mid,))
