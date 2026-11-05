@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from infoparser.backup import _sha_file, latest_schema
+from infoparser.providers.openai_compat import _OPENER  # never follows redirects
 from infoparser.providers.registry import Registry
 
 PROBE_TIMEOUT = 3
@@ -179,9 +180,16 @@ def _auth(b) -> dict:
     return {"Authorization": f"Bearer {key}"} if key else {}
 
 
+def _why(e) -> str:
+    """Short failure reason; a 30x is named as a refused redirect (the key must not follow it)."""
+    if isinstance(e, urllib.error.HTTPError) and 300 <= e.code < 400:
+        return f"redirect refused (HTTP {e.code}); doctor never follows redirects"
+    return str(getattr(e, "reason", e))
+
+
 def _http_get(url, headers=None):
     req = urllib.request.Request(url, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as r:  # noqa: S310 - local backend, canned request
+    with _OPENER.open(req, timeout=PROBE_TIMEOUT) as r:
         return r.status
 
 
@@ -192,17 +200,19 @@ def _probe_embeddings(b) -> str:
             b.base_url.rstrip("/") + "/embeddings", method="POST",
             data=json.dumps({"model": b.embed_model, "input": ["doctor probe"]}).encode(),
             headers={"Content-Type": "application/json", **_auth(b)})
-        with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as r:  # noqa: S310
+        with _OPENER.open(req, timeout=PROBE_TIMEOUT) as r:
             r.read()
         return "; /embeddings ok"
     except (urllib.error.URLError, OSError, ValueError) as e:
-        return f"; /embeddings failed ({getattr(e, 'reason', e)})"
+        return f"; /embeddings failed ({_why(e)})"
 
 
 def _probe_openai(name, head, b, base) -> Check:
     try:
         _http_get(b.base_url.rstrip("/") + "/models", _auth(b))
     except urllib.error.HTTPError as e:
+        if 300 <= e.code < 400:
+            return Check(name, "WARN", f"{head}; probe failed at {b.base_url}: {_why(e)}", base)
         if e.code in (401, 403):
             return Check(name, "WARN", f"{head}; reachability unknown "
                          f"(auth required: HTTP {e.code}; set the key env var)", base)
