@@ -1,0 +1,21 @@
+# Roadmap
+
+Nothing here is built. These are the gaps that were consciously left out, roughly in order of usefulness,
+not a commitment. Verification gaps are in [limitations.md](limitations.md).
+
+- Verify the unverified paths first: a real Telegram export, a real whisper.cpp run, cloud backends with real
+  credentials, a larger local model, and tuning the near-duplicate thresholds against a real embedding model.
+- A CLI command for clarification (today only the dashboard does it) and for filtering search.
+- Lock the standalone `worker`, `dashboard`, `watch` and `serve-http` processes with `run.lock` so a restore can
+  detect them.
+- OCR for scanned PDFs; non-English captions in the media extractor; recursion into subfolders in the drop
+  folder; streaming parse of very large Telegram exports.
+- An escape hatch for backup when one live blob is corrupt (skip and report), and `.pre-restore` path in
+  the error when a rollback rename fails.
+- Approximate nearest-neighbour search (for example `sqlite-vec`) once the library passes roughly 200k
+  chunks; an LSH shortlist for duplicate detection (it is linear per new item today).
+- Native `trafilatura` extraction (optional extra) for harder pages, and a browser extension that talks to the
+  local endpoint.
+- An email adapter and a shipped Telegram bot adapter (a recipe exists).
+- A redirect guard in the `openai_compat` client, and an SSRF allow/deny policy for submitted URLs.
+- Multi-user, sync and hosting are non-goals.

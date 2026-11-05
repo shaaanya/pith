@@ -1,5 +1,7 @@
-# Copy to infoparser.toml (or point INFOPARSER_CONFIG at it).
-# Env overrides: INFOPARSER_HOME, INFOPARSER_CONFIG.
+# Copy anywhere and pass it with `infoparser --config PATH ...` or INFOPARSER_CONFIG=PATH.
+# No config file is searched for automatically; without one the defaults apply (heuristic only).
+# Env overrides: INFOPARSER_HOME, INFOPARSER_CONFIG, INFOPARSER_HTTP_TOKEN,
+# INFOPARSER_YT_DLP, INFOPARSER_FFMPEG. See docs/configuration.md for every key.
 home = "~/InfoParser"
 
 [privacy]
@@ -22,6 +24,10 @@ type = "openai_compat"
 locality = "local"
 base_url = "http://localhost:11434/v1"
 model = "REPLACE_WITH_LOCAL_MODEL"
+# embed_model = "REPLACE_WITH_EMBEDDING_MODEL"   # enables the embed task (hybrid search)
+# api_key_env = "NAME_OF_ENV_VAR"                 # only if the server needs a key
+# capabilities = ["json_mode"]                    # extras the server supports
+# timeout = 120
 
 [backends.heuristic]
 type = "heuristic"
@@ -43,12 +49,33 @@ type = "heuristic"
 # api_key_env = "ANTHROPIC_API_KEY"   # env var NAME, never the key itself
 # max_tokens = 4096
 
+# A command-line text generator (e.g. an agentic CLI used ONLY as a text backend; see
+# docs/providers.md). The prompt arrives on stdin (or as the last argument with prompt_via = "arg").
+# [backends.cli_text]
+# type = "cli"
+# command = ["REPLACE_WITH_COMMAND", "REPLACE_WITH_ARG"]
+# prompt_via = "stdin"
+# timeout = 300
+# locality = "local"            # "remote" if the command sends text off this machine
+
 # Task routing: ordered fallback lists, "name" or "name:model".
 [tasks]
 distill = ["local", "heuristic"]
 classify = ["local", "heuristic"]
 # ocr = ["ocr"]
 # transcribe = ["stt"]
+# embed = ["local"]             # needs embed_model on that backend
+# answer = ["local"]            # `ask`; without one, ask returns cited excerpts only
+
+# HTTP ingest (`infoparser serve-http`). Loopback by default; the token is generated into
+# <home>/http_token. A non-loopback bind requires an explicit token and is NOT recommended.
+# [http]
+# bind = "127.0.0.1"
+# port = 8787
+# token = "REPLACE_WITH_LONG_RANDOM_TOKEN"
+# [media]
+# yt_dlp = "yt-dlp"
+# ffmpeg = "ffmpeg"
 
 # [digest]
 # interval_days = 7     # at most one digest per interval
