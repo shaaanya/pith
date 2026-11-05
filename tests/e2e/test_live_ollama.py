@@ -36,23 +36,30 @@ def _need(env):
     return name
 
 
-def _report(res, label, record_property):
+def _report(res, label, backend, record_property):
+    """Check the contract, require every item to come from `backend` or the heuristic fallback,
+    and record how many were model-made. Model acceptance itself is never asserted: a tiny
+    model is nondeterministic (observed 0 to 9 of ~10 items accepted across runs)."""
     stated, downgraded, _ = check_contract(res)
-    by = sorted({r[0] for r in db(res["svc"]).execute("SELECT extracted_by FROM knowledge_items")})
-    info = (f"{label}: stated={stated} downgraded={downgraded} extracted_by={by} "
+    rows = db(res["svc"]).execute("SELECT extracted_by FROM knowledge_items").fetchall()
+    by = [r[0] for r in rows]
+    assert all(b.startswith((backend + ":", "heuristic:")) for b in by), set(by)
+    made = sum(b.startswith(backend + ":") for b in by)
+    info = (f"{label}: model_made={made}/{len(by)} stated={stated} downgraded={downgraded} "
             f"search={res['search'].mode} ask={res['answer'].mode}")
     print(info)
     record_property("live_result", info)
-    return by
 
 
 def test_live_ollama_pipeline(tmp_path, record_property):
     """Full pipeline against real local Ollama chat + embedding models (openai_compat)."""
     chat, emb = _need("INFOPARSER_LIVE_CHAT_MODEL"), _need("INFOPARSER_LIVE_EMBED_MODEL")
     res = run_workflow_cfg(cfg_live(tmp_path / "live", chat, emb))
-    by = _report(res, "openai_compat", record_property)
+    _report(res, "openai_compat", "ollama", record_property)
+    # deterministic parts: the real embedding model produced vectors and search used them
+    models = {r[0] for r in db(res["svc"]).execute("SELECT DISTINCT model_id FROM embeddings")}
+    assert models == {f"ollama:{emb}"}
     assert res["search"].mode == "hybrid"
-    assert by  # extracted_by recorded (ollama:<model> or heuristic fallback; both are reported)
 
 
 def test_live_ollama_cli(tmp_path, record_property):
@@ -61,4 +68,4 @@ def test_live_ollama_cli(tmp_path, record_property):
         pytest.skip("`ollama` binary not on PATH")
     chat = _need("INFOPARSER_LIVE_CHAT_MODEL")
     res = run_workflow_cfg(cfg_live_cli(tmp_path / "livecli", chat))
-    _report(res, "cli(ollama run)", record_property)
+    _report(res, "cli(ollama run)", "ollama_cli", record_property)
