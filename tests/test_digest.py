@@ -1,5 +1,7 @@
 import datetime as dt
 
+import pytest
+
 from infoparser import digest
 from infoparser.pipeline import runner
 
@@ -23,7 +25,10 @@ def age(svc, days):
 def test_digest_sections(svc):
     load(svc, [f"Old fact number {i} about topic{i} things." for i in range(8)])
     age(svc, 30)
-    load(svc, ["Fresh note about quokkas on Rottnest Island."])
+    a, b = load(svc, ["Fresh note about quokkas on Rottnest Island.", "Another fresh note about quokkas on Rottnest."])
+    ia, ib = [r["id"] for r in svc.conn.execute("SELECT id FROM knowledge_items WHERE created_at>? ORDER BY id", ("2026-11-04",))][:2]
+    svc.conn.execute("DELETE FROM relations")
+    svc.conn.execute("INSERT INTO relations(item_a,item_b,type,score) VALUES (?,?,'duplicate',0.97)", (ia, ib))
     bad = svc.inbox.submit(adapter="t", text="https://example.invalid/x").id
     svc.inbox.set_status(bad, "failed", "HTTP 404")
     nc = svc.inbox.submit(adapter="t", text="https://example.invalid/y").id
@@ -35,6 +40,7 @@ def test_digest_sections(svc):
     md = digest.build(svc, since_days=7, now=NOW, seed="s")
     for h in ("## New", "## Needs attention", "## Worth revisiting", "## Possible duplicates"):
         assert h in md
+    assert "None found" not in md.split("## Possible duplicates")[1] and "0.97" in md
     assert "HTTP 404" in md and "quokkas" in md.lower()
 
 
@@ -88,3 +94,28 @@ def test_hostile_title_cannot_break_markdown_structure(svc):
     svc.conn.execute("UPDATE knowledge_items SET title='x\n## Injected heading\n[a](javascript:alert(1))'")
     md = digest.build(svc, now=NOW)
     assert "\n## Injected" not in md
+
+
+@pytest.mark.parametrize("bad", ["abc", "-3", "2026-13-45", "nan", "inf", "99999999", "2026-02-30"])
+def test_bad_since_is_a_clean_error(svc, bad):
+    with pytest.raises(ValueError):
+        digest.run(svc, since=bad, dry_run=True, today=TODAY, now=NOW)
+
+
+def test_cli_bad_since_clean_exit(tmp_path):
+    import os
+    import subprocess
+    import sys
+    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
+    r = subprocess.run([sys.executable, "-m", "infoparser.cli", "digest", "--since", "2026-13-45"], env=env, capture_output=True, text=True)
+    assert r.returncode != 0 and "error:" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_since_does_not_overwrite_todays_digest_or_bypass_interval(svc):
+    load(svc, ["Fresh note about quokkas."])
+    r1 = digest.run(svc, today=TODAY, now=NOW)
+    first = r1.path.read_text()
+    r2 = digest.run(svc, since="2026-01-01", today=TODAY, now=NOW)
+    assert r2.skipped and "--force" in r2.text and r1.path.read_text() == first
+    r3 = digest.run(svc, since="2026-01-01", today=TODAY, now=NOW, force=True)
+    assert not r3.skipped and r3.path == r1.path

@@ -1,6 +1,7 @@
 """detect -> extract -> chunk -> save source/segments -> distill -> save items. Idempotent per inbox_id."""
 import hashlib
 import json
+import sqlite3
 import time
 
 from infoparser.domain.models import SegmentIn
@@ -50,10 +51,15 @@ def _profile(ct, hints):
 def process(services, inbox_id: str):
     s = services
 
-    def sink(backend, nbytes):  # every call to a remote backend leaves an audit row for this inbox item
-        s.conn.execute(
-            "INSERT INTO processing_events(inbox_id, at, stage, status, detail, backend, egress)"
-            " VALUES (?,?,?,?,?,?,1)", (inbox_id, utcnow(), "egress", "info", json.dumps({"bytes_sent": nbytes}), backend))
+    def sink(backend, nbytes):
+        """Audit row per remote call, attributed to THIS inbox item (also embed_pending run by process()).
+        Fail-open: an audit write failure must not abort the call (one stderr warning per process)."""
+        try:
+            s.conn.execute(
+                "INSERT INTO processing_events(inbox_id, at, stage, status, detail, backend, egress)"
+                " VALUES (?,?,?,?,?,?,1)", (inbox_id, utcnow(), "egress", "info", json.dumps({"bytes_sent": nbytes}), backend))
+        except sqlite3.Error as e:
+            egress.warn_once(f"egress audit write failed: {e}")
     tok = egress.sink.set(sink)
     try:
         return _process(services, inbox_id)

@@ -181,7 +181,10 @@ def _verify(a):
 
 def _digest(a):
     from infoparser import digest
-    r = digest.run(_services(a), since=a.since, dry_run=a.dry_run)
+    try:
+        r = digest.run(_services(a), since=a.since, dry_run=a.dry_run, force=a.force)
+    except ValueError as e:
+        sys.exit(f"error: {e}")
     print(r.text)
     if r.path and not r.skipped:
         print(f"written: {r.path}", file=sys.stderr)
@@ -340,6 +343,7 @@ def main(argv=None):
     c = sub.add_parser("digest", parents=[common])
     c.add_argument("--since", help="YYYY-MM-DD or a number of days")
     c.add_argument("--dry-run", action="store_true")
+    c.add_argument("--force", action="store_true", help="write even inside the interval / overwrite today's digest")
     c.set_defaults(f=_digest)
     c = sub.add_parser("adapters", parents=[common])
     asub = c.add_subparsers(dest="acmd", required=True)

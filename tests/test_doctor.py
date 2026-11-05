@@ -126,7 +126,7 @@ def test_egress_report_states_routes_and_limits(tmp_path):
                   tasks={"distill": ["cloud"]})
     r = doctor.egress_report(cfg)
     assert r["allow_remote"] is False and r["routes"]["distill"]["remote"] == ["cloud"]
-    assert r["routes"]["distill"]["blocked"] is True and "what leaves" in " ".join(r["routes"]["distill"]) or r["routes"]["distill"]["data"]
+    assert r["routes"]["distill"]["blocked"] is True and r["routes"]["distill"]["data"]
     assert "cannot report what a remote provider logs" in r["note"]
     cfg.allow_remote = True
     r = doctor.egress_report(cfg)
@@ -167,3 +167,84 @@ def test_egress_blocked_remote_leaves_no_event(tmp_path):
         runner.process(s, iid)
         assert not stub.requests
         assert s.conn.execute("SELECT count(*) FROM processing_events WHERE stage='egress'").fetchone()[0] == 0
+
+
+def _server(handler_cls):
+    import threading
+    from http.server import ThreadingHTTPServer
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def test_probe_timeout_is_enforced_against_a_server_that_never_answers(tmp_path, monkeypatch):
+    import socket
+    import threading
+    import time
+    ls = socket.socket()
+    ls.bind(("127.0.0.1", 0))
+    ls.listen()
+    held = []
+    threading.Thread(target=lambda: held.append(ls.accept()), daemon=True).start()
+    monkeypatch.setattr(doctor, "PROBE_TIMEOUT", 0.4)
+    cfg = cfg_for(tmp_path, backends={"slow": {"type": "openai_compat", "base_url": f"http://127.0.0.1:{ls.getsockname()[1]}/v1", "model": "m"}})
+    t = time.time()
+    checks = doctor.run(cfg)
+    ls.close()
+    assert time.time() - t < 3 and by(checks, "backend:slow").level == "WARN"
+
+
+def test_probe_sends_configured_key_and_401_is_not_called_unreachable(tmp_path, monkeypatch):
+    from http.server import BaseHTTPRequestHandler
+    got = []
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            got.append(self.headers.get("Authorization"))
+            ok = self.headers.get("Authorization") == "Bearer probe-credential-xyz"
+            self.send_response(200 if ok else 401)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+    srv = _server(H)
+    try:
+        spec = {"type": "openai_compat", "base_url": f"http://127.0.0.1:{srv.server_port}/v1", "model": "m", "api_key_env": "IP_DOC_KEY"}
+        monkeypatch.setenv("IP_DOC_KEY", "probe-credential-xyz")
+        c = by(doctor.run(cfg_for(tmp_path, backends={"k": spec})), "backend:k")
+        assert c.level == "OK" and "probe-credential-xyz" not in c.detail and got[-1] == "Bearer probe-credential-xyz"
+        monkeypatch.delenv("IP_DOC_KEY")
+        c = by(doctor.run(cfg_for(tmp_path, backends={"k": spec})), "backend:k")
+        assert "unreachable" not in c.detail and "auth required" in c.detail
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_egress_sink_failure_is_fail_open_and_wrap_is_single(tmp_path, capsys):
+    from infoparser.providers import egress
+    with OpenAIStub() as stub:
+        cfg = cfg_for(tmp_path, allow_remote=True,
+                      backends={"cloud": {"type": "openai_compat", "base_url": stub.base_url, "model": "m", "locality": "remote"}},
+                      tasks={"distill": ["cloud"]})
+        s = build(cfg)
+        b = s.registry.backends["cloud"]
+        g = b.generate
+        assert egress.wrap_remote(b) is b and b.generate is g  # second wrap is a no-op
+        s.conn.execute("CREATE TRIGGER no_egress BEFORE INSERT ON processing_events WHEN NEW.stage='egress'"
+                       " BEGIN SELECT RAISE(ABORT, 'audit disk full'); END")  # only the audit insert fails
+        egress._warned = False
+        iid_row = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia.")
+        runner.process(s, iid_row.id)
+        assert stub.requests  # the backend call still went out
+        assert capsys.readouterr().err.count("egress audit write failed") == 1
+
+
+def test_every_port_method_is_wrapped():
+    import inspect
+    from infoparser.providers import egress, ports
+    names = {n for _, c in inspect.getmembers(ports, inspect.isclass) if getattr(c, "_is_protocol", False) and c is not ports.Backend
+             for n, f in vars(c).items() if callable(f) and not n.startswith("_")}
+    assert names and names <= set(egress.METHODS)

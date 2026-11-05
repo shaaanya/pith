@@ -151,7 +151,7 @@ def test_crashed_worker_stops_the_process_loudly(cfg, monkeypatch, capsys):
     assert not t.is_alive(), "run() kept serving a dead worker"
     assert err and isinstance(err[0], run_all.RunError) and "worker" in str(err[0])
     assert "worker exploded" in capsys.readouterr().err
-    assert (cfg.home / "run.lock").exists()  # persistent file: never unlinked while a flock may be held
+    assert _lock_free(cfg)  # the crashed run released its flock (file itself is persistent)
 
 
 def test_lock_is_a_real_flock_not_just_a_pid_file(cfg):

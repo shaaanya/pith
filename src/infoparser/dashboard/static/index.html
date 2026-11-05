@@ -222,9 +222,14 @@ async function duplicates() {
 }
 async function digest() {
   const d = await api("GET", "/api/digest");
-  put(main, h("p", { class: "mut" }, `${d.total} item(s) added in the last ${d.days} days`), ...d.items.map((i) =>
-    h("div", { class: "card item", tabindex: "0", role: "button", onclick: () => detail(i.id), onkeydown: (e) => { if (e.key === "Enter") detail(i.id); } },
-      badge(i.provenance), " ", i.title, " ", h("span", { class: "mut" }, i.created_at))));
+  const itemCard = (i) => h("div", { class: "card item", tabindex: "0", role: "button", onclick: () => detail(i.id), onkeydown: (e) => { if (e.key === "Enter") detail(i.id); } },
+    badge(i.provenance), " ", i.title, " ", h("span", { class: "mut" }, i.created_at || ""));
+  const topics = Object.entries(d.new.by_topic);
+  put(main, h("p", { class: "mut" }, `${d.total} item(s) added since ${d.since} (preview: nothing is written)`),
+    h("h3", {}, "New"), topics.length ? topics.map(([t, items]) => [h("b", {}, t), ...items.map(itemCard)]) : h("p", { class: "mut" }, "Nothing new."),
+    h("h3", {}, "Needs attention"), d.attention.length ? d.attention.map((a) => h("div", { class: "card" }, badge(a.status, "failed"), " ", a.what || a.id, " ", h("span", { class: "mut" }, a.error || ""))) : h("p", { class: "mut" }, "Nothing is stuck."),
+    h("h3", {}, "Worth revisiting"), d.resurfaced.length ? d.resurfaced.map(itemCard) : h("p", { class: "mut" }, "Nothing older to resurface yet."),
+    h("h3", {}, "Possible duplicates"), d.duplicates.length ? d.duplicates.map((x) => h("div", { class: "card" }, `${x.a.title || x.a.id} / ${x.b.title || x.b.id}`)) : h("p", { class: "mut" }, "None found."));
 }
 async function status() {
   const [s, p] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/privacy")]);

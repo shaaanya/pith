@@ -175,8 +175,10 @@ def test_pathological_nesting_fails_cleanly(svc):
             assert "nest" in out.error
 
 
-def test_non_page_content_type_clarification_does_not_invite_pasting():
-    from infoparser.pipeline.extractors import web
-    import inspect
-    src = inspect.getsource(web)
-    assert "submit the file or paste the text" not in src
+def test_non_page_content_type_clarification_does_not_invite_pasting(svc):
+    with FixtureServer({"/z": Route(b"PK\x03\x04zip", ctype="application/zip")}) as srv:
+        iid = svc.inbox.submit(adapter="t", text=srv.base + "/z").id
+        out = runner.process(svc, iid)
+        assert isinstance(out, NeedsClarification)
+        assert "paste" not in out.reason.lower() and "submit the file" in out.reason
+        assert not getattr(out, "pasteable", False)

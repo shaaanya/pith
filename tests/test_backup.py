@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import sqlite3
 import tarfile
 import threading
@@ -103,6 +104,8 @@ def test_backup_consistent_while_a_writer_is_writing(svc, tmp_path):
     from infoparser.services import build as b
     w = b(svc.cfg)
 
+    done = []
+
     def writer():
         i = 0
         while not stop.is_set():
@@ -112,13 +115,16 @@ def test_backup_consistent_while_a_writer_is_writing(svc, tmp_path):
                 errs.append(e)
                 return
             i += 1
+            done.append(i)
     t = threading.Thread(target=writer, daemon=True)
     t.start()
     time.sleep(0.3)
+    before = len(done)
     archives = [backup.backup(svc.cfg, tmp_path / f"o{k}") for k in range(3)]
+    progressed = len(done) - before
     stop.set()
     t.join(10)
-    assert not errs
+    assert not errs and progressed > 0  # the writer really was writing while the backups ran
     for k, a in enumerate(archives):
         cfg2 = other(tmp_path, f"r{k}")
         backup.restore(a, cfg2.home)
@@ -127,6 +133,12 @@ def test_backup_consistent_while_a_writer_is_writing(svc, tmp_path):
         assert c.execute("PRAGMA foreign_key_check").fetchall() == []
         with tarfile.open(a) as tf:
             m = json.load(tf.extractfile("manifest.json"))
+            snap = tmp_path / f"snap{k}.db"
+            snap.write_bytes(tf.extractfile("infoparser.db").read())  # the snapshot itself, not the restored copy
+        sc = sqlite3.connect(snap)
+        assert m["counts"]["inbox_items"] == sc.execute("SELECT count(*) FROM inbox_items").fetchone()[0]
+        assert m["counts"]["knowledge_items"] == sc.execute("SELECT count(*) FROM knowledge_items").fetchone()[0]
+        sc.close()
         assert m["counts"]["inbox_items"] == c.execute("SELECT count(*) FROM inbox_items").fetchone()[0]
         assert m["counts"]["knowledge_items"] == c.execute("SELECT count(*) FROM knowledge_items").fetchone()[0]
         # FTS and items agree inside the snapshot
@@ -191,13 +203,26 @@ def test_newer_schema_refused_older_migrated(svc, tmp_path):
     a = backup.backup(svc.cfg, tmp_path / "o")
 
     def newer(n, d):
+        if n == "infoparser.db":
+            f = tmp_path / "n.db"
+            f.write_bytes(d)
+            c = sqlite3.connect(f)
+            c.execute("PRAGMA user_version=99")
+            c.commit()
+            c.close()
+            newer.raw = f.read_bytes()
+            return newer.raw
         if n == "manifest.json":
-            m = json.loads(d)
-            m["schema_version"] = 99
+            m = json.loads(d)  # manifest still claims the old version: the DB's own version decides
+            m["files"]["infoparser.db"] = None
             return json.dumps(m).encode()
         return d
+    # members are visited in archive order: manifest first, so patch its hash after the fact
+    mod = rewrite(a, newer)
+    mod = rewrite(mod, lambda n, d: json.dumps({**json.loads(d), "files": {**json.loads(d)["files"],
+                  "infoparser.db": hashlib.sha256(newer.raw).hexdigest()}}).encode() if n == "manifest.json" else d)
     with pytest.raises(backup.RestoreError, match="newer"):
-        backup.restore(rewrite(a, newer), other(tmp_path).home)
+        backup.restore(mod, other(tmp_path).home)
     # an older archive: strip the v2/v3 additions by building a v1 database
     from infoparser.store.db import _migrations, _split
     v1 = tmp_path / "v1.db"
@@ -225,3 +250,128 @@ def test_newer_schema_refused_older_migrated(svc, tmp_path):
     c = build(cfg2).conn
     assert c.execute("PRAGMA user_version").fetchone()[0] >= 3
     assert c.execute("SELECT payload_text FROM inbox_items WHERE id='a'").fetchone()[0] == "hi"
+
+
+def _junk_home(svc):
+    (svc.cfg.blobs_dir / "ab").mkdir(parents=True, exist_ok=True)
+    (svc.cfg.blobs_dir / "ab" / ".DS_Store").write_bytes(b"junk")
+    v = svc.cfg.vault_dir
+    (v / ".obsidian/plugins/x").mkdir(parents=True, exist_ok=True)
+    (v / ".DS_Store").write_bytes(b"junk")
+    (v / ".obsidian/plugins/x/main.js").write_text("legit")
+    (v / "notes.md").write_text("my notes")
+
+
+def test_junk_files_do_not_break_backup_and_legit_nested_vault_files_roundtrip(svc, tmp_path):
+    load(svc)
+    _junk_home(svc)
+    a = backup.backup(svc.cfg, tmp_path / "o")
+    assert backup.verify(a)["blob_count"] >= 1
+    cfg2 = other(tmp_path)
+    backup.restore(a, cfg2.home)
+    assert (cfg2.vault_dir / ".obsidian/plugins/x/main.js").read_text() == "legit"
+    assert (cfg2.vault_dir / "notes.md").read_text() == "my notes"
+    assert not list(cfg2.home.rglob(".DS_Store"))
+
+
+def test_corrupted_live_blob_fails_the_backup_and_leaves_no_archive(svc, tmp_path):
+    load(svc)
+    sha = svc.conn.execute("SELECT blob_sha256 FROM inbox_items WHERE blob_sha256 IS NOT NULL").fetchone()[0]
+    svc.blobs.path(sha).write_bytes(b"bit rot")
+    out = tmp_path / "o"
+    with pytest.raises(backup.RestoreError, match="verification failed"):
+        backup.backup(svc.cfg, out)
+    assert not list(out.glob("*"))
+
+
+def test_archive_mode_is_0600(svc, tmp_path):
+    load(svc)
+    a = backup.backup(svc.cfg, tmp_path / "o")
+    assert (a.stat().st_mode & 0o777) == 0o600 and not list(a.parent.glob("*.part"))
+
+
+def _snapshot_home(cfg):
+    c = sqlite3.connect(cfg.db_path)
+    assert c.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+    counts = [c.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in ("inbox_items", "knowledge_items", "segments")]
+    c.close()
+    return counts, sorted(p.name for p in cfg.blobs_dir.rglob("*") if p.is_file())
+
+
+def _new_archive(tmp_path):
+    cfg = other(tmp_path, "src")
+    s = build(cfg)
+    load(s, ["Entirely different content about volcanoes and magma chambers."])
+    s.conn.close()
+    return backup.backup(cfg, tmp_path / "srcbk")
+
+
+@pytest.mark.parametrize("n,exc", [(1, OSError), (2, OSError), (3, OSError), (4, OSError), (3, KeyboardInterrupt)])
+def test_force_restore_failure_mid_swap_leaves_old_home_intact(svc, tmp_path, monkeypatch, n, exc):
+    load(svc)
+    svc.conn.close()
+    before = _snapshot_home(svc.cfg)
+    arc = _new_archive(tmp_path)
+    real, calls = os.replace, []
+
+    def flaky(a, b, *x, **k):
+        calls.append(1)
+        if len(calls) == n:
+            raise exc("injected")
+        return real(a, b, *x, **k)
+    monkeypatch.setattr(backup.os, "replace", flaky)
+    with pytest.raises(exc):
+        backup.restore(arc, svc.cfg.home, force=True)
+    monkeypatch.undo()
+    assert _snapshot_home(svc.cfg) == before
+    assert not list(svc.cfg.home.glob(".pre-restore*")) and not list(svc.cfg.home.glob(".restore-stage*"))
+
+
+def test_force_restore_success_leaves_no_temp_dirs(svc, tmp_path):
+    load(svc)
+    svc.conn.close()
+    backup.restore(_new_archive(tmp_path), svc.cfg.home, force=True)
+    assert not list(svc.cfg.home.glob(".pre-restore*")) and not list(svc.cfg.home.glob(".restore-stage*"))
+    c = sqlite3.connect(svc.cfg.db_path)
+    assert c.execute("SELECT count(*) FROM knowledge_items WHERE body LIKE '%volcano%'").fetchone()[0] >= 1
+
+
+def test_restore_refused_while_run_lock_is_held(svc, tmp_path):
+    import fcntl
+    load(svc)
+    svc.conn.close()
+    before = _snapshot_home(svc.cfg)
+    arc = _new_archive(tmp_path)
+    held = open(svc.cfg.home / "run.lock", "a+")
+    fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    try:
+        with pytest.raises(backup.RestoreError, match="running"):
+            backup.restore(arc, svc.cfg.home, force=True)
+    finally:
+        held.close()
+    assert _snapshot_home(svc.cfg) == before
+
+
+def test_manifest_types_validated_and_blob_prefix_and_caps(svc, tmp_path, monkeypatch):
+    load(svc)
+    a = backup.backup(svc.cfg, tmp_path / "o")
+    for patch in ({"files": ["x"]}, {"schema_version": "abc"}, {"files": {"infoparser.db": 5}}, {"counts": 3}):
+        def f(n, d, patch=patch):
+            return json.dumps({**json.loads(d), **patch}).encode() if n == "manifest.json" else d
+        with pytest.raises(backup.RestoreError):
+            backup.verify(rewrite(a, f))
+    wrong = tmp_path / "wrong.tar.gz"
+    sha = "ab" + "c" * 62
+    with tarfile.open(wrong, "w:gz") as t:
+        ti = tarfile.TarInfo(f"blobs/zz/yy/{sha}")
+        ti.size = 1
+        t.addfile(ti, io.BytesIO(b"x"))
+    with pytest.raises(backup.RestoreError):
+        backup.verify(wrong)
+    monkeypatch.setattr(backup, "MAX_MEMBERS", 2)
+    with pytest.raises(backup.RestoreError, match="too many"):
+        backup.verify(a)
+    monkeypatch.setattr(backup, "MAX_MEMBERS", 10**6)
+    monkeypatch.setattr(backup, "MAX_TOTAL_BYTES", 100)
+    with pytest.raises(backup.RestoreError, match="too large"):
+        backup.verify(a)

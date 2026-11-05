@@ -108,22 +108,43 @@ def _last(dirp: Path) -> dt.date | None:
     return max((dt.date.fromisoformat(m[1]) for p in names if (m := _FILE.search(p.name))), default=None)
 
 
+_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+MAX_SINCE_DAYS = 36500
+
+
+def _parse_since(since: str, now: dt.datetime) -> str:
+    """ISO date or a number of days (>= 0, <= 100 years). ValueError with a readable message otherwise."""
+    try:
+        if _DATE.fullmatch(since.strip()):
+            d = dt.datetime.fromisoformat(since.strip()).replace(tzinfo=dt.UTC)
+        else:
+            n = float(since)
+            if not 0 <= n <= MAX_SINCE_DAYS:  # also rejects nan (comparison False) and inf
+                raise ValueError
+            d = now - dt.timedelta(days=n)
+        return _iso(d)
+    except (ValueError, OverflowError):
+        raise ValueError(f"--since must be YYYY-MM-DD or a number of days between 0 and {MAX_SINCE_DAYS}, got {since!r}") from None
+
+
 def run(s, *, since: str | None = None, dry_run: bool = False, today: dt.date | None = None,
-        now: dt.datetime | None = None, seed=None) -> DigestRun:
-    """since: ISO date (YYYY-MM-DD) or a number of days. Without it: since the last digest, else one interval back."""
+        now: dt.datetime | None = None, seed=None, force: bool = False) -> DigestRun:
+    """since: ISO date (YYYY-MM-DD) or a number of days. Without it: since the last digest, else one interval back.
+    The interval rule applies to every writing run (also with --since); `force` overrides it and may overwrite today's file."""
     now = now or dt.datetime.now(dt.UTC)
     today = today or now.date()
     now = now.replace(year=today.year, month=today.month, day=today.day)
     dirp = Path(s.cfg.home) / "digests"
     interval = s.cfg.digest_interval_days
     last = _last(dirp)
-    if last and not dry_run and since is None and (today - last).days < interval:
+    if since is not None:
+        _parse_since(since, now)  # validate before anything else
+    if last and not dry_run and not force and (today - last).days < interval:
         nxt = last + dt.timedelta(days=interval)
         return DigestRun(f"A digest was already written for {last} (interval {interval} days); the next is due {nxt}. "
-                         f"See {dirp / f'{last}.md'}.", dirp / f"{last}.md", skipped=True)
+                         f"See {dirp / f'{last}.md'} (use --force to write another).", dirp / f"{last}.md", skipped=True)
     if since is not None:
-        cutoff = (_iso(dt.datetime.fromisoformat(since).replace(tzinfo=dt.UTC)) if "-" in since
-                  else _iso(now - dt.timedelta(days=float(since))))
+        cutoff = _parse_since(since, now)
     elif last:
         cutoff = _iso(dt.datetime.combine(last, dt.time(), dt.UTC))
     else:

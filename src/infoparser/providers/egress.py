@@ -5,11 +5,31 @@ text leaves even when the call then fails. The runner installs a sink that write
 ask/search have no inbox item (processing_events.inbox_id is NOT NULL), so they report egress inline instead
 (Answer.egress / SearchResult.egress). Only configured routes can be reported, never what a provider logs."""
 import functools
+import sys
 from contextvars import ContextVar
 from pathlib import Path
 
 sink: ContextVar = ContextVar("egress_sink", default=None)
-METHODS = ("generate", "embed", "rerank", "describe", "read", "transcribe")
+_warned = False
+
+
+def _port_methods() -> tuple:
+    """Public call methods of every port Protocol, so a new port method is wrapped automatically."""
+    import inspect
+    from . import ports
+    return tuple(sorted({n for _, c in inspect.getmembers(ports, inspect.isclass)
+                         if getattr(c, "_is_protocol", False) and c is not ports.Backend
+                         for n, f in vars(c).items() if callable(f) and not n.startswith("_")}))
+
+
+METHODS = _port_methods()
+
+
+def warn_once(msg: str) -> None:
+    global _warned
+    if not _warned:
+        _warned = True
+        print(msg, file=sys.stderr)
 
 
 def size_of(o) -> int:
@@ -32,7 +52,7 @@ def size_of(o) -> int:
 def wrap_remote(b):
     for m in METHODS:
         fn = getattr(b, m, None)
-        if not callable(fn):
+        if not callable(fn) or getattr(fn, "_egress_wrapped", False):  # never double-wrap
             continue
 
         def make(fn):
@@ -41,6 +61,7 @@ def wrap_remote(b):
                 if (s := sink.get()) is not None:
                     s(b.name, size_of(a) + size_of(k))
                 return fn(*a, **k)
+            inner._egress_wrapped = True
             return inner
         setattr(b, m, make(fn))
     return b

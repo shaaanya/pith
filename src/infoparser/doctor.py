@@ -1,7 +1,8 @@
 """Doctor: environment, database, blobs, backends, egress and external-tool checks.
 
 Design rules: takes a Config (not Services: building Services creates and migrates the database, which a
-diagnostic must not do on an empty home and cannot do on a corrupt one); opens the DB read-only; every check is
+diagnostic must not do on an empty home and cannot do on a corrupt one); opens the DB with mode=ro (on a WAL
+database SQLite may still create -wal/-shm sidecar files when it reads; it never writes to the main database); every check is
 isolated so one failure never aborts the report or raises; probes have a 3 s timeout and send only canned
 strings, never user content; remote backends are never contacted; `cli` backends are never executed
 (shutil.which only). Exit code is non-zero only when a check is ERROR (WARN is allowed).
@@ -156,8 +157,16 @@ def _orphans(cfg):
     return Check("orphans", "WARN" if bits else "OK", "; ".join(bits) or "no orphan blobs or rows")
 
 
-def _http_get(url, timeout=PROBE_TIMEOUT):
-    with urllib.request.urlopen(url, timeout=timeout) as r:  # noqa: S310 - loopback/local backend, canned request
+def _auth(b) -> dict:
+    """Authorization header for a local backend that is configured with a key (never logged or reported)."""
+    import os
+    key = os.environ.get(b.api_key_env) if getattr(b, "api_key_env", None) else None
+    return {"Authorization": f"Bearer {key}"} if key else {}
+
+
+def _http_get(url, headers=None):
+    req = urllib.request.Request(url, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=PROBE_TIMEOUT) as r:  # noqa: S310 - local backend, canned request
         return r.status
 
 
@@ -169,7 +178,11 @@ def _probe(cfg, b) -> Check:
         return Check(name, "INFO", f"{head}; not probed (remote backends are never contacted by doctor)", base)
     if b.type == "openai_compat":
         try:
-            _http_get(b.base_url.rstrip("/") + "/models")
+            _http_get(b.base_url.rstrip("/") + "/models", _auth(b))
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                return Check(name, "WARN", f"{head}; reachability unknown (auth required: HTTP {e.code}; set the key env var)", base)
+            # any other HTTP status still proves the server is up
         except (urllib.error.URLError, OSError, ValueError) as e:
             return Check(name, "WARN", f"{head}; unreachable at {b.base_url}: {getattr(e, 'reason', e)}", base)
         extra = ""
@@ -177,7 +190,7 @@ def _probe(cfg, b) -> Check:
             try:  # canned probe string; never user content
                 req = urllib.request.Request(b.base_url.rstrip("/") + "/embeddings", method="POST",
                                              data=json.dumps({"model": b.embed_model, "input": ["doctor probe"]}).encode(),
-                                             headers={"Content-Type": "application/json"})
+                                             headers={"Content-Type": "application/json", **_auth(b)})
                 urllib.request.urlopen(req, timeout=PROBE_TIMEOUT).read()  # noqa: S310
                 extra = "; /embeddings ok"
             except (urllib.error.URLError, OSError, ValueError) as e:

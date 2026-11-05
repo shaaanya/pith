@@ -73,31 +73,48 @@ def test_anthropic_blocked_when_remote_disallowed(make_cfg):
     assert {d["name"] for d in r.describe()} >= {"cloud"}
 
 
-def test_anthropic_never_forwards_key_on_redirect(key):
+@pytest.mark.parametrize("code", [301, 302, 303, 307, 308])
+def test_anthropic_never_forwards_key_on_redirect(key, code):
     import threading
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-    with AnthropicStub() as target:
-        class R(BaseHTTPRequestHandler):
-            def log_message(self, *a):
-                pass
+    seen = []  # ANY request of ANY method reaching the second server (stdlib turns 301/302/303 POSTs into GETs)
 
-            def do_POST(self):
-                self.rfile.read(int(self.headers.get("Content-Length", 0)))
-                self.send_response(307)
-                self.send_header("Location", target.base_url + "/v1/messages")
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-        srv = ThreadingHTTPServer(("127.0.0.1", 0), R)
-        threading.Thread(target=srv.serve_forever, daemon=True).start()
-        try:
-            b = AnthropicBackend("a", "m", "IP_ANTH_KEY", base_url=f"http://127.0.0.1:{srv.server_port}")
-            with pytest.raises(ProviderError, match="redirect"):
-                b.generate(MSGS[1:2])
-        finally:
-            srv.shutdown()
-            srv.server_close()
-        assert target.requests == []  # the second server never saw the request, let alone the key
+    class T(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _any(self):
+            seen.append((self.command, self.path, dict(self.headers)))
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"{}")
+        do_GET = do_POST = _any
+
+    class R(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(code)
+            self.send_header("Location", f"http://127.0.0.1:{target.server_port}/v1/messages")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+    target = ThreadingHTTPServer(("127.0.0.1", 0), T)
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), R)
+    for x in (target, srv):
+        threading.Thread(target=x.serve_forever, daemon=True).start()
+    try:
+        b = AnthropicBackend("a", "m", "IP_ANTH_KEY", base_url=f"http://127.0.0.1:{srv.server_port}")
+        with pytest.raises(ProviderError, match="redirect"):
+            b.generate(MSGS[1:2])
+    finally:
+        for x in (target, srv):
+            x.shutdown()
+            x.server_close()
+    assert seen == []  # no request at all reached the second server, so no x-api-key either
 
 
 def test_anthropic_requires_https_for_non_loopback():
