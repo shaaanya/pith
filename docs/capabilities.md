@@ -12,7 +12,7 @@ it so an unsupported use is detected up front instead of failing at call time.
 | `rerank` | Can rerank documents | declared in config on `openai_compat` (Jina/Cohere-style `POST /rerank`; UNVERIFIED against a real server). No other backend implements it |
 | `transcribe` | Speech to text | `whisper_cpp`; `openai_compat` when declared |
 | `ocr` | Image to text | `tesseract` only; declaring `ocr` on `openai_compat` or `cli` is a config error (use `vision` to describe images) |
-| `context_window` | Tokens (default 8192) used to size prompts and decide on map-reduce | `context_window` in config |
+| `context_window` | Tokens (default 8192) used to size prompts and decide on map-reduce. Match the server's real context: Ollama's `/v1` endpoint truncated a default-sized batch to 4096 prompt tokens without an error, so an Ollama backend should set `context_window = 4096` (or raise the server's context) | `context_window` in config |
 
 ## Tasks
 

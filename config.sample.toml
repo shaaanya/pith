@@ -24,6 +24,9 @@ type = "openai_compat"
 locality = "local"
 base_url = "http://localhost:11434/v1"
 model = "REPLACE_WITH_LOCAL_MODEL"
+# Ollama's /v1 serves a 4096-token context by default, while the built-in default assumes 8192, so long
+# documents lose text silently. Set this to the context size your server really uses.
+context_window = 4096
 # embed_model = "REPLACE_WITH_EMBEDDING_MODEL"   # enables the embed task (hybrid search)
 # api_key_env = "NAME_OF_ENV_VAR"                 # only if the server needs a key
 # capabilities = ["json_mode"]                    # extras the server supports
