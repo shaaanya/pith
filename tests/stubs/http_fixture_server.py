@@ -9,7 +9,9 @@ FIXTURES = Path(__file__).parent.parent / "fixtures"
 
 
 @dataclass
-class Route:
+class Route:  # pylint: disable=too-many-instance-attributes  # one field per response knob
+    """One canned response."""
+
     body: bytes | Path = b""
     status: int = 200
     ctype: str = "text/html; charset=utf-8"
@@ -19,16 +21,21 @@ class Route:
 
 
 class FixtureServer:
+    """Context-managed loopback server serving the given routes; records hit paths."""
+
     def __init__(self, routes: dict[str, Route]):
         routes_ = routes
         self.hits: list[str] = []
         hits = self.hits
 
         class H(BaseHTTPRequestHandler):
-            def log_message(self, *a):
-                pass
+            """Serves the routes."""
 
-            def do_GET(self):
+            def log_message(self, *a):  # pylint: disable=arguments-differ  # silence logging
+                """No request logging."""
+
+            def do_GET(self):  # pylint: disable=invalid-name  # http.server dispatch name
+                """Serve the route for the path, else 404."""
                 hits.append(self.path)
                 r = routes_.get(self.path.split("?")[0])
                 if r is None:
@@ -52,9 +59,11 @@ class FixtureServer:
         self.base = f"http://127.0.0.1:{self.httpd.server_address[1]}"
 
     def __enter__(self):
+        """Start serving."""
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         return self
 
     def __exit__(self, *a):
+        """Stop serving."""
         self.httpd.shutdown()
         self.httpd.server_close()

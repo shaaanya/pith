@@ -1,11 +1,13 @@
+"""Deterministic hashing embedder for tests."""
 import hashlib
 import re
 
 from infoparser.providers.ports import Capabilities, EmbedResult
 
 
-class HashEmbedder:
-    """Deterministic bag-of-words hashing embedder implementing the Embedder port (no model, fixed dim)."""
+class HashEmbedder:  # pylint: disable=too-few-public-methods  # the Embedder port has one method
+    """Bag-of-words hashing embedder implementing the Embedder port (no model, fixed dim)."""
+
     locality = "local"
     capabilities = Capabilities(embeddings=True)
 
@@ -13,6 +15,7 @@ class HashEmbedder:
         self.name, self.model_id, self.dim = "hash", model_id, dim
 
     def embed(self, texts):
+        """One hashed bag-of-words vector per text."""
         out = []
         for t in texts:
             v = [0.0] * self.dim

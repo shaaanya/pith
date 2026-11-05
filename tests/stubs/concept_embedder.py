@@ -1,5 +1,7 @@
-"""Deterministic concept embedder: words in the same concept group share one strong dimension (so
-paraphrases with no word overlap still match); every other word hashes into a few weak noise dims."""
+"""Deterministic concept embedder: words in one concept group share a strong dimension.
+
+Paraphrases with no word overlap still match; other words hash into a few weak noise dims.
+"""
 import hashlib
 import json
 import re
@@ -12,7 +14,9 @@ WORD2G = {w: i for i, ws in enumerate(GROUPS.values()) for w in ws}
 NOISE = 16
 
 
-class ConceptEmbedder:
+class ConceptEmbedder:  # pylint: disable=too-few-public-methods  # the Embedder port has one method
+    """Concept-group embedder implementing the Embedder port."""
+
     locality = "local"
     capabilities = Capabilities(embeddings=True)
 
@@ -20,6 +24,7 @@ class ConceptEmbedder:
         self.name, self.model_id = name, model_id
 
     def embed(self, texts):
+        """One concept-group vector per text."""
         out = []
         for t in texts:
             v = [0.0] * (len(GROUPS) + NOISE)
