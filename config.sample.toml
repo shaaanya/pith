@@ -49,3 +49,7 @@ distill = ["local", "heuristic"]
 classify = ["local", "heuristic"]
 # ocr = ["ocr"]
 # transcribe = ["stt"]
+
+# [digest]
+# interval_days = 7     # at most one digest per interval
+# max_items = 20        # cap on items listed per section

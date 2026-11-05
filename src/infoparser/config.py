@@ -23,6 +23,8 @@ class Config:
     http_bind: str = "127.0.0.1"
     http_port: int = 8787
     http_token: str | None = None  # explicit token required for a non-loopback bind
+    digest_interval_days: int = 7
+    digest_max_items: int = 20
 
 
 def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
@@ -48,6 +50,8 @@ def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
         http_bind=data.get("http", {}).get("bind", "127.0.0.1"),
         http_port=int(data.get("http", {}).get("port", 8787)),
         http_token=env.get("INFOPARSER_HTTP_TOKEN") or data.get("http", {}).get("token"),
+        digest_interval_days=int(data.get("digest", {}).get("interval_days", 7)),
+        digest_max_items=int(data.get("digest", {}).get("max_items", 20)),
         max_fetch_bytes=limits.get("max_fetch_bytes", 50_000_000),
         yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or data.get("media", {}).get("yt_dlp", "yt-dlp"),
         ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or data.get("media", {}).get("ffmpeg", "ffmpeg"),

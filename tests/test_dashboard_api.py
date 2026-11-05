@@ -139,3 +139,12 @@ def test_hostile_strings_come_back_as_plain_data(svc):
     d = api.item_detail(svc, iid)
     assert d["source"]["url"] is None
     assert all(h["source_url"] is None for h in api.search(svc, "quokkas", {})["hits"])
+
+
+def test_api_digest_uses_digest_module_and_never_writes(svc):
+    r = api.inbox_submit(svc, {"text": NOTE})
+    process(svc, r["id"])
+    d = api.digest(svc)
+    assert d["total"] >= 1 and d["items"] and "## New" in d["markdown"]
+    assert not (svc.cfg.home / "digests").exists()  # dry-run: opening the dashboard must not use up the interval
+    assert "egress" in api.privacy(svc)

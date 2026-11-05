@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-import time
 from pathlib import Path
 from urllib.parse import urlparse
 
+from infoparser import digest as digest_mod
+from infoparser import doctor
 from infoparser.inbox.ingest import handle
-from infoparser.ids import utcnow
 from infoparser.retrieval import ask as ask_mod
 from infoparser.retrieval import search as search_mod
 from infoparser.store import knowledge
@@ -61,6 +61,7 @@ def state(s) -> dict:
 def privacy(s) -> dict:
     backends = [{"name": n, "locality": b.locality, "type": getattr(b, "type", None)} for n, b in s.registry.backends.items()]
     return {"allow_remote": s.cfg.allow_remote, "backends": backends, "skipped": list(s.registry.skipped),
+            "egress": doctor.egress_report(s.cfg),
             "note": "remote backends receive text only when allow_remote is true"}
 
 
@@ -230,12 +231,10 @@ def duplicates(s) -> list[dict]:
 
 
 def digest(s, days: int = 7) -> dict:
-    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - days * 86400))
-    rows = s.conn.execute("SELECT id, title, kind, provenance, created_at FROM knowledge_items"
-                          " WHERE deleted_at IS NULL AND created_at>=? ORDER BY created_at DESC LIMIT 100",
-                          (since,)).fetchall()
-    return {"days": days, "since": since, "total": len(rows), "items": [dict(r) for r in rows],
-            "generated_at": utcnow()}
+    """Dry run of the real digest module: never writes a file, so viewing it cannot use up the interval."""
+    d = digest_mod.data(s, since_days=days)
+    return {**d, "days": days, "total": d["new"]["total"], "items": d["new"]["items"],
+            "markdown": digest_mod.render(d)}
 
 
 # ---- blobs

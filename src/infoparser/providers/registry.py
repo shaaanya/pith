@@ -13,6 +13,7 @@ import threading
 from dataclasses import asdict
 
 from ..config import Config
+from . import egress
 from .ports import Backend, RemoteBlocked
 
 TYPES = {
@@ -43,6 +44,8 @@ def _build(name: str, spec: dict) -> Backend:
     except (KeyError, TypeError, ValueError) as e:
         raise ValueError(f"backend {name!r}: bad spec ({type(e).__name__}: {e})") from e
     b.type = t
+    if b.locality == "remote":
+        egress.wrap_remote(b)
     return b
 
 

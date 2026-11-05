@@ -231,7 +231,12 @@ async function status() {
   put(main, h("div", { class: "card" }, h("b", {}, "Inbox"), h("div", { class: "row" }, Object.entries(s.counts).map(([k, v]) => badge(`${k}: ${v}`, k))), h("div", { class: "mut" }, s.items + " knowledge items")),
     h("div", { class: "card" }, h("b", {}, "Privacy"), h("p", {}, p.allow_remote ? "Remote backends are ALLOWED: text may leave this machine." : "Nothing leaves this machine (allow_remote is off)."),
       ...p.backends.map((b) => h("div", {}, badge(b.locality, b.locality === "remote" ? "failed" : "stated"), " ", b.name, " ", h("span", { class: "mut" }, b.type || ""))),
-      ...p.skipped.map((k) => h("div", { class: "warn" }, `skipped ${k.name} (${k.task}): ${k.reason}`))));
+      ...p.skipped.map((k) => h("div", { class: "warn" }, `skipped ${k.name} (${k.task}): ${k.reason}`))),
+    h("div", { class: "card" }, h("b", {}, "Egress"),
+      ...Object.entries(p.egress.routes).filter(([, x]) => x.remote.length).map(([t, x]) =>
+        h("div", {}, `${t}: ${x.remote.join(", ")} ${x.blocked ? "(blocked)" : "(active)"}; would send ${x.data}`)),
+      ...p.egress.logged.map((e) => h("div", {}, `${e.backend}: ${e.calls} call(s), ${e.bytes_sent} bytes sent`)),
+      h("p", { class: "mut" }, p.egress.note)));
 }
 addEventListener("keydown", (e) => {
   if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); show("search"); }

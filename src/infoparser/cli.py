@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -7,17 +8,22 @@ from infoparser.config import load_config
 from infoparser.services import build
 
 
-def _services(a):
+def _cfg(a):
     env = dict(os.environ)
     if a.home:
         env["INFOPARSER_HOME"] = a.home
-    return build(load_config(Path(a.config) if a.config else None, env))
+    return load_config(Path(a.config) if a.config else None, env)
+
+
+def _services(a):
+    return build(_cfg(a))
 
 
 def _init(a):
     s = _services(a)
     for d in (s.cfg.blobs_dir, s.cfg.vault_dir, *s.cfg.watch_dirs[:1]):
         Path(d).mkdir(parents=True, exist_ok=True)
+    Path(s.cfg.home).chmod(0o700)
     print(f"initialized {s.cfg.home}")
 
 
@@ -127,12 +133,58 @@ def _reindex(a):
 
 
 def _doctor(a):
+    from infoparser import doctor
+    checks = doctor.run(_cfg(a), full=a.full)  # config only: never builds Services (no db creation/migration)
+    print(doctor.to_json(checks) if a.json else doctor.render(checks))
+    sys.exit(doctor.exit_code(checks))
+
+
+def _egress(a):
+    from infoparser import doctor
+    r = doctor.egress_report(_cfg(a))
+    print(json.dumps(r, indent=2) if a.json else doctor.render_egress(r))
+
+
+def _export(a):
+    from infoparser.export import export_vault
     s = _services(a)
-    print(f"home: {s.cfg.home}\ndb: {s.cfg.db_path}\nallow_remote: {s.cfg.allow_remote}")
-    for d in s.registry.describe():
-        print(f"backend: {d}")
-    for k in s.registry.skipped:
-        print(f"skipped: {k}")
+    print(f"exported {export_vault(s, keep=a.keep)} item(s) to {s.cfg.vault_dir}")
+
+
+def _backup(a):
+    from infoparser import backup
+    cfg = _cfg(a)
+    try:
+        print(f"backup written: {backup.backup(cfg, Path(a.dest) if a.dest else cfg.home / 'backups')}")
+    except (backup.RestoreError, OSError) as e:
+        sys.exit(f"error: {e}")
+
+
+def _restore(a):
+    from infoparser import backup
+    cfg = _cfg(a)
+    try:
+        backup.restore(Path(a.archive), cfg.home, force=a.force)
+    except (backup.RestoreError, OSError) as e:
+        sys.exit(f"error: {e}")
+    print(f"restored {a.archive} into {cfg.home}")
+
+
+def _verify(a):
+    from infoparser import backup
+    try:
+        m = backup.verify(Path(a.archive))
+    except (backup.RestoreError, OSError) as e:
+        sys.exit(f"error: {e}")
+    print(f"ok: schema v{m['schema_version']}, {m['blob_count']} blob(s), created {m['created_at']}, {m['counts']}")
+
+
+def _digest(a):
+    from infoparser import digest
+    r = digest.run(_services(a), since=a.since, dry_run=a.dry_run)
+    print(r.text)
+    if r.path and not r.skipped:
+        print(f"written: {r.path}", file=sys.stderr)
 
 
 ADAPTERS = ("fs", "telegram_export", "http")
@@ -265,7 +317,30 @@ def main(argv=None):
     c = sub.add_parser("reindex", parents=[common])
     c.add_argument("--prune-old", action="store_true")
     c.set_defaults(f=_reindex)
-    sub.add_parser("doctor", parents=[common]).set_defaults(f=_doctor)
+    c = sub.add_parser("doctor", parents=[common])
+    c.add_argument("--json", action="store_true")
+    c.add_argument("--full", action="store_true", help="verify every blob, not a sample")
+    c.set_defaults(f=_doctor)
+    c = sub.add_parser("egress", parents=[common])
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(f=_egress)
+    c = sub.add_parser("export", parents=[common])
+    c.add_argument("--keep", action="store_true", help="keep vault files of deleted/renamed items")
+    c.set_defaults(f=_export)
+    c = sub.add_parser("backup", parents=[common])
+    c.add_argument("dest", nargs="?")
+    c.set_defaults(f=_backup)
+    c = sub.add_parser("restore", parents=[common])
+    c.add_argument("archive")
+    c.add_argument("--force", action="store_true")
+    c.set_defaults(f=_restore)
+    c = sub.add_parser("verify", parents=[common])
+    c.add_argument("archive")
+    c.set_defaults(f=_verify)
+    c = sub.add_parser("digest", parents=[common])
+    c.add_argument("--since", help="YYYY-MM-DD or a number of days")
+    c.add_argument("--dry-run", action="store_true")
+    c.set_defaults(f=_digest)
     c = sub.add_parser("adapters", parents=[common])
     asub = c.add_subparsers(dest="acmd", required=True)
     asub.add_parser("list", parents=[common]).set_defaults(f=_adapters_list)

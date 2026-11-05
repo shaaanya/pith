@@ -1,5 +1,6 @@
 """detect -> extract -> chunk -> save source/segments -> distill -> save items. Idempotent per inbox_id."""
 import hashlib
+import json
 import time
 
 from infoparser.domain.models import SegmentIn
@@ -8,6 +9,7 @@ from infoparser.pipeline import extractors  # noqa: F401  (registers extractors)
 from infoparser.pipeline.chunk import chunk_text, chunk_timed
 from infoparser.pipeline.detect import detect
 from infoparser.pipeline import dedupe, entities
+from infoparser.providers import egress
 from infoparser.pipeline.distill import distill
 from infoparser.pipeline.schemas import profile_for
 from infoparser.pipeline.extractors.base import EXTRACTORS, Extracted, ExtractCtx, NeedsClarificationError
@@ -46,6 +48,20 @@ def _profile(ct, hints):
 
 
 def process(services, inbox_id: str):
+    s = services
+
+    def sink(backend, nbytes):  # every call to a remote backend leaves an audit row for this inbox item
+        s.conn.execute(
+            "INSERT INTO processing_events(inbox_id, at, stage, status, detail, backend, egress)"
+            " VALUES (?,?,?,?,?,?,1)", (inbox_id, utcnow(), "egress", "info", json.dumps({"bytes_sent": nbytes}), backend))
+    tok = egress.sink.set(sink)
+    try:
+        return _process(services, inbox_id)
+    finally:
+        egress.sink.reset(tok)
+
+
+def _process(services, inbox_id: str):
     s = services
     t0 = time.monotonic()
     try:
