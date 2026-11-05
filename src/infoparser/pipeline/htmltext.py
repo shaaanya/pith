@@ -15,10 +15,11 @@ _HEADING = {f"h{i}": "#" * i for i in range(1, 7)}
 
 
 class _Node:
-    __slots__ = ("tag", "attrs", "kids", "parent")
+    __slots__ = ("tag", "attrs", "kids", "parent", "sem")
 
     def __init__(self, tag, attrs, parent):
         self.tag, self.attrs, self.kids, self.parent = tag, attrs, [], parent
+        self.sem = False  # contains an <article>/<main> descendant
 
 
 class _Builder(HTMLParser):
@@ -37,6 +38,10 @@ class _Builder(HTMLParser):
                 self.meta.setdefault(k, a["content"].strip())
         n = _Node(tag, a, self.cur)
         self.cur.kids.append(n)
+        if tag in ("article", "main"):
+            p = n.parent
+            while p is not None and not p.sem:
+                p.sem, p = True, p.parent
         if tag == "title":
             self._in_title = True
         if tag not in _VOID:
@@ -65,7 +70,10 @@ class _Builder(HTMLParser):
 def _junk(n: _Node) -> bool:
     if n.tag in _DROP or "hidden" in n.attrs or n.attrs.get("aria-hidden") == "true":
         return True
-    toks = re.split(r"[\s_-]+", f"{n.attrs.get('class') or ''} {n.attrs.get('id') or ''}".lower())
+    if n.tag in ("html", "body") or n.sem:  # wrappers of the real content are never junk
+        return False
+    # whole class/id tokens only: "sidebar" matches, "has-sidebar" / "page-with-sidebar" do not
+    toks = f"{n.attrs.get('class') or ''} {n.attrs.get('id') or ''}".lower().split()
     return any(t in _JUNK_TOKENS for t in toks)
 
 
@@ -131,6 +139,13 @@ def _walk(n: _Node):
 
 
 def extract_main(html: str, base_url: str) -> tuple[str, str, list[tuple[str, str]], dict]:
+    try:
+        return _extract_main(html, base_url)
+    except RecursionError:
+        raise RuntimeError("page nesting too deep to parse") from None
+
+
+def _extract_main(html: str, base_url: str):
     b = _Builder()
     b.feed(html)
     b.close()

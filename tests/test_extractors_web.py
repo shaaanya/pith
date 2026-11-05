@@ -80,7 +80,8 @@ def test_web_response_over_cap_fails_or_truncates_cleanly(svc, announce):
     assert svc.inbox.get(iid)["canonical_url"]
 
 
-def test_reddit_json_post_and_comments(svc):
+def test_reddit_json_post_and_comments(svc, monkeypatch):
+    monkeypatch.setattr(web, "REDDIT_HOSTS", ("127.0.0.1",))
     thread = (FIXTURES / "reddit_thread.json").read_bytes()
     with FixtureServer({"/r/LocalLLaMA/comments/abc/best_way.json": Route(thread, ctype="application/json")}) as srv:
         iid = svc.inbox.submit(adapter="t", text=srv.base + "/r/LocalLLaMA/comments/abc/best_way/").id
@@ -108,3 +109,67 @@ def test_fetch_follows_http_redirect():
     with FixtureServer({"/r": Route(b"", 302, headers={"Location": "/ok"}), "/ok": Route(b"hi", ctype="text/plain")}) as srv:
         res = web.fetch(srv.base + "/r", max_bytes=1000)
         assert res.status == 200 and res.body == b"hi" and res.final_url.endswith("/ok")
+
+
+BODY = ("<h1>Guide</h1>" + "<p>Retrieval systems chunk documents into passages and embed each one. </p>" * 8)
+
+
+@pytest.mark.parametrize("html", [
+    f"<html><body class='has-sidebar'><article>{BODY}</article></body></html>",
+    f"<html><body class='no-sidebar modal-open'><main>{BODY}</main></body></html>",
+    f"<html><body><div id='page-with-sidebar'><article>{BODY}</article></div></body></html>",
+    f"<html><body><div class='sidebar-layout wrap'><div class='content'>{BODY}</div></div></body></html>",
+])
+def test_wrapper_class_tokens_do_not_hide_article(html):
+    _, text, _, _ = extract_main(html, "http://x.test/")
+    assert "chunk documents into passages" in text
+
+
+def test_real_sidebar_and_ad_still_dropped():
+    html = (f"<html><body><article>{BODY}<div class='ad'>BUYADS</div></article>"
+            "<div class='sidebar'><a href='/a'>NAVLINKONE</a><a href='/b'>NAVLINKTWO</a></div></body></html>")
+    _, text, _, _ = extract_main(html, "http://x.test/")
+    assert "BUYADS" not in text and "NAVLINKONE" not in text and "chunk documents" in text
+
+
+def test_long_page_mentioning_enable_javascript_is_not_refused(svc):
+    page = ("<html><body><article><h1>Tutorial</h1><p>First, enable JavaScript in your browser settings.</p>"
+            + "<p>Then we explain how retrieval augmented generation works in practice.</p>" * 40
+            + "</article></body></html>")
+    with FixtureServer({"/t": Route(page.encode())}) as srv:
+        iid = svc.inbox.submit(adapter="t", text=srv.base + "/t").id
+        assert isinstance(runner.process(svc, iid), Processed)
+
+
+def test_pdf_and_json_urls_get_clear_clarification(svc):
+    routes = {"/p": Route(b"%PDF-1.4", ctype="application/pdf"), "/j": Route(b"{}", ctype="application/json")}
+    with FixtureServer(routes) as srv:
+        out = runner.process(svc, svc.inbox.submit(adapter="t", text=srv.base + "/p").id)
+        assert isinstance(out, NeedsClarification) and "PDF" in out.reason and "submit the file" in out.reason
+        out = runner.process(svc, svc.inbox.submit(adapter="t", text=srv.base + "/j").id)
+        assert isinstance(out, NeedsClarification) and "application/json" in out.reason
+
+
+def test_reddit_path_on_non_reddit_host_is_plain_web(svc):
+    # no monkeypatch: 127.0.0.1 is not a reddit host, so no .json rewrite is attempted
+    with FixtureServer({"/r/x/comments/1/t": Route(FIXTURES / "article.html")}) as srv:
+        iid = svc.inbox.submit(adapter="t", text=srv.base + "/r/x/comments/1/t").id
+        assert isinstance(runner.process(svc, iid), Processed)
+        assert not any(h.endswith(".json") for h in srv.hits)
+
+
+def test_https_submitted_url_never_downgrades_to_http(svc):
+    with FixtureServer({"/a": Route(FIXTURES / "article.html")}) as srv:
+        url = srv.base.replace("http://", "https://") + "/a"
+        out = runner.process(svc, svc.inbox.submit(adapter="t", text=url).id)
+        assert isinstance(out, Failed)
+        assert srv.hits == []  # plain-http server never saw a request
+
+
+def test_pathological_nesting_fails_cleanly(svc):
+    page = "<html><body>" + "<div>" * 5000 + "deep text " * 50 + "</div>" * 5000 + "</body></html>"
+    with FixtureServer({"/d": Route(page.encode())}) as srv:
+        out = runner.process(svc, svc.inbox.submit(adapter="t", text=srv.base + "/d").id)
+        assert isinstance(out, (Failed, NeedsClarification, Processed))  # must not crash the worker
+        if isinstance(out, Failed):
+            assert "nest" in out.error

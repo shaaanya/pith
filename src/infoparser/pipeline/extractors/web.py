@@ -16,6 +16,7 @@ _WALL = re.compile(r"log ?in to (continue|read|view)|sign ?in to (continue|read|
                    r"subscribers only|create (a free )?account to (continue|read)|enable javascript|"
                    r"verify you are (a )?human", re.I)
 _REDDIT_PATH = re.compile(r"^/r/[^/]+/comments/")
+REDDIT_HOSTS = ("reddit.com",)  # module-level so tests can point it at the fixture server
 PASTE = "login or paywall; paste the text"
 # ponytail: private-IP/SSRF blocking not done (user's own machine, local fixture server needs localhost)
 
@@ -114,15 +115,21 @@ def extract(ctx: ExtractCtx) -> Extracted:
     if not url:
         raise NeedsClarificationError("web item has no URL")
     p = urlparse(url)
-    if _REDDIT_PATH.match(p.path):
+    host = (p.hostname or "").lower()
+    if _REDDIT_PATH.match(p.path) and any(host == h or host.endswith("." + h) for h in REDDIT_HOSTS):
         return _reddit(url, ctx)
     res = _fetch_with_http_fallback(url, ctx)
     _check_status(res)
+    ct = res.content_type.split(";")[0].strip().lower()
+    if ct == "application/pdf":
+        raise NeedsClarificationError("URL serves a PDF; download it and submit the file")
+    if ct and not (ct.startswith("text/") or ct in ("application/xhtml+xml", "application/xml")):
+        raise NeedsClarificationError(f"URL serves {ct}, not a web page; download it and submit the file or paste the text")
     sha = ctx.blobs.put_bytes(res.body)
     html = _decode(res)
     title, text, links, meta = extract_main(html, res.final_url)
-    if len(text) < 200 or _WALL.search(text[:2000]):
-        if len(text) < 200 or _WALL.search(text):
-            raise NeedsClarificationError(PASTE)
+    # wall markers only count on short pages: a long tutorial may legitimately say "enable JavaScript"
+    if len(text) < 200 or (len(text) < 1500 and _WALL.search(text)):
+        raise NeedsClarificationError(PASTE)
     return Extracted(title or url, meta.get("author"), url, "web", text,
                      metadata={**meta, "links": links[:200]}, original_sha=sha)

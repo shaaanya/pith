@@ -21,12 +21,15 @@ class Route:
 class FixtureServer:
     def __init__(self, routes: dict[str, Route]):
         routes_ = routes
+        self.hits: list[str] = []
+        hits = self.hits
 
         class H(BaseHTTPRequestHandler):
             def log_message(self, *a):
                 pass
 
             def do_GET(self):
+                hits.append(self.path)
                 r = routes_.get(self.path.split("?")[0])
                 if r is None:
                     r = Route(b"not found", 404, "text/plain")
