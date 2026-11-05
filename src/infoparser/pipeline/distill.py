@@ -40,16 +40,18 @@ def _parse(text: str):
     return None
 
 
-def _ask(backend, system, user, schema):
+def _ask(backend, system, user, schema, lenient=False, profile=None):
     """One generate + one repair retry. Returns (obj, GenResult) or (None, None). ProviderError propagates."""
     msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     for attempt in range(2):
         res = backend.generate(msgs, json_schema=schema)
         obj = _parse(res.text)
         err = "not valid JSON" if obj is None else validate(obj, schema)
-        # any backend (the heuristic one included) may answer in the generic shape; normalize() adapts it
-        if obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:
+        # only the final heuristic fallback may answer in the generic shape; normalize() adapts it
+        if lenient and obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:
             err = None
+        if err is None and profile == "collection" and not lenient and not obj.get("entries"):
+            err = "'entries' must not be empty"
         if err is None:
             return obj, res
         msgs = [*msgs, {"role": "assistant", "content": res.text},
@@ -82,12 +84,13 @@ def _text(segs):
 
 def _run_backend(backend, segments, profile, title, user_context):
     schema, system = SCHEMAS[profile], _system(profile, title, user_context)
+    ask = lambda u, sch=schema: _ask(backend, system, u, sch, lenient=backend.type == "heuristic", profile=profile)
     budget = max(500, backend.capabilities.context_window * _CHARS_PER_TOKEN - _OVERHEAD)
     if sum(len(s.text) + 2 for s in segments) <= budget:
-        return _ask(backend, system, _text(segments), schema)
+        return ask(_text(segments))
     parts, last = [], None
     for batch in _batches(segments, budget):  # map
-        obj, last = _ask(backend, system, _text(batch), schema)
+        obj, last = ask(_text(batch))
         if obj is None:
             return None, None
         parts.append(obj)
@@ -123,10 +126,16 @@ def normalize(obj: dict, profile: str, segments: list[SegmentIn], title: str = "
         return [Candidate(kind="collection", title=title, body=obj.get("summary") or title,
                           data={"entries": entries}, **common)]
     out = [Candidate(kind="summary", title="Summary", body=obj["summary"], **common)]
-    for key, kind in (("insights", "insight"), ("claims", "claim")):
-        out += [item(kind, i["text"], i["text"], i.get("quote")) for i in obj.get(key, [])]
-    out += [item("snippet", s["title"], s["title"], s.get("quote"), {"code": s["code"]}) for s in obj.get("snippets", [])]
-    out += [item("insight", p, p, None) for p in obj.get("key_points", [])]
+    convs = [(obj.get(k, []), lambda i, kind=kind: item(kind, i["text"], i["text"], i.get("quote")))
+             for k, kind in (("insights", "insight"), ("claims", "claim"))]
+    convs.append((obj.get("snippets", []), lambda x: item("snippet", x["title"], x["title"], x.get("quote"), {"code": x["code"]})))
+    convs.append((obj.get("key_points", []), lambda p: item("insight", p, p, None)))
+    for elems, conv in convs:
+        for e in elems:
+            try:  # one malformed element must not sink the whole result
+                out.append(conv(e))
+            except (KeyError, TypeError, AttributeError):
+                continue
     return out
 
 
@@ -138,5 +147,9 @@ def distill(registry, segments, *, profile, title, user_context):
             continue
         if obj is None:
             continue
-        return check(normalize(obj, profile, segments, title), segments), f"{res.backend}:{res.model}"
+        try:
+            cands = normalize(obj, profile, segments, title)
+        except (KeyError, TypeError, AttributeError):
+            continue
+        return check(cands, segments), f"{res.backend}:{res.model}"
     raise ProviderError("no backend produced valid distillation output")

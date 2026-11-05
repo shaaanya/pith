@@ -122,3 +122,25 @@ def test_distill_oversized_single_segment_is_split():
     f = Fake("f", [part] * 5 + [{"summary": "final"}], context_window=1500)
     run(reg(f), segs)
     assert len(f.calls) >= 3 and all(len(c[1]["content"]) <= 3000 for c in f.calls[:-1])
+
+
+@pytest.mark.parametrize("profile,bad", [
+    ("programming", {"summary": "s", "snippets": [{"title": "t"}]}),
+    ("paper", {"summary": "s", "claims": [{"quote": "q"}]}),
+    ("collection", {"summary": "only a summary"}),
+    ("collection", {"title": "t", "entries": []}),
+])
+def test_distill_real_backend_profile_violation_repairs_then_heuristic(profile, bad):
+    f = Fake("f", [bad, bad])
+    cands, by = run(reg(f), profile=profile)
+    assert len(f.calls) == 2 and by.startswith("heuristic") and cands
+    if profile == "collection":
+        assert len(cands) == 1 and cands[0].data["entries"] is not None
+
+
+def test_distill_normalize_never_raises_on_malformed_element(monkeypatch):
+    from infoparser.pipeline import distill as D
+    f = Fake("f", [{"summary": "s", "insights": [{"text": "ok"}]}])
+    monkeypatch.setattr(D, "validate", lambda obj, schema, path="$": None)  # force past validation
+    obj = {"summary": "s", "insights": [{"quote": "no text"}, {"text": "ok"}], "snippets": [{"title": "t"}]}
+    assert [c.title for c in D.normalize(obj, "programming", SEGS)] == ["Summary", "ok"]
