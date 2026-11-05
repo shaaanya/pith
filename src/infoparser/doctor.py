@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from infoparser.backup import _sha_file, latest_schema
-from infoparser.providers.openai_compat import _OPENER  # never follows redirects
+from infoparser.providers.locality import opener  # no redirects, no proxy
 from infoparser.providers.registry import Registry
 
 PROBE_TIMEOUT = 3
@@ -189,7 +189,7 @@ def _why(e) -> str:
 
 def _http_get(url, headers=None):
     req = urllib.request.Request(url, headers=headers or {})
-    with _OPENER.open(req, timeout=PROBE_TIMEOUT) as r:
+    with opener(True).open(req, timeout=PROBE_TIMEOUT) as r:
         return r.status
 
 
@@ -200,7 +200,7 @@ def _probe_embeddings(b) -> str:
             b.base_url.rstrip("/") + "/embeddings", method="POST",
             data=json.dumps({"model": b.embed_model, "input": ["doctor probe"]}).encode(),
             headers={"Content-Type": "application/json", **_auth(b)})
-        with _OPENER.open(req, timeout=PROBE_TIMEOUT) as r:
+        with opener(True).open(req, timeout=PROBE_TIMEOUT) as r:
             r.read()
         return "; /embeddings ok"
     except (urllib.error.URLError, OSError, ValueError) as e:

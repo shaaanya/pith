@@ -75,7 +75,7 @@ def test_undeclared_non_loopback_backend_is_refused_and_sends_nothing(
 def test_undeclared_non_loopback_backend_reports_egress_when_allowed(
         tmp_path, monkeypatch, events):
     """Allowed remote traffic is announced to the egress sink before the call."""
-    monkeypatch.setattr("infoparser.providers.openai_compat._OPENER.open",
+    monkeypatch.setattr("urllib.request.OpenerDirector.open",
                         lambda *a, **k: (_ for _ in ()).throw(OSError("offline")))
     spec = {"type": "openai_compat", "base_url": LAN, "model": "m"}
     reg = Registry.from_config(_cfg(tmp_path, {"lan": spec}, allow_remote=True))

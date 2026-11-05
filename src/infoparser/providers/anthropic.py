@@ -19,18 +19,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from .locality import opener
 from .ports import Capabilities, CapabilityError, GenResult, ProviderError, schema_instruction
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Redirect handler that refuses every redirect."""
-
-    def redirect_request(self, *_args, **_kwargs):
-        """Never follow: the x-api-key header must not leave base_url."""
-        return None
-
-
-_OPENER = urllib.request.build_opener(_NoRedirect)
 _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 
@@ -77,7 +69,8 @@ class AnthropicBackend:  # pylint: disable=too-many-instance-attributes  # one a
             headers={"x-api-key": key, "anthropic-version": self.anthropic_version,
                      "content-type": "application/json"})
         try:
-            with _OPENER.open(req, timeout=self.timeout) as r:
+            # http is only accepted for loopback (see __init__): never via a proxy
+            with opener(self.base_url.startswith("http:")).open(req, timeout=self.timeout) as r:
                 data = json.loads(r.read())
         except urllib.error.HTTPError as e:
             if 300 <= e.code < 400:

@@ -23,7 +23,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from .locality import resolve
+from .locality import opener, resolve
 from .ports import (
     Capabilities,
     CapabilityError,
@@ -33,17 +33,6 @@ from .ports import (
     TimedText,
     schema_instruction,
 )
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    """Never follow a redirect: the Authorization header must not leave base_url."""
-
-    def redirect_request(self, *_a, **_k):  # pylint: disable=signature-differs
-        """Refuse: the 30x then surfaces as an HTTPError."""
-        return None
-
-
-_OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # plain spec values
@@ -92,7 +81,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         req = urllib.request.Request(self.base_url + path, data=body, method="POST",
                                      headers={"Content-Type": content_type, **self._headers()})
         try:
-            with _OPENER.open(req, timeout=self.timeout) as r:
+            with opener(self.locality == "local").open(req, timeout=self.timeout) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
             raise ProviderError(f"{self.name}: HTTP {e.code} {e.read()[:200]!r}") from e
