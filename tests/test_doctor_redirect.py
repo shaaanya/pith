@@ -41,7 +41,8 @@ class _Server:
         self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Recorder)
         self.httpd.seen, self.httpd.reply = [], reply
         self.port = self.httpd.server_address[1]
-        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        threading.Thread(target=self.httpd.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True).start()
 
     @property
     def seen(self):

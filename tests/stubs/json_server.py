@@ -37,7 +37,8 @@ class JsonStub:  # pylint: disable=too-few-public-methods  # context manager + b
 
     def __enter__(self):
         """Start serving."""
-        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True).start()
         return self
 
     def __exit__(self, *exc):
