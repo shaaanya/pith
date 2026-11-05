@@ -46,12 +46,15 @@ def process(services, inbox_id: str):
             twin = s.conn.execute("SELECT id FROM sources WHERE text_sha256=? ORDER BY fetched_at LIMIT 1",
                                   (text_sha,)).fetchone()
             if twin:
+                orig = s.conn.execute("SELECT inbox_id FROM provenance_log WHERE source_id=? AND inbox_id<>?"
+                                      " ORDER BY id LIMIT 1", (twin["id"], inbox_id)).fetchone()
                 with transaction(s.conn):
                     s.conn.execute("INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
                                    (twin["id"], inbox_id, ex.url, utcnow()))
                     s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?",
                                    (twin["id"], ct, inbox_id))
-                _stage(s.conn, inbox_id, "duplicate", t0, f"same text as source {twin['id']}; no new source")
+                _stage(s.conn, inbox_id, "duplicate", t0, f"same text as source {twin['id']} (first submitted as inbox "
+                       f"{orig['inbox_id'] if orig else '?'}); no new source")
                 return Processed()
         t0 = time.monotonic()
         if ex.timed:
@@ -81,17 +84,20 @@ def process(services, inbox_id: str):
                                (sid, inbox_id, ex.url, utcnow()))
             seg_ids = knowledge.save_segments(s.conn, sid, segs)
             item_ids = knowledge.save_items(s.conn, sid, cands, by, seg_ids)
-            entities.apply(s.conn, item_ids, cands)
             s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?", (sid, ct, inbox_id))
         _stage(s.conn, inbox_id, "save", t0, sid)
-        for stage, fn in (("embed", lambda: index.embed_pending(s)),
+        for stage, fn in (("entities", lambda: entities.apply(s.conn, item_ids, cands) or len(item_ids)),
+                          ("embed", lambda: index.embed_pending(s)),
                           ("dedupe", lambda: dedupe.find_near_duplicates(s.conn, item_ids, s))):
             t0 = time.monotonic()  # best-effort enrichment: a failure is logged, never fails the item
             try:
                 r = fn()
                 _stage(s.conn, inbox_id, stage, t0, str(r if isinstance(r, int) else len(r)))
             except Exception as e:  # noqa: BLE001
-                _stage(s.conn, inbox_id, stage, t0, f"{type(e).__name__}: {e}", level="error")
+                try:
+                    _stage(s.conn, inbox_id, stage, t0, f"{type(e).__name__}: {e}", level="error")
+                except Exception:  # noqa: BLE001 - the item is already saved; never fail it over a log write
+                    pass
         return Processed()
     except NeedsClarificationError as e:
         return NeedsClarification(e.reason)

@@ -56,3 +56,54 @@ def test_openai_compat_embeddings(svc, tmp_path):
             b if t == "embed" else None
         runner.process(svc, svc.inbox.submit(adapter="t", text=TEXT).id)
     assert list(models(svc)) == ["oa:e"]
+
+
+def test_reindex_failure_midway_keeps_old_vectors(svc, use_embedder):
+    use_embedder(svc, HashEmbedder("m1"))
+    runner.process(svc, svc.inbox.submit(adapter="t", text=TEXT).id)
+    before = models(svc)
+
+    class Flaky(HashEmbedder):
+        calls = 0
+
+        def embed(self, texts):
+            Flaky.calls += 1
+            if Flaky.calls > 1:
+                raise RuntimeError("down")
+            return super().embed(texts)
+    use_embedder(svc, Flaky("m1"))
+    import pytest
+    with pytest.raises(RuntimeError):
+        index.reindex(svc, prune_old=True)
+    assert models(svc) == before
+
+
+def test_model_id_probe_cached_and_empty_texts_skipped(svc, use_embedder):
+    class Counting(HashEmbedder):
+        texts = []
+
+        def embed(self, texts):
+            Counting.texts.append(list(texts))
+            return super().embed(texts)
+    use_embedder(svc, Counting())
+    svc.conn.execute("INSERT INTO sources(id) VALUES ('s')")
+    svc.conn.execute("INSERT INTO segments(source_id, idx, text) VALUES ('s', 0, '   ')")
+    svc.conn.execute("INSERT INTO segments(source_id, idx, text) VALUES ('s', 1, 'real text')")
+    index.embed_pending(svc)
+    index.embed_pending(svc)
+    probes = [t for t in Counting.texts if t == ["."]]
+    assert len(probes) == 1
+    assert not any("   " in t for t in Counting.texts)
+    assert models(svc) == {"test-embed-1": 1}
+
+
+def test_cli_reindex(svc, use_embedder, monkeypatch, capsys):
+    from infoparser import cli
+    use_embedder(svc, HashEmbedder("m1"))
+    runner.process(svc, svc.inbox.submit(adapter="t", text=TEXT).id)
+    use_embedder(svc, HashEmbedder("m2"))
+    monkeypatch.setattr(cli, "_services", lambda a: svc)
+    cli.main(["reindex"])
+    assert "reindexed" in capsys.readouterr().out and set(models(svc)) == {"m1", "m2"}
+    cli.main(["reindex", "--prune-old"])
+    assert set(models(svc)) == {"m2"}

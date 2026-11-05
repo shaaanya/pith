@@ -67,3 +67,31 @@ def test_dedupe_failure_never_fails_item(svc, monkeypatch):
     assert isinstance(runner.process(svc, iid), Processed)
     assert svc.conn.execute("SELECT count(*) FROM processing_events WHERE inbox_id=? AND stage='dedupe'"
                             " AND status='error'", (iid,)).fetchone()[0] == 1
+
+
+def test_duplicate_replaces_related_and_related_never_overwrites_duplicate(svc, use_embedder):
+    use_embedder(svc, HashEmbedder())
+    a = mk(svc, "s1", [Candidate("insight", "Vector search", "vector search finds nearest neighbours of embeddings quickly")])
+    b = mk(svc, "s2", [Candidate("insight", "Vector search", "vector search finds nearest neighbours of embeddings using indexes graphs")])
+    index.embed_pending(svc)
+    dedupe.find_near_duplicates(svc.conn, b, svc, threshold=0.99)
+    assert [r[2] for r in rels(svc)] == ["related"]
+    dedupe.find_near_duplicates(svc.conn, b, svc, threshold=0.5)
+    assert [r[2] for r in rels(svc)] == ["duplicate"]
+    dedupe.find_near_duplicates(svc.conn, b, svc, threshold=0.99)
+    assert [r[2] for r in rels(svc)] == ["duplicate"]
+
+
+def test_thresholds_are_named_constants():
+    assert dedupe.DUPLICATE_COSINE == 0.92 and dedupe.RELATED_COSINE == 0.75 and dedupe.JACCARD == 0.8
+
+
+def test_duplicate_event_names_original_inbox_and_source(svc):
+    page = FIXTURES / "article.html"
+    with FixtureServer({"/one": Route(page), "/two": Route(page)}) as srv:
+        i1 = svc.inbox.submit(adapter="t", text=srv.base + "/one").id
+        i2 = svc.inbox.submit(adapter="t", text=srv.base + "/two").id
+        runner.process(svc, i1)
+        runner.process(svc, i2)
+    d = svc.conn.execute("SELECT detail FROM processing_events WHERE inbox_id=? AND stage='duplicate'", (i2,)).fetchone()[0]
+    assert i1 in d and svc.inbox.get(i1)["source_id"] in d

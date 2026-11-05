@@ -2,7 +2,7 @@ import json
 import re
 from dataclasses import dataclass
 
-from infoparser.pipeline.entities import normalize
+from infoparser.domain.text import normalize
 
 _TOKEN = re.compile(r"\w+")
 

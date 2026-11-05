@@ -23,7 +23,8 @@ def put(conn, owner_type: str, owner_ids: list, model_id: str, vecs) -> None:
 
 
 def load(conn, model_id: str, owner_type: str = "segment", dim: int | None = None):
-    rows = conn.execute("SELECT owner_id, dim, vector FROM embeddings WHERE owner_type=? AND model_id=?",
+    live = " AND owner_id IN (SELECT id FROM knowledge_items WHERE deleted_at IS NULL)" if owner_type == "item" else ""
+    rows = conn.execute("SELECT owner_id, dim, vector FROM embeddings WHERE owner_type=? AND model_id=?" + live,
                         (owner_type, model_id)).fetchall()
     if dim is not None:
         rows = [r for r in rows if r["dim"] == dim]

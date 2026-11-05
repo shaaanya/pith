@@ -4,6 +4,8 @@ from infoparser.retrieval import index, vectors
 def test_cosine_topk_filters_by_model_id(svc):
     vectors.put(svc.conn, "segment", ["a", "b"], "m1", [[1, 0], [0, 1]])
     vectors.put(svc.conn, "segment", ["c"], "m2", [[1, 0]])
+    svc.conn.execute("INSERT INTO knowledge_items(id,kind,provenance,created_at,updated_at)"
+                     " VALUES ('i','insight','inferred','x','x')")
     vectors.put(svc.conn, "item", ["i"], "m1", [[1, 0]])
     got = vectors.cosine_topk(svc.conn, "m1", [1, 0.1], 5)
     assert [o for o, _ in got] == ["a", "b"] and got[0][1] > got[1][1]

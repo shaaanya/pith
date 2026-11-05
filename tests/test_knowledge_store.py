@@ -104,7 +104,7 @@ def test_segment_refs_use_idx_not_list_position(conn):
     assert conn.execute("SELECT text FROM segments WHERE id=?", (ref,)).fetchone()[0] == "seven"
 
 
-def test_update_item_data_merge_preserves_evidence_entities_topics(conn):
+def test_update_item_data_merge_preserves_evidence_and_keeps_other_keys(conn):
     sid, segs = setup(conn)
     [iid] = K.save_items(conn, sid, [cand("x", evidence="ev", entities=["E"], topics=["T"])], "m", segs)
     K.update_item(conn, iid, data={"note": "n", "topics": ["T2"]})

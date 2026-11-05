@@ -49,6 +49,15 @@ def save_segments(conn, source_id, segs: list[SegmentIn]) -> list[int]:
     return ids
 
 
+def _purge_links(conn, item_ids) -> None:
+    """Drop topic/entity links, relations (either side) and vectors of items that stop being live."""
+    for i in item_ids:
+        conn.execute("DELETE FROM item_topics WHERE item_id=?", (i,))
+        conn.execute("DELETE FROM item_entities WHERE item_id=?", (i,))
+        conn.execute("DELETE FROM relations WHERE item_a=? OR item_b=?", (i, i))
+        conn.execute("DELETE FROM embeddings WHERE owner_type='item' AND owner_id=?", (i,))
+
+
 def _snapshot(conn, row, reason, now):
     conn.execute("INSERT INTO knowledge_versions(item_id,version,title,body,data_json,saved_at,reason) VALUES (?,?,?,?,?,?,?)",
                  (row["id"], row["version"], row["title"], row["body"], row["data_json"], now, reason))
@@ -72,6 +81,7 @@ def save_items(conn, source_id, candidates: list[Candidate], extracted_by, segme
             _snapshot(conn, r, "reprocess", now)
             conn.execute("UPDATE knowledge_items SET deleted_at=?, updated_at=? WHERE id=?", (now, now, r["id"]))
             conn.execute("DELETE FROM items_fts WHERE rowid=?", (r["rid"],))
+        _purge_links(conn, [r["id"] for r in old])
         for c in candidates:
             iid = new_id()
             # entities/topics live in their tables (pipeline.entities.apply), not in data_json
@@ -120,6 +130,7 @@ def update_item(conn, item_id, **fields) -> None:
                      " updated_at=? WHERE id=?", (title, body, data_json, now, item_id))
         if r["deleted_at"] is None:
             _fts_set(conn, r["rid"], title, body)
+        conn.execute("DELETE FROM embeddings WHERE owner_type='item' AND owner_id=?", (item_id,))  # stale vector
 
 
 def delete_item(conn, item_id) -> None:
@@ -131,3 +142,4 @@ def delete_item(conn, item_id) -> None:
         conn.execute("UPDATE knowledge_items SET deleted_at=?, updated_at=? WHERE id=? AND deleted_at IS NULL",
                      (now, now, item_id))
         conn.execute("DELETE FROM items_fts WHERE rowid=?", (r["rid"],))
+        _purge_links(conn, [item_id])
