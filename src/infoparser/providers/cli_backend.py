@@ -19,9 +19,15 @@ from .ports import (Capabilities, CapabilityError, GenResult, ProviderError, fla
 _ESC = re.compile(r"\x1b(?:\[([0-9;?]*)([ -/]*[@-~])|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
 
 
+_MAX_DIGITS = 9  # longer CSI parameters are nonsense; treated as the default (1)
+
+
 def clean_terminal_output(text: str) -> str:
     """Render `text` as a terminal would: apply cursor-left/right, erase-line, CR and
-    backspace; drop every other escape sequence (colour, cursor visibility, OSC titles)."""
+    backspace; drop every other escape sequence (colour, cursor visibility, OSC titles).
+
+    Never raises. Caveat: a bare carriage return in legitimate output moves the cursor to the
+    start of the line, so the text after it overwrites what came before on that line."""
     lines, cur, col = [], [], 0
     pos = 0
     while pos < len(text):
@@ -29,7 +35,8 @@ def clean_terminal_output(text: str) -> str:
         if esc:
             pos = esc.end()
             params, final = esc.group(1), esc.group(2)
-            num = int(params.split(";")[0] or 1) if params and params[0].isdigit() else 1
+            first = params.split(";")[0] if params and params[0].isdigit() else ""
+            num = int(first) if 0 < len(first) <= _MAX_DIGITS else 1  # oversize -> ignored
             if final == "D":
                 col = max(0, col - num)
             elif final == "C":

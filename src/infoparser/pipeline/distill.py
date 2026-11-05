@@ -28,13 +28,25 @@ def _system(profile, title, user_context):
             "Reply with ONLY JSON matching the given schema.")
 
 
+_SCAN_CHARS = 256 * 1024  # a reply is never legitimately larger; bounds hostile input
+_MAX_STARTS = 200  # '{' positions tried before giving up
+
+
 def _first_object(text: str):
-    """The first balanced JSON object embedded in `text` (prose and fences around it ignored)."""
+    """The first balanced JSON object embedded in `text` (prose and fences around it ignored).
+
+    Work is bounded: only the first 256 KB are scanned and at most 200 '{' start positions are
+    tried, so hostile output cannot cost quadratic time."""
     decoder = json.JSONDecoder(strict=False)
-    for m in re.finditer(r"\{", text):
+    text = text[:_SCAN_CHARS]
+    pos = -1
+    for _ in range(_MAX_STARTS):
+        pos = text.find("{", pos + 1)
+        if pos < 0:
+            return None
         try:
-            obj, _ = decoder.raw_decode(text, m.start())
-        except ValueError:
+            obj, _ = decoder.raw_decode(text, pos)
+        except (ValueError, RecursionError):
             continue
         if isinstance(obj, dict):
             return obj
@@ -49,7 +61,7 @@ def _parse(text: str):
     t = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     try:
         return json.loads(t, strict=False)
-    except ValueError:
+    except (ValueError, RecursionError):
         return _first_object(t)
 
 
