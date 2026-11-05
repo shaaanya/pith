@@ -49,3 +49,35 @@ def test_registry_name_model_override_and_describe(make_cfg, stub):
     d = {x["name"]: x for x in r.describe()}
     assert d["oa"]["type"] == "openai_compat" and d["oa"]["capabilities"]["embeddings"]
     assert "embed" in d["oa"]["tasks"] and "distill" in d["heuristic"]["tasks"]
+
+
+def test_registry_skips_recorded_and_described(make_cfg):
+    be = {"far": {"type": "cli", "command": ["x"], "locality": "remote"}}
+    r = Registry.from_config(make_cfg(be, {"distill": ["far"]}))
+    r.chain("distill")
+    assert r.skipped == [{"name": "far", "task": "distill", "reason": "remote blocked: allow_remote=false"}]
+    d = {x["name"]: x for x in r.describe()}
+    assert d["far"]["blocked_reason"] == "remote blocked: allow_remote=false"
+    assert d["heuristic"]["blocked_reason"] is None
+
+
+def test_registry_explicit_remote_raises_remote_blocked(make_cfg):
+    from infoparser.providers.ports import RemoteBlocked
+    be = {"far": {"type": "cli", "command": ["x"], "locality": "remote"}}
+    with pytest.raises(RemoteBlocked):
+        Registry.from_config(make_cfg(be)).get("far")
+    assert Registry.from_config(make_cfg(be, allow_remote=True)).get("far").name == "far"
+
+
+def test_registry_heuristic_forced_last(make_cfg):
+    be = {"a": {"type": "cli", "command": ["x"]}, "heuristic": H}
+    r = Registry.from_config(make_cfg(be, {"distill": ["heuristic", "a"]}))
+    assert [x.name for x in r.chain("distill")] == ["a", "heuristic"]
+
+
+@pytest.mark.parametrize("spec", [
+    {"type": "cli"}, {"type": "openai_compat", "model": "m"}, {"type": "openai_compat", "base_url": "u"},
+    {"type": "cli", "command": ["x"], "capabilities": ["telepathy"]}])
+def test_registry_bad_spec_raises_value_error_with_name(make_cfg, spec):
+    with pytest.raises(ValueError, match="'bad'"):
+        Registry.from_config(make_cfg({"bad": spec}))
