@@ -7,8 +7,9 @@ transcribed. Local files go straight to the transcriber after ffmpeg -> 16 kHz m
 transcript is < 200 chars.
 
 The URL is passed to yt-dlp and cited exactly as submitted (the canonical form is only the dedupe
-key); when yt-dlp reports a `webpage_url` that is cited instead. That webpage_url handling is
-UNVERIFIED against the real yt-dlp (the fake never sets it).
+key); when yt-dlp reports a `webpage_url` that is cited instead. Checked against real yt-dlp
+(generic extractor, loopback): it echoes a direct URL back unchanged and reports the target of a
+redirect; other extractors are UNVERIFIED.
 
 Honest limits: captions are English-only (en/en.* tracks); other-language captions are ignored and
 the item falls back to transcription (or asks for clarification). Instagram/TikTok extraction
@@ -79,7 +80,7 @@ class YtDlp:
     """Thin yt-dlp wrapper: argument lists only, URL after `--`."""
 
     def __init__(self, binary: str = "yt-dlp", max_bytes: int | None = None):
-        self.binary = binary
+        self.binary, self.max_bytes = binary, max_bytes
         self.size = ["--max-filesize", str(max_bytes)] if max_bytes else []
 
     def _ok(self, cmd, timeout):
@@ -87,6 +88,15 @@ class YtDlp:
         if r.returncode != 0:
             raise MediaToolError((r.stderr or r.stdout or "yt-dlp failed").strip()[-500:])
         return r
+
+    def _found(self, tmpdir, pattern, r, optional=False) -> Path:
+        files = sorted(Path(tmpdir).glob(pattern))
+        if files:
+            return files[0]
+        if "larger than max-filesize" in r.stdout:  # real yt-dlp skips the file and exits 0
+            msg = f"media larger than max_fetch_bytes ({self.max_bytes})"
+            raise MediaToolError(msg) if optional else NeedsClarificationError(msg)
+        raise MediaToolError("yt-dlp produced no file")
 
     def info_and_subs(self, url: str, tmpdir: Path) -> tuple[dict, Path | None]:
         """Metadata plus the first English caption file, if any (nothing else downloaded)."""
@@ -124,7 +134,7 @@ class YtDlp:
 
     def download_audio(self, url: str, tmpdir: Path) -> Path:
         """Download the audio track for transcription."""
-        self._ok(
+        r = self._ok(
             [
                 self.binary,
                 "--no-playlist",
@@ -140,11 +150,11 @@ class YtDlp:
             ],
             DOWNLOAD_TIMEOUT,
         )
-        return self._found(tmpdir, "audio.*")
+        return self._found(tmpdir, "audio.*", r)
 
     def download_video(self, url: str, tmpdir: Path) -> Path:
         """Download the video for frame description."""
-        self._ok(
+        r = self._ok(
             [
                 self.binary,
                 "--no-playlist",
@@ -159,14 +169,7 @@ class YtDlp:
             ],
             DOWNLOAD_TIMEOUT,
         )
-        return self._found(tmpdir, "video.*")
-
-    @staticmethod
-    def _found(tmpdir, pattern) -> Path:
-        files = sorted(Path(tmpdir).glob(pattern))
-        if not files:
-            raise MediaToolError("yt-dlp produced no file")
-        return files[0]
+        return self._found(tmpdir, "video.*", r, optional=True)
 
 
 def _ffmpeg(cfg, args: list[str]) -> None:
@@ -351,7 +354,7 @@ def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
             ) as e:  # download failure/timeout: frames are optional
                 ferr = f"{type(e).__name__}: {e}"
     except MediaToolError as e:
-        if social or _LOGIN.search(str(e)):
+        if social or _LOGIN.search(str(e).replace(url, "")):  # yt-dlp may echo the URL
             raise _login_clarification(url, str(e), info, netguard.untrusted(ctx.row)) from e
         raise RuntimeError(f"yt-dlp: {e}") from e
     ctype = "audio" if info.get("vcodec") == "none" else "video"
