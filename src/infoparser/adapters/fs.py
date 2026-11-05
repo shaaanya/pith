@@ -51,19 +51,25 @@ class FsAdapter:
         self._seen: dict[Path, tuple[int, int]] = {}  # path -> (size, consecutive stable polls)
         self.skipped: dict[Path, str] = {}
 
+    def _skip(self, p: Path, reason: str) -> None:
+        """Remember and report (once per file) a file left in place, never submitted."""
+        if p not in self.skipped:
+            log.warning("fs adapter: skipping %s (%s); the file is left in the folder", p, reason)
+        self.skipped[p] = reason
+
     def _candidate(self, d: Path, p: Path) -> os.stat_result | None:
         """stat of `p` if it is a regular, in-folder, not oversize file; else None."""
         if p.name.startswith(".") or p.name.endswith(_SKIP_SUFFIX):
             return None
         try:
             if p.is_symlink() and not p.resolve().is_relative_to(d.resolve()):
-                self.skipped[p] = "symlink outside folder"
+                self._skip(p, "symlink outside folder")
                 return None
             st = p.stat() if p.is_file() else None
         except OSError:
             return None
         if st and st.st_size > self.inbox.cfg.max_fetch_bytes:
-            self.skipped[p] = "larger than max_fetch_bytes"
+            self._skip(p, "larger than max_fetch_bytes")
             return None
         return st
 
