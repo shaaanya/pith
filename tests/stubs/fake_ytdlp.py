@@ -4,7 +4,7 @@
   --skip-download --write-subs -o TPL ... -- URL -> writes <TPL minus .%(ext)s>.en.vtt (mode "captions")
   -x ... -o TPL -- URL                         -> writes a silent wav (audio download)
   -f ... -o TPL -- URL (no -x)                 -> copies $FAKE_YTDLP_VIDEO (video download)
-Env: FAKE_YTDLP_LOG=file (one JSON line of argv per call), FAKE_YTDLP_MODE=captions|nocaptions|login|fail|hang."""
+Env: FAKE_YTDLP_LOG=file (one JSON line of argv per call), FAKE_YTDLP_MODE=captions|nocaptions|subfail|emptyjson|login|fail|hang."""
 import json
 import os
 import shutil
@@ -26,6 +26,11 @@ if mode == "login":
     sys.exit(1)
 if mode == "fail":
     print("ERROR: Unable to download webpage: HTTP Error 404: Not Found", file=sys.stderr)
+    sys.exit(1)
+if mode == "emptyjson" and "--dump-json" in argv:
+    sys.exit(0)
+if mode == "subfail" and "--write-subs" in argv:
+    print("ERROR: HTTP Error 429: Too Many Requests", file=sys.stderr)
     sys.exit(1)
 assert "--" in argv and argv.index("--") == len(argv) - 2, "URL must follow a lone --"
 tpl = argv[argv.index("-o") + 1] if "-o" in argv else None

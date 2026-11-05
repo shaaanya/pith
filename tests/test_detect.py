@@ -35,7 +35,10 @@ def test_detect_url_and_file_types(tmp_path):
 def test_detect_media_by_magic_without_extension(tmp_path):
     f = lambda data: detect(row(kind_hint="file", original_filename="noext", blob_sha256="x"), Blobs(tmp_path, data))
     assert f(b"RIFF\x00\x00\x00\x00WAVEfmt ") == "audio"
-    assert f(b"ID3\x04\x00\x00") == "audio"
+    assert f(b"ID3\x04\x00\x00\x00\x00\x00\x0a\x00") == "audio"
+    assert f(b"ID3 x is a text file about things") == "text"
+    assert f(b"ID3") == "text"
+    assert f(b"\x00\x00\x00\x20ftypheic\x00") == "image" and f(b"\x00\x00\x00\x20ftypavif\x00") == "image"
     assert f(b"OggS\x00") == "audio" and f(b"fLaC\x00") == "audio"
     assert f(b"\x00\x00\x00\x20ftypM4A \x00") == "audio"
     assert f(b"\x00\x00\x00\x20ftypisom\x00") == "video"

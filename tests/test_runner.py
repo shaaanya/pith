@@ -40,10 +40,10 @@ def test_runner_non_utf8_file_decoded_with_replacement(svc):
     assert "�" in seg and "zebra" in seg
 
 
-def test_runner_unknown_type_needs_clarification(svc):
+def test_runner_unreadable_media_needs_clarification(svc):
     iid = svc.inbox.submit(adapter="t", file=b"ID3 x", filename="a.mp3").id
     out = runner.process(svc, iid)
-    assert isinstance(out, NeedsClarification) and out.reason
+    assert isinstance(out, NeedsClarification) and ("stream" in out.reason or "ffmpeg" in out.reason)
     assert svc.blobs.exists(svc.inbox.get(iid)["blob_sha256"])
 
 
@@ -95,3 +95,11 @@ def test_runner_failed_keeps_original_error_if_event_write_fails(svc, monkeypatc
     iid = svc.inbox.submit(adapter="t", text="hello world").id
     out = runner.process(svc, iid)
     assert isinstance(out, Failed) and "ZeroDivisionError" in out.error
+
+
+def test_runner_no_extractor_branch(svc, monkeypatch):
+    from infoparser.pipeline.extractors import base
+    monkeypatch.delitem(base.EXTRACTORS, "note")
+    iid = svc.inbox.submit(adapter="t", text="hello there").id
+    out = runner.process(svc, iid)
+    assert isinstance(out, NeedsClarification) and "no extractor available" in out.reason

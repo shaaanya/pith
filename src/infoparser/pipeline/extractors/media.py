@@ -5,7 +5,8 @@ there are no captions AND a `transcribe` backend is configured is audio download
 Local files go straight to the transcriber after ffmpeg -> 16 kHz mono wav. Frames (ffmpeg -vf fps=1/3)
 go to a `describe` (vision) backend only when one is configured and the transcript is < 200 chars.
 
-Honest limits: Instagram/TikTok extraction usually needs cookies/login and is rate-limited; on such a
+Honest limits: captions are English-only (en/en.* tracks); other-language captions are ignored and the item
+falls back to transcription (or asks for clarification). Instagram/TikTok extraction usually needs cookies/login and is rate-limited; on such a
 failure we raise NeedsClarificationError carrying the page caption (og:description) if reachable. That
 path is tested only against a fake yt-dlp -- real Instagram/TikTok behaviour is UNVERIFIED here. Whisper is
 not installed here, so real transcription is unverified too (tests use stub transcribers).
@@ -17,6 +18,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from urllib.parse import urlparse
 from pathlib import Path
 
 from infoparser.pipeline.extractors import web
@@ -36,7 +38,7 @@ _OG = re.compile(r'<meta[^>]+(?:property|name)=["\'](?:og:)?description["\'][^>]
 
 def _run(cmd: list[str], timeout: float, what: str) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=False)
+        return subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=timeout, shell=False)
     except FileNotFoundError:
         raise NeedsClarificationError(f"{what} not found ({cmd[0]}); install it or set its path in config") from None
     except subprocess.TimeoutExpired:
@@ -48,8 +50,9 @@ class MediaToolError(RuntimeError):
 
 
 class YtDlp:
-    def __init__(self, binary: str = "yt-dlp"):
+    def __init__(self, binary: str = "yt-dlp", max_bytes: int | None = None):
         self.binary = binary
+        self.size = ["--max-filesize", str(max_bytes)] if max_bytes else []
 
     def _ok(self, cmd, timeout):
         r = _run(cmd, timeout, "yt-dlp")
@@ -60,19 +63,25 @@ class YtDlp:
     def info_and_subs(self, url: str, tmpdir: Path) -> tuple[dict, Path | None]:
         import json
         base = [self.binary, "--no-playlist", "--no-warnings"]
-        info = json.loads(self._ok([*base, "--dump-json", "--", url], INFO_TIMEOUT).stdout.splitlines()[0])
-        self._ok([*base, "--skip-download", "--write-subs", "--write-auto-subs", "--sub-langs", "en.*,en",
+        out = self._ok([*base, "--dump-json", "--", url], INFO_TIMEOUT).stdout.strip()
+        if not out:
+            raise MediaToolError("yt-dlp returned no metadata")
+        info = json.loads(out.splitlines()[0])
+        try:
+            self._ok([*base, "--skip-download", "--write-subs", "--write-auto-subs", "--sub-langs", "en.*,en",
                   "--sub-format", "vtt", "-o", str(Path(tmpdir) / "sub.%(ext)s"), "--", url], INFO_TIMEOUT)
+        except MediaToolError as e:  # e.g. 429 on the subtitle fetch: caller falls back to transcription
+            info["_subs_error"] = str(e)
         vtts = sorted(Path(tmpdir).glob("sub*.vtt"), key=lambda p: (".en." not in p.name, len(p.name), p.name))
         return info, (vtts[0] if vtts else None)
 
     def download_audio(self, url: str, tmpdir: Path) -> Path:
-        self._ok([self.binary, "--no-playlist", "--no-warnings", "-x", "--audio-format", "wav",
+        self._ok([self.binary, "--no-playlist", "--no-warnings", *self.size, "-x", "--audio-format", "wav",
                   "-o", str(Path(tmpdir) / "audio.%(ext)s"), "--", url], DOWNLOAD_TIMEOUT)
         return self._found(tmpdir, "audio.*")
 
     def download_video(self, url: str, tmpdir: Path) -> Path:
-        self._ok([self.binary, "--no-playlist", "--no-warnings", "-f", "worst[ext=mp4]/worst",
+        self._ok([self.binary, "--no-playlist", "--no-warnings", *self.size, "-f", "worst[ext=mp4]/worst",
                   "-o", str(Path(tmpdir) / "video.%(ext)s"), "--", url], DOWNLOAD_TIMEOUT)
         return self._found(tmpdir, "video.*")
 
@@ -115,16 +124,24 @@ def _frames(cfg, video: Path, tmpdir: Path) -> list[Path]:
     return sorted(out.glob("f_*.jpg"))
 
 
-def _add_frames(ctx, video: Path, tmp: Path, timed: list[TimedText]) -> list[TimedText]:
+def _add_frames(ctx, video: Path, tmp: Path, timed: list[TimedText], duration: float | None = None):
+    """Optional step: never loses `timed`. Returns (timed, error_or_None)."""
     vision = ctx.registry.first("describe")
     if vision is None or sum(len(t.text) for t in timed) >= SHORT_TRANSCRIPT:
-        return timed
-    frames = _frames(ctx.cfg, video, tmp)
-    if not frames:
-        return timed
-    desc = (vision.describe(frames, "Describe what is shown in these video frames, including any visible text.")
-            or "").strip()
-    return [*timed, TimedText(0.0, 0.0, f"[visual] {desc}")] if desc else timed
+        return timed, None
+    try:
+        frames = _frames(ctx.cfg, video, tmp)
+        if not frames:
+            return timed, None
+        desc = (vision.describe(frames, "Describe what is shown in these video frames, including any visible "
+                                        "text.") or "").strip()
+    except Exception as e:  # noqa: BLE001 - frames are best effort; keep the captions/transcript
+        return timed, f"{type(e).__name__}: {getattr(e, 'reason', e)}"
+    if not desc:
+        return timed, None
+    end = len(frames) * FRAME_SECONDS
+    end = min(end, duration) if duration else end
+    return sorted([*timed, TimedText(0.0, float(end), f"[visual] {desc}")], key=lambda t: t.start), None
 
 
 def _wav16(cfg, src: Path, tmp: Path) -> Path:
@@ -149,7 +166,9 @@ def extract(ctx: ExtractCtx) -> Extracted:
         if not sha:
             raise NeedsClarificationError("media item has neither URL nor file")
         path = ctx.blobs.path(sha)
-        has_video, has_audio = _streams(cfg, path)
+        if path.stat().st_size > cfg.max_fetch_bytes:
+            raise NeedsClarificationError(f"media file larger than max_fetch_bytes ({cfg.max_fetch_bytes})")
+        has_video, has_audio, duration = _streams(cfg, path)
         timed: list[TimedText] = []
         if has_audio:
             if ctx.registry.first("transcribe") is None:
@@ -157,54 +176,56 @@ def extract(ctx: ExtractCtx) -> Extracted:
             timed = _transcribe(ctx, path, tmp)
         elif not (has_video and ctx.registry.first("describe")):
             raise NeedsClarificationError("media has no audio track to transcribe")
+        ferr = None
         if has_video:
-            timed = _add_frames(ctx, path, tmp, timed)
-        is_video = has_video
-        return _result(row["original_filename"] or "Media file", None, None, "video" if is_video else "audio",
-                       timed, sha)
+            timed, ferr = _add_frames(ctx, path, tmp, timed, duration)
+        return _result(row["original_filename"] or "Media file", None, None, "video" if has_video else "audio",
+                       timed, sha, ferr)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _streams(cfg, path: Path) -> tuple[bool, bool]:
+def _streams(cfg, path: Path) -> tuple[bool, bool, float | None]:
     # ffmpeg -i prints stream info to stderr and exits 1 without an output file; that is expected here.
     r = _run([cfg.ffmpeg_binary, "-hide_banner", "-i", str(path)], 60, "ffmpeg")
     video = bool(re.search(r"Stream #.*Video:", r.stderr)) and "attached pic" not in r.stderr
     audio = bool(re.search(r"Stream #.*Audio:", r.stderr))
     if not (video or audio):
         raise NeedsClarificationError("file has no audio or video stream ffmpeg can read")
-    return video, audio
+    m = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", r.stderr)
+    return video, audio, (int(m[1]) * 3600 + int(m[2]) * 60 + float(m[3]) if m else None)
 
 
-def _result(title, author, url, ctype, timed, sha=None) -> Extracted:
+def _result(title, author, url, ctype, timed, sha=None, frames_error=None) -> Extracted:
     timed = [t for t in timed if t.text.strip()]
     if not timed:
         raise NeedsClarificationError("no speech or text could be extracted from the media")
-    return Extracted(title, author, url, ctype, " ".join(t.text for t in timed), timed=timed, original_sha=sha)
+    return Extracted(title, author, url, ctype, " ".join(t.text for t in timed), timed=timed, original_sha=sha,
+                     metadata={"frames_error": frames_error} if frames_error else {})
 
 
 def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
-    yt = YtDlp(ctx.cfg.yt_dlp_binary)
-    social = any((url.split("/")[2:3] or [""])[0].removeprefix("www.").endswith(h) for h in _SOCIAL)
+    yt = YtDlp(ctx.cfg.yt_dlp_binary, ctx.cfg.max_fetch_bytes)
+    host = (urlparse(url).hostname or "").removeprefix("www.")
+    social = any(host == h or host.endswith("." + h) for h in _SOCIAL)
+    info: dict = {}
     try:
         info, subs = yt.info_and_subs(url, tmp)
         timed = parse_vtt(subs.read_text("utf-8", "replace")) if subs else []
-        video = None
         if not timed:
             if ctx.registry.first("transcribe") is None:
                 raise NeedsClarificationError(NO_TRANSCRIBER)
             audio = yt.download_audio(url, tmp)
             timed = _transcribe(ctx, audio, tmp)
+        ferr = None
         if ctx.registry.first("describe") and sum(len(t.text) for t in timed) < SHORT_TRANSCRIPT:
             try:
-                video = yt.download_video(url, tmp)
-            except MediaToolError:
-                video = None  # frames are optional
-            if video:
-                timed = _add_frames(ctx, video, tmp, timed)
+                timed, ferr = _add_frames(ctx, yt.download_video(url, tmp), tmp, timed, info.get("duration"))
+            except (MediaToolError, RuntimeError) as e:  # download failure/timeout: frames are optional
+                ferr = f"{type(e).__name__}: {e}"
     except MediaToolError as e:
         if social or _LOGIN.search(str(e)):
-            raise _login_clarification(url, str(e), None) from e
+            raise _login_clarification(url, str(e), info) from e
         raise RuntimeError(f"yt-dlp: {e}") from e
     ctype = "audio" if info.get("vcodec") == "none" else "video"
-    return _result(info.get("title"), info.get("uploader"), url, ctype, timed)
+    return _result(info.get("title"), info.get("uploader"), url, ctype, timed, frames_error=ferr)

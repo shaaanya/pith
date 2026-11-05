@@ -12,7 +12,7 @@ from infoparser.pipeline import runner
 from infoparser.pipeline.extractors import media, web
 from infoparser.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
 from infoparser.pipeline.extractors.vtt import parse_vtt
-from infoparser.providers.ports import TimedText
+from infoparser.providers.ports import ProviderError, TimedText
 from infoparser.worker import Failed, NeedsClarification, Processed
 
 FIX = Path(__file__).parent / "fixtures"
@@ -246,3 +246,91 @@ def test_ffmpeg_missing_needs_clarification(env, tmp_path):
     env.cfg.ffmpeg_binary = "/nonexistent/ffmpeg"
     with pytest.raises(NeedsClarificationError, match="ffmpeg"):
         media.extract(file_ctx(env, tmp_path, p, transcribe=Transcriber()))
+
+
+# ---- fix round 1 ----
+class FlakyVision(Vision):
+    def describe(self, images, prompt):
+        raise ProviderError("vision down")
+
+
+@needs_ffmpeg
+def test_flaky_vision_keeps_captions_and_records_error(env, svc, monkeypatch):
+    ex = media.extract(url_ctx(env, describe=FlakyVision()))  # short captions + vision configured
+    assert "ranking" in ex.text and ex.timed
+    # no video downloaded by fake in captions mode -> still contained
+    assert "frames_error" in ex.metadata
+    assert not any(Path(d).exists() for d in env.dirs)
+
+
+@needs_ffmpeg
+def test_local_vision_failure_keeps_transcript(env, tmp_path):
+    ex = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "mp4"), transcribe=Transcriber(),
+                                describe=FlakyVision()))
+    assert ex.text.startswith("spoken words") and "ProviderError" in ex.metadata["frames_error"]
+    assert not any(Path(d).exists() for d in env.dirs)
+
+
+@needs_ffmpeg
+def test_ffmpeg_frame_failure_contained(env, tmp_path, monkeypatch):
+    monkeypatch.setattr(media, "_frames", lambda *a: (_ for _ in ()).throw(RuntimeError("ffmpeg failed: x")))
+    ex = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "mp4"), transcribe=Transcriber(),
+                                describe=Vision()))
+    assert ex.timed and "ffmpeg failed" in ex.metadata["frames_error"]
+
+
+@needs_ffmpeg
+def test_visual_item_has_real_range_locator(env, tmp_path):
+    from infoparser.pipeline.chunk import chunk_timed
+    ex = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "silent"), describe=Vision()))
+    v = ex.timed[0]
+    assert v.start == 0 and v.end == 6.0 and v.text.startswith("[visual]")
+    loc = chunk_timed(ex.timed)[0][1]
+    assert loc != "t=0-0" and loc.startswith("t=0-")
+    ex2 = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "mp4"), transcribe=Transcriber(), describe=Vision()))
+    assert [t.text for t in ex2.timed][:2] == ["spoken words here", "more talk"] and ex2.timed[-1].end > 0
+    assert chunk_timed(ex2.timed)[0][1] == "t=0-9"
+
+
+def test_subtitle_fetch_failure_falls_back_to_transcription(env, monkeypatch):
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "subfail")
+    ex = media.extract(url_ctx(env, transcribe=Transcriber()))
+    assert ex.timed[0].text == "spoken words here" and ex.title == "Search and ranking 101"
+    monkeypatch.setattr(media, "_caption_from_page", lambda u: None)
+    with pytest.raises(NeedsClarificationError, match="no transcription"):
+        media.extract(url_ctx(env))
+
+
+def test_social_host_match_is_exact(env, monkeypatch):
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "fail")
+    with pytest.raises(RuntimeError):  # 404 on a lookalike host is a plain error, not a login clarification
+        media.extract(url_ctx(env, url="https://notinstagram.com/reel/abc"))
+
+
+def test_empty_dump_json_clean_error(env, monkeypatch):
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "emptyjson")
+    with pytest.raises(RuntimeError, match="no metadata"):
+        media.extract(url_ctx(env))
+
+
+def test_max_filesize_flag_and_local_size_cap(env, tmp_path, monkeypatch):
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "nocaptions")
+    media.extract(url_ctx(env, transcribe=Transcriber()))
+    dl = [c for c in env.calls() if "-x" in c][0]
+    assert dl[dl.index("--max-filesize") + 1] == str(env.cfg.max_fetch_bytes)
+    p = tmp_path / "a.wav"
+    p.write_bytes(b"RIFFxxxxWAVE" * 10)
+    env.cfg.max_fetch_bytes = 5
+    with pytest.raises(NeedsClarificationError, match="max_fetch_bytes"):
+        media.extract(file_ctx(env, tmp_path, p, transcribe=Transcriber()))
+
+
+def test_dash_url_is_after_double_dash(env):
+    media.extract(url_ctx(env, url="--exec=touch /tmp/pwned"))
+    assert env.calls() and all(c[-2:] == ["--", "--exec=touch /tmp/pwned"] for c in env.calls())
+
+
+def test_vtt_hours_and_empty_cue():
+    got = parse_vtt("WEBVTT\n\n01:02:03.500 --> 01:02:05.000\nhour cue\n\n"
+                    "01:02:05.000 --> 01:02:06.000\n\n01:02:06.000 --> 01:02:07.000\n<c></c>\n")
+    assert [(t.start, t.end, t.text) for t in got] == [(3723.5, 3725.0, "hour cue")]

@@ -18,9 +18,13 @@ _AUDIO_BRANDS = (b"M4A ", b"M4B ", b"M4P ")
 
 
 def _sniff_media(head: bytes) -> str | None:
-    if head[:4] == b"RIFF" and head[8:12] == b"WAVE" or head[:3] == b"ID3" or head[:4] in (b"OggS", b"fLaC"):
+    id3 = head[:3] == b"ID3" and len(head) >= 10 and head[3] < 0xFF and head[4] < 0xFF and head[5] < 0x20 \
+        and all(b < 0x80 for b in head[6:10])  # real ID3v2 header: version, flags, syncsafe size
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE" or id3 or head[:4] in (b"OggS", b"fLaC"):
         return "audio"
     if head[4:8] == b"ftyp":
+        if head[8:12] in (b"heic", b"heix", b"heif", b"mif1", b"msf1", b"avif"):
+            return "image"
         return "audio" if head[8:12] in _AUDIO_BRANDS else "video"
     if head[:4] == b"\x1a\x45\xdf\xa3":  # EBML: mkv/webm
         return "video"
