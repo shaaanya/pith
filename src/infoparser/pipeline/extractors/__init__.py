@@ -1,2 +1,5 @@
 """Importing this package registers every extractor."""
-from infoparser.pipeline.extractors import document, image, media, pdf, text, web  # noqa: F401  (self-register)
+# noqa: F401 - imported only to self-register
+from infoparser.pipeline.extractors import (  # noqa: F401
+    document, image, media, pdf, text, web,
+)

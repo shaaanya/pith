@@ -84,6 +84,7 @@ class Inbox:
             (adapter, external_id)).fetchone()
         return seen["id"] if seen else None
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # one dedupe lookup; args are already grouped
     def _existing(self, ext: tuple, urls: tuple, sha, user_context, now) -> SubmitResult | None:
         """A repeat submission: no-op for a known external id, else folded into the original.
 

@@ -35,7 +35,7 @@ def chunk_text(text: str, *, max_chars=1200, overlap=100) -> list[tuple[str, str
 
     def flush():
         if cur:
-            out.append(_span(text, *cur))
+            out.append(_span(text, cur[0], cur[1]))
         cur.clear()
 
     for a, b, heading in _blocks(text):
