@@ -28,7 +28,11 @@ def _migrations() -> list[tuple[int, str]]:
 
 @contextmanager
 def transaction(conn: sqlite3.Connection):
-    # connection is autocommit (isolation_level=None), so `with conn:` would not open a txn
+    # connection is autocommit (isolation_level=None), so `with conn:` would not open a txn.
+    # Re-entrant: inside an open transaction this joins it (outermost owner commits/rolls back).
+    if conn.in_transaction:
+        yield
+        return
     conn.execute("BEGIN IMMEDIATE")
     try:
         yield

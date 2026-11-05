@@ -1,4 +1,6 @@
+import calendar
 import threading
+import time
 
 import pytest
 
@@ -64,6 +66,10 @@ def test_fail_backoff_then_dead_keeps_original(env):
         res = q.fail(j.id, "boom")
         assert res == ("dead" if i == cfg.max_attempts else "retry")
         if res == "retry":
+            ra = q.conn.execute("SELECT run_after FROM jobs").fetchone()[0]
+            delay = calendar.timegm(time.strptime(ra, "%Y-%m-%dT%H:%M:%SZ")) - time.time()
+            want = min(5 * 2 ** (i - 1), 3600)
+            assert want - 2 <= delay <= want + 1  # exponential growth
             assert q.claim("w1") is None  # backed off
             due(q.conn)
     assert q.claim("w1") is None
@@ -98,3 +104,14 @@ def test_concurrent_claims_threads(env):
     [t.start() for t in ts]
     [t.join() for t in ts]
     assert len(got) == 20 and len(set(got)) == 20
+
+
+def test_backoff_is_capped(env):
+    inbox, q, cfg = env
+    cfg.max_attempts = 100
+    inbox.submit(adapter="t", text="x")
+    q.claim("w")
+    q.conn.execute("UPDATE jobs SET attempts=50")
+    assert q.fail(q.conn.execute("SELECT id FROM jobs").fetchone()[0], "e") == "retry"
+    ra = q.conn.execute("SELECT run_after FROM jobs").fetchone()[0]
+    assert calendar.timegm(time.strptime(ra, "%Y-%m-%dT%H:%M:%SZ")) - time.time() <= 3601

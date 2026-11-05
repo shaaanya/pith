@@ -15,6 +15,14 @@ def _at(offset: float) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + offset))
 
 
+def log_event(conn: sqlite3.Connection, inbox_id: str, job_id: str | None, stage: str,
+              level: str = "info", detail: str | None = None) -> None:
+    conn.execute(
+        "INSERT INTO processing_events(inbox_id, job_id, at, stage, status, detail) VALUES (?,?,?,?,?,?)",
+        (inbox_id, job_id, utcnow(), stage, level, detail),
+    )
+
+
 @dataclass
 class Job:
     id: str
@@ -61,14 +69,24 @@ class JobQueue:
             (_at(self.cfg.lease_seconds), job_id),
         )
 
-    def complete(self, job_id: str) -> None:
-        self.conn.execute(
-            "UPDATE jobs SET state='done', lease_expires_at=NULL, last_error=NULL WHERE id=?", (job_id,)
+    def complete(self, job_id: str, worker_id: str | None = None) -> bool:
+        """False if the job is no longer running under this worker (stale completion ignored)."""
+        cur = self.conn.execute(
+            "UPDATE jobs SET state='done', lease_expires_at=NULL, last_error=NULL"
+            " WHERE id=? AND state='running' AND (? IS NULL OR worker_id=?)", (job_id, worker_id, worker_id)
         )
+        return cur.rowcount == 1
 
-    def fail(self, job_id: str, error: str) -> str:
+    def fail(self, job_id: str, error: str, worker_id: str | None = None) -> str:
+        """'retry' | 'dead' | 'stale' (job not running under this worker; nothing changed)."""
         with transaction(self.conn):
-            attempts = self.conn.execute("SELECT attempts FROM jobs WHERE id=?", (job_id,)).fetchone()[0]
+            row = self.conn.execute(
+                "SELECT attempts FROM jobs WHERE id=? AND state='running' AND (? IS NULL OR worker_id=?)",
+                (job_id, worker_id, worker_id),
+            ).fetchone()
+            if row is None:
+                return "stale"
+            attempts = row[0]
             if attempts >= self.cfg.max_attempts:
                 self.conn.execute(
                     "UPDATE jobs SET state='failed', last_error=?, lease_expires_at=NULL WHERE id=?",
@@ -99,6 +117,8 @@ class JobQueue:
                                   " WHERE id=?", (err, r["id"]))
                 self.conn.execute("UPDATE inbox_items SET status='failed', error=?, updated_at=? WHERE id=?",
                                   (err, now, r["inbox_id"]))
+                log_event(self.conn, r["inbox_id"], r["id"], "dead", "error", err)
             else:
                 self.conn.execute("UPDATE jobs SET state='pending', lease_expires_at=NULL WHERE id=?", (r["id"],))
+                log_event(self.conn, r["inbox_id"], r["id"], "lease_expired", "warning", "lease expired, requeued")
         return n

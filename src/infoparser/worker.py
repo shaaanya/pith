@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 import threading
 from collections.abc import Callable
@@ -7,8 +8,10 @@ from dataclasses import dataclass
 
 from infoparser.domain.models import Status
 from infoparser.inbox.service import Inbox
-from infoparser.ids import utcnow
-from infoparser.jobs import JobQueue
+from infoparser.jobs import JobQueue, log_event
+from infoparser.store.db import connect, transaction
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -35,13 +38,17 @@ class Worker:
                  processor: Processor, worker_id: str = "w1"):
         self.conn, self.inbox, self.queue = conn, inbox, queue
         self.processor, self.worker_id = processor, worker_id
+        self.heartbeat_seconds = queue.cfg.lease_seconds / 3
 
-    def _event(self, job, stage: str, detail: str | None = None) -> None:
-        self.conn.execute(
-            "INSERT INTO processing_events(inbox_id, job_id, at, stage, status, detail)"
-            " VALUES (?,?,?,?,?,?)",
-            (job.inbox_id, job.id, utcnow(), stage, "info", detail),
-        )
+    def _heartbeat_loop(self, job_id: str, done: threading.Event) -> None:
+        # own connection: a sqlite connection must not be shared with an in-flight transaction on another thread
+        q = JobQueue(connect(self.queue.cfg.db_path), self.queue.cfg)
+        while not done.wait(self.heartbeat_seconds):
+            try:
+                q.heartbeat(job_id)
+            except sqlite3.OperationalError:
+                log.warning("heartbeat failed for %s", job_id, exc_info=True)
+        q.conn.close()
 
     def run_once(self) -> bool:
         job = self.queue.claim(self.worker_id)
@@ -49,29 +56,54 @@ class Worker:
             return False
         self.inbox.set_status(job.inbox_id, Status.PROCESSING)
         self.conn.execute("UPDATE inbox_items SET attempts=? WHERE id=?", (job.attempts, job.inbox_id))
-        self._event(job, "claimed", self.worker_id)
+        log_event(self.conn, job.inbox_id, job.id, "claimed", "info", self.worker_id)
+        # Lease is kept alive by a daemon thread heartbeating every lease_seconds/3 while the processor runs.
+        done = threading.Event()
+        hb = threading.Thread(target=self._heartbeat_loop, args=(job.id, done), daemon=True)
+        hb.start()
         try:
             out = self.processor(job.inbox_id)
         except Exception as e:  # noqa: BLE001 - any processor bug becomes a retryable failure
             out = Failed(f"{type(e).__name__}: {e}")
-        if isinstance(out, Processed):
-            self.queue.complete(job.id)
-            self.inbox.set_status(job.inbox_id, Status.PROCESSED)
-            self._event(job, "processed")
-        elif isinstance(out, NeedsClarification):
-            self.queue.complete(job.id)
-            self.inbox.set_status(job.inbox_id, Status.NEEDS_CLARIFICATION, out.reason)
-            self._event(job, "needs_clarification", out.reason)
-        else:
-            verdict = self.queue.fail(job.id, out.error)
-            status = Status.FAILED if verdict == "dead" else Status.PENDING
-            self.inbox.set_status(job.inbox_id, status, out.error)
-            self._event(job, verdict, out.error)
+        finally:
+            done.set()
+            hb.join()
+        self._finish(job, out)
         return True
+
+    def _finish(self, job, out: Outcome) -> None:
+        """Job state, inbox status and event commit together or not at all."""
+        wid, iid = self.worker_id, job.inbox_id
+        with transaction(self.conn):
+            if isinstance(out, (Processed, NeedsClarification)):
+                if not self.queue.complete(job.id, wid):
+                    return self._stale(job)
+                if isinstance(out, Processed):
+                    self.inbox.set_status(iid, Status.PROCESSED)
+                    log_event(self.conn, iid, job.id, "processed")
+                else:
+                    self.inbox.set_status(iid, Status.NEEDS_CLARIFICATION, out.reason)
+                    log_event(self.conn, iid, job.id, "needs_clarification", "info", out.reason)
+            else:
+                verdict = self.queue.fail(job.id, out.error, wid)
+                if verdict == "stale":
+                    return self._stale(job)
+                dead = verdict == "dead"
+                self.inbox.set_status(iid, Status.FAILED if dead else Status.PENDING, out.error)
+                log_event(self.conn, iid, job.id, verdict, "error" if dead else "warning", out.error)
+
+    def _stale(self, job) -> None:
+        log_event(self.conn, job.inbox_id, job.id, "stale_completion", "warning",
+                  f"{self.worker_id} lost its lease; result discarded")
 
     def run_forever(self, poll_seconds: float = 2.0, stop: threading.Event | None = None) -> None:
         stop = stop or threading.Event()
         while not stop.is_set():
-            if not self.run_once():
+            try:
+                busy = self.run_once()
+            except sqlite3.OperationalError:
+                log.warning("worker db error", exc_info=True)
+                busy = False
+            if not busy:
                 stop.wait(poll_seconds)
 
