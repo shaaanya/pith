@@ -82,7 +82,8 @@ def find_near_duplicates(conn, item_ids, services,
     vecs = _item_vectors(conn, services)
     rows = {r["id"]: r for r in conn.execute(
         "SELECT id, title, body, source_id FROM knowledge_items WHERE deleted_at IS NULL")}
-    sh, out, seen = _ShingleCache(rows), [], set()
+    sh, out = _ShingleCache(rows), []
+    seen: set[tuple[str, str]] = set()
     for a in item_ids:
         if a not in rows:
             continue

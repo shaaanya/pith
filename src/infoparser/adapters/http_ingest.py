@@ -106,10 +106,9 @@ class _Handler(QuietHandler):
         finally:
             conn.close()
 
-    def _body(self) -> dict:
+    def _body(self, length: int) -> dict:
         """The submission dict from the JSON, multipart or raw request body (ValueError if bad)."""
-        n = self.headers.get("Content-Length")
-        raw = self.rfile.read(int(n))
+        raw = self.rfile.read(length)
         ctype = self.headers.get("Content-Type", "")
         base = ctype.split(";")[0].strip().lower()
         if base == "application/json" or not ctype:
@@ -133,7 +132,7 @@ class _Handler(QuietHandler):
         if int(n) > self.server.cfg.max_fetch_bytes:
             self._send(413, {"error": "body too large"})
             return
-        body = self._body()
+        body = self._body(int(n))
         conn, inbox = self._inbox()
         try:
             self._send(200, handle(inbox, body))

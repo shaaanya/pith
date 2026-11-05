@@ -1,10 +1,17 @@
 """Extractor registry and the value types extractors exchange."""
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from infoparser.providers.ports import TimedText
+
+if TYPE_CHECKING:  # annotations only: avoids import cycles
+    from infoparser.config import Config
+    from infoparser.providers.registry import Registry
+    from infoparser.store.blobs import BlobStore
 
 
 class NeedsClarificationError(Exception):
@@ -37,10 +44,10 @@ class Extracted:  # pylint: disable=too-many-instance-attributes  # flat record
 class ExtractCtx:
     """What an extractor gets: the inbox row and the shared services."""
 
-    row: object  # inbox_items row
-    blobs: object
-    registry: object
-    cfg: object
+    row: sqlite3.Row  # inbox_items row
+    blobs: BlobStore
+    registry: Registry
+    cfg: Config
 
 
 EXTRACTORS: dict[str, Callable[[ExtractCtx], Extracted]] = {}

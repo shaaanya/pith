@@ -10,6 +10,7 @@ from email.parser import BytesParser
 from email.policy import HTTP
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from typing import Any
 
 from infoparser.inbox.service import Inbox
 
@@ -58,7 +59,7 @@ def handle(inbox: Inbox, body: dict, adapter: str = NAME) -> dict:
         raise ValueError("exactly one of url, text or file is required")
     if url and not _HTTP_URL.fullmatch(url.strip()):
         raise ValueError("url must be http(s)")
-    kw = {"adapter": adapter, "user_context": ctx or None, "platform": plat or None}
+    kw: dict[str, Any] = {"adapter": adapter, "user_context": ctx or None, "platform": plat or None}
     if file:
         r = inbox.submit(file=bytes(file), filename=safe_filename(body.get("filename")), **kw)
     else:

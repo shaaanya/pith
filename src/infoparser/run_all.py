@@ -127,7 +127,7 @@ def run(cfg, port: int = 8777, *,  # pylint: disable=too-many-arguments  # publi
     main_svc = None
     try:
         main_svc = build(cfg)
-        info = {"port": None, "token": None, "url": None}
+        info: dict[str, object] = {"port": None, "token": None, "url": None}
         if dashboard:
             server = _make_dashboard(main_svc, port)
             info["port"], info["token"] = server.server_address[1], server.token
