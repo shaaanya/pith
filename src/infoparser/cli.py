@@ -40,7 +40,10 @@ def _inbox(a):
 
 
 def _retry(a):
-    _services(a).inbox.retry(a.id)
+    try:
+        _services(a).inbox.retry(a.id)
+    except KeyError:
+        sys.exit(f"error: unknown id {a.id}")
     print(f"requeued {a.id}")
 
 
@@ -75,7 +78,7 @@ def _show(a):
     except KeyError:
         k = get_item(s.conn, a.id)
         if not k:
-            sys.exit(f"not found: {a.id}")
+            sys.exit(f"error: unknown id {a.id}")
         print(f"{k['id']} [{k['kind']}/{k['provenance']}] {k['title']}\n{k['body']}\nevidence: {k['data'].get('evidence')}")
         return
     print(f"{r['id']} status={r['status']} type={r['content_type']} attempts={r['attempts']}")
@@ -100,33 +103,35 @@ def _doctor(a):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="infoparser")
-    p.add_argument("--home")
-    p.add_argument("--config")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--home", default=argparse.SUPPRESS)
+    common.add_argument("--config", default=argparse.SUPPRESS)
+    p = argparse.ArgumentParser(prog="infoparser", parents=[common])
+    p.set_defaults(home=None, config=None)
     sub = p.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("init").set_defaults(f=_init)
-    c = sub.add_parser("submit")
+    sub.add_parser("init", parents=[common]).set_defaults(f=_init)
+    c = sub.add_parser("submit", parents=[common])
     c.add_argument("text", nargs="?")
     c.add_argument("--context")
     c.add_argument("--file")
     c.set_defaults(f=_submit)
-    c = sub.add_parser("inbox")
+    c = sub.add_parser("inbox", parents=[common])
     c.add_argument("--status")
     c.set_defaults(f=_inbox)
-    c = sub.add_parser("retry")
+    c = sub.add_parser("retry", parents=[common])
     c.add_argument("id")
     c.set_defaults(f=_retry)
-    c = sub.add_parser("worker")
+    c = sub.add_parser("worker", parents=[common])
     c.add_argument("--once", action="store_true")
     c.set_defaults(f=_worker)
-    c = sub.add_parser("search")
+    c = sub.add_parser("search", parents=[common])
     c.add_argument("query", nargs="+")
     c.add_argument("--limit", type=int, default=10)
     c.set_defaults(f=_search)
-    c = sub.add_parser("show")
+    c = sub.add_parser("show", parents=[common])
     c.add_argument("id")
     c.set_defaults(f=_show)
-    sub.add_parser("doctor").set_defaults(f=_doctor)
+    sub.add_parser("doctor", parents=[common]).set_defaults(f=_doctor)
     a = p.parse_args(argv)
     a.f(a)
     return 0

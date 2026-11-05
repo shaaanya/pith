@@ -55,3 +55,43 @@ def test_runner_extractor_exception_is_failed_with_event(svc, monkeypatch):
     assert isinstance(out, Failed) and "ZeroDivisionError" in out.error
     assert svc.conn.execute("SELECT count(*) FROM processing_events WHERE inbox_id=? AND status='error'",
                             (iid,)).fetchone()[0] == 1
+
+
+def test_runner_refreshes_source_and_content_types_match(svc):
+    iid = svc.inbox.submit(adapter="t", text="def f():\n    return 1\n\nclass A: pass").id
+    runner.process(svc, iid)
+    row = svc.inbox.get(iid)
+    src = svc.conn.execute("SELECT * FROM sources WHERE id=?", (row["source_id"],)).fetchone()
+    assert row["content_type"] == src["content_type"] == "code"
+    # edit via requeue with new context: profile hint must be accepted, source refreshed on reprocess
+    svc.conn.execute("UPDATE inbox_items SET payload_text='# New title\n\nchanged body here' WHERE id=?", (iid,))
+    runner.process(svc, iid)
+    src2 = svc.conn.execute("SELECT * FROM sources WHERE id=?", (row["source_id"],)).fetchone()
+    assert src2["title"] == "# New title".lstrip("# ") and src2["text_sha256"] != src["text_sha256"]
+    assert src2["content_type"] == "note"
+    assert svc.inbox.get(iid)["content_type"] == "note"
+
+
+def test_runner_uses_profile_for_with_user_context(svc, monkeypatch):
+    seen = {}
+    real = runner.distill
+    monkeypatch.setattr(runner, "distill", lambda *a, **k: (seen.update(k), real(*a, **k))[1])
+    iid = svc.inbox.submit(adapter="t", text="Some list items here.", user_context="top 10 tools").id
+    runner.process(svc, iid)
+    assert seen["profile"] == "collection"
+
+
+def test_runner_failed_keeps_original_error_if_event_write_fails(svc, monkeypatch):
+    from infoparser.pipeline.extractors import base
+    monkeypatch.setitem(base.EXTRACTORS, "note", lambda ctx: 1 / 0)
+    real = runner._stage
+
+    def stage(conn, iid, name, *a, **k):
+        if name == "error":
+            raise RuntimeError("db gone")
+        return real(conn, iid, name, *a, **k)
+
+    monkeypatch.setattr(runner, "_stage", stage)
+    iid = svc.inbox.submit(adapter="t", text="hello world").id
+    out = runner.process(svc, iid)
+    assert isinstance(out, Failed) and "ZeroDivisionError" in out.error

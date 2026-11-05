@@ -23,3 +23,14 @@ def test_cli_submit_worker_search_roundtrip(tmp_path):
     assert "processed" not in run(home, "inbox", "--status", "failed").stdout
     assert run(home, "show", "nope").returncode != 0
     assert run(home, "search", '"foo" AND ( NEAR').returncode == 0
+
+
+def test_cli_unknown_id_clean_error_and_flags_after_subcommand(tmp_path):
+    home = tmp_path / "h"
+    for args in (("retry", "nope"), ("show", "nope")):
+        r = run(home, *args)
+        assert r.returncode != 0 and "Traceback" not in r.stderr and "nope" in r.stderr
+    env = {k: v for k, v in os.environ.items() if k != "INFOPARSER_HOME"}
+    r = subprocess.run([sys.executable, "-m", "infoparser.cli", "init", "--home", str(tmp_path / "h2")],
+                       env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0 and (tmp_path / "h2" / "infoparser.db").exists()
