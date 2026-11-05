@@ -288,7 +288,7 @@ def test_visual_item_has_real_range_locator(env, tmp_path):
     loc = chunk_timed(ex.timed)[0][1]
     assert loc != "t=0-0" and loc.startswith("t=0-")
     ex2 = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "mp4"), transcribe=Transcriber(), describe=Vision()))
-    assert [t.text for t in ex2.timed][:2] == ["spoken words here", "more talk"] and ex2.timed[-1].end > 0
+    assert {t.text for t in ex2.timed} == {"spoken words here", "more talk", "[visual] a test pattern"}
     assert chunk_timed(ex2.timed)[0][1] == "t=0-9"
 
 
