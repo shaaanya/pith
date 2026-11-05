@@ -25,7 +25,7 @@ class Inbox:
     def _tx(self):
         return transaction(self.conn)
 
-    def submit(  # pylint: disable=too-many-arguments  # keyword-only adapter-facing API
+    def submit(  # pylint: disable=too-many-arguments,too-many-locals  # keyword-only adapter API
         self,
         *,
         adapter: str,
@@ -36,14 +36,17 @@ class Inbox:
         user_context: str | None = None,
         platform: str | None = None,
         external_id: str | None = None,
+        as_note: bool = False,
     ) -> SubmitResult:
         """external_id: adapter-scoped stable id (e.g. Telegram chat:message).
 
         A repeat with the same (adapter, external_id) is a pure no-op duplicate: no new row, no
-        context appended, no requeue."""
+        context appended, no requeue.
+
+        as_note: keep a bare-URL text as a note (verbatim, never fetched or URL-deduped)."""
         if (text is None) == (file is None):
             raise ValueError("exactly one of text or file is required")
-        kind, sha, url = self._classify(text, file)
+        kind, sha, url = self._classify(text, file, as_note)
         now = utcnow()
         with self._tx():
             dup = self._existing((adapter, external_id), url, sha, user_context, now)
@@ -62,13 +65,13 @@ class Inbox:
             self._record_external(adapter, external_id, iid)
         return SubmitResult(iid)
 
-    def _classify(self, text: str | None, file: Path | bytes | None):
+    def _classify(self, text: str | None, file: Path | bytes | None, as_note: bool = False):
         """-> (kind, blob sha256 or None, canonical url or None); stores the blob first."""
         if file is not None:
             # blob first: content-addressed and idempotent, so an orphan after rollback is harmless
             put = self.blobs.put_bytes if isinstance(file, bytes) else self.blobs.put_file
             return "file", put(file), None
-        if _BARE_URL.fullmatch(text.strip()):
+        if not as_note and _BARE_URL.fullmatch(text.strip()):
             return "url", None, canonicalize_url(text)
         return "text", None, None
 

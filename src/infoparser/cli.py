@@ -283,7 +283,8 @@ def _adapters_run(a):
 def _import_telegram(a):
     from infoparser.adapters.telegram_export import import_export
     try:
-        r = import_export(_services(a).inbox, Path(a.path), since=a.since)
+        r = import_export(_services(a).inbox, Path(a.path), since=a.since,
+                          fetch_urls=a.fetch_urls)
     except (ValueError, OSError) as e:
         sys.exit(f"error: {e}")
     print(f"submitted {r.submitted}, duplicates {r.duplicates}, skipped {r.skipped}")
@@ -380,7 +381,11 @@ COMMANDS = {
                          _arg("--force", action="store_true",
                               help="write even inside the interval / overwrite today's digest")]),
     "watch": (_watch, [_ONCE]),
-    "import-telegram": (_import_telegram, [_arg("path"), _arg("--since")]),
+    "import-telegram": (_import_telegram, [
+        _arg("path"), _arg("--since"),
+        _arg("--fetch-urls", action="store_true",
+             help="fetch URL-only messages (public addresses only; default: keep them as notes, "
+                  "never fetched)")]),
     "serve-http": (_serve_http, []),
     "run": (_run, [_PORT, _arg("--no-dashboard", action="store_true"),
                    _arg("--no-watch", action="store_true")]),

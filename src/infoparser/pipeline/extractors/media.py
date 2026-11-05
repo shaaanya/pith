@@ -29,6 +29,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
+from infoparser import netguard
 from infoparser.domain.display import submitted_url
 
 from infoparser.pipeline.extractors import web
@@ -318,6 +319,10 @@ def _result(title, author, url, ctype, timed, sha=None, frames_error=None) -> Ex
 
 
 def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
+    if netguard.untrusted(ctx.row):
+        # yt-dlp follows its own redirects outside the guard (see docs/limitations.md): only hand
+        # it a URL whose host resolves to public addresses.
+        netguard.check_url(url, allow_private=False)
     yt = YtDlp(ctx.cfg.yt_dlp_binary, ctx.cfg.max_fetch_bytes)
     host = (urlparse(url).hostname or "").removeprefix("www.")
     social = any(host == h or host.endswith("." + h) for h in _SOCIAL)

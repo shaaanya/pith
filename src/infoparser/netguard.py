@@ -21,7 +21,7 @@ class BlockedURL(ValueError):
 
 def untrusted(row) -> bool:
     """True when the inbox row came from content other people wrote (never the user directly)."""
-    return row["adapter"] in UNTRUSTED_ADAPTERS
+    return ("adapter" in row.keys()) and row["adapter"] in UNTRUSTED_ADAPTERS
 
 
 def resolve(host: str) -> list[str]:

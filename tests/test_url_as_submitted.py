@@ -44,7 +44,7 @@ def test_host_path_and_query_are_fetched_as_submitted(svc, monkeypatch, url):
     """www., m., trailing slash and tracking params are fetched exactly as submitted."""
     seen = []
 
-    def fake_fetch(u, *, max_bytes, timeout=None):  # pylint: disable=unused-argument
+    def fake_fetch(u, *, max_bytes, timeout=None, untrusted=False):  # pylint: disable=unused-argument
         """Serve the article fixture for any URL."""
         seen.append(u)
         body = (FIXTURES / "article.html").read_bytes()

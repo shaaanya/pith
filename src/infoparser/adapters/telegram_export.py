@@ -98,8 +98,13 @@ def _content(m: dict, root: Path, since: str | None):
     return text, path, ctx
 
 
-def import_export(inbox, export_json: Path, *, since: str | None = None) -> ImportReport:
-    """Submit every message of a Telegram Desktop export; re-importing is a no-op."""
+def import_export(inbox, export_json: Path, *, since: str | None = None,
+                  fetch_urls: bool = True) -> ImportReport:
+    """Submit every message of a Telegram Desktop export; re-importing is a no-op.
+
+    fetch_urls=False keeps URL-only messages as notes (URL verbatim, never fetched). Fetched ones
+    are untrusted (adapter telegram_export): public addresses only, see netguard.
+    """
     export_json = Path(export_json)
     data = _load(export_json)
     root = export_json.parent.resolve()
@@ -117,7 +122,8 @@ def import_export(inbox, export_json: Path, *, since: str | None = None) -> Impo
                 ctx.append(text)
             r = inbox.submit(file=path, filename=path.name, user_context="\n".join(ctx), **kw)
         else:
-            r = inbox.submit(text=text.strip(), user_context="\n".join(ctx), **kw)
+            r = inbox.submit(text=text.strip(), user_context="\n".join(ctx),
+                             as_note=not fetch_urls, **kw)
         if r.duplicate_of:
             rep.duplicates += 1
         else:
