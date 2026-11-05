@@ -1,3 +1,4 @@
+"""Configuration: TOML file plus INFOPARSER_* environment overrides."""
 import os
 import tomllib
 from collections.abc import Mapping
@@ -6,7 +7,9 @@ from pathlib import Path
 
 
 @dataclass
-class Config:
+class Config:  # pylint: disable=too-many-instance-attributes  # flat settings record
+    """All settings, resolved from file and environment."""
+
     home: Path
     db_path: Path
     blobs_dir: Path
@@ -28,8 +31,9 @@ class Config:
 
 
 def load_config(path: Path | None = None, env: Mapping = os.environ) -> Config:
+    """Load the config file (path, else INFOPARSER_CONFIG, else none) with env overrides."""
     path = path or (Path(env["INFOPARSER_CONFIG"]) if env.get("INFOPARSER_CONFIG") else None)
-    data = tomllib.loads(Path(path).expanduser().read_text()) if path else {}
+    data = tomllib.loads(Path(path).expanduser().read_text(encoding="utf-8")) if path else {}
     home = Path(env.get("INFOPARSER_HOME") or data.get("home") or "~/InfoParser").expanduser()
     if not home.is_absolute():
         home = Path.home() / home
