@@ -37,3 +37,6 @@ migration splitter is simple: no triggers in migration SQL. Ids are 26-character
 Changing the configured embedding model changes the `model_id`; old vectors stay but are ignored, search
 falls back to FTS until `infoparser reindex` has embedded under the new model. `reindex --prune-old`
 removes vectors of other models. Vectors are never required for correctness.
+
+A segment's vectors are deleted in the same transaction that changes or removes its text (reprocess), and
+the next embedding pass refills the changed ones, so a vector never outlives the text it encodes.
