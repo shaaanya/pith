@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass
 
 from infoparser.config import Config
@@ -10,6 +11,22 @@ from infoparser.ids import new_id, utcnow
 from infoparser.store.db import transaction
 
 _BACKOFF_BASE, _BACKOFF_CAP = 5, 3600  # seconds
+# (job_id, worker_id, attempts) of the job the current thread is processing; set by the Worker
+current: ContextVar = ContextVar("current_job", default=None)
+
+
+class LeaseLost(RuntimeError):
+    """The job this thread is processing is no longer leased to it."""
+
+
+def require_lease(conn: sqlite3.Connection) -> None:
+    """Inside a write transaction: raise LeaseLost unless the job being processed is still running
+    under this worker and attempt. A no-op for callers outside a Worker (library use, tests)."""
+    cur = current.get()
+    if cur is not None and conn.execute(
+            "SELECT 1 FROM jobs WHERE id=? AND worker_id=? AND attempts=? AND state='running'",
+            cur).fetchone() is None:
+        raise LeaseLost("lost the lease: the job now belongs to another worker; result discarded")
 
 
 def _at(offset: float) -> str:
@@ -74,11 +91,12 @@ class JobQueue:
             )
             return Job(row["id"], row["inbox_id"], row["kind"], row["attempts"] + 1)
 
-    def heartbeat(self, job_id: str) -> None:
-        """Extend the lease of a running job."""
+    def heartbeat(self, job_id: str, worker_id: str | None = None) -> None:
+        """Extend the lease of a running job (only if still leased to `worker_id`, when given)."""
         self.conn.execute(
-            "UPDATE jobs SET lease_expires_at=? WHERE id=? AND state='running'",
-            (_at(self.cfg.lease_seconds), job_id),
+            "UPDATE jobs SET lease_expires_at=? WHERE id=? AND state='running'"
+            " AND (? IS NULL OR worker_id=?)",
+            (_at(self.cfg.lease_seconds), job_id, worker_id, worker_id),
         )
 
     def complete(self, job_id: str, worker_id: str | None = None) -> bool:

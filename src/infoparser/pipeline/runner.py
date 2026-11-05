@@ -7,6 +7,7 @@ import time
 
 from infoparser.domain.models import SegmentIn
 from infoparser.ids import utcnow
+from infoparser.jobs import require_lease
 from infoparser.pipeline.chunk import chunk_text, chunk_timed
 from infoparser.pipeline.detect import detect
 from infoparser.pipeline import dedupe, entities, provenance
@@ -98,6 +99,7 @@ def _share_twin(s, row, ex, ct, t0):
     orig = s.conn.execute("SELECT inbox_id FROM provenance_log WHERE source_id=? AND inbox_id<>?"
                           " ORDER BY id LIMIT 1", (twin["id"], inbox_id)).fetchone()
     with transaction(s.conn):
+        require_lease(s.conn)
         s.conn.execute("INSERT INTO provenance_log(source_id, inbox_id, url, added_at)"
                        " VALUES (?,?,?,?)", (twin["id"], inbox_id, ex.url, utcnow()))
         s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?",
@@ -122,6 +124,7 @@ def _save(s, row, ex, ct, distilled):
     inbox_id, text_sha = row["id"], _text_sha(ex)
     segs, cands, by = distilled
     with transaction(s.conn):
+        require_lease(s.conn)
         sid = row["source_id"]
         now = s.conn.execute("SELECT source_id FROM inbox_items WHERE id=?", (inbox_id,)).fetchone()
         if now is None or now["source_id"] != sid:  # another worker saved since we started

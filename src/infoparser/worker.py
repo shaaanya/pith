@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from infoparser import locks
 from infoparser.domain.models import Status
 from infoparser.inbox.service import Inbox
-from infoparser.jobs import JobQueue, log_event
+from infoparser.jobs import JobQueue, current, log_event
 from infoparser.store.db import connect, transaction
 
 log = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ Processor = Callable[[str], Outcome]
 
 class Worker:
     """Runs one job at a time from the queue, keeping its lease alive meanwhile."""
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # wiring record
     def __init__(self, conn: sqlite3.Connection, inbox: Inbox, queue: JobQueue,
                  processor: Processor, worker_id: str | None = None):
         self.conn, self.inbox, self.queue = conn, inbox, queue
@@ -51,7 +52,7 @@ class Worker:
         q = JobQueue(connect(self.queue.cfg.db_path), self.queue.cfg)
         while not done.wait(self.heartbeat_seconds):
             try:
-                q.heartbeat(job_id)
+                q.heartbeat(job_id, self.worker_id)
             except sqlite3.OperationalError:
                 log.warning("heartbeat failed for %s", job_id, exc_info=True)
         q.conn.close()
@@ -70,12 +71,14 @@ class Worker:
         done = threading.Event()
         hb = threading.Thread(target=self._heartbeat_loop, args=(job.id, done), daemon=True)
         hb.start()
+        token = current.set((job.id, self.worker_id, job.attempts))
         try:
             out = self.processor(job.inbox_id)
         except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             # any processor bug becomes a retryable failure
             out = Failed(f"{type(e).__name__}: {e}")
         finally:
+            current.reset(token)
             done.set()
             hb.join()
         self._finish(job, out)
