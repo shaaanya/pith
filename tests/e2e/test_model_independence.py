@@ -22,10 +22,15 @@ def test_matrix_same_shapes_differing_extractors(tmp_path, stub):
     shapes, by = [], {}
     for v in VARIANTS:
         res = _run(v, tmp_path, stub)
-        shapes.append(check_contract(res))
+        stated, downgraded, shape = check_contract(res)
+        shapes.append(shape)
+        if v != "heuristic":  # model output: verbatim stated item kept, fabricated one downgraded
+            assert stated >= 1 and downgraded >= 1, (v, stated, downgraded)
+        if v == "cli":
+            assert res["answer"].mode == "answer"
         rows = db(res["svc"]).execute("SELECT extracted_by FROM knowledge_items")
         by[v] = {x["extracted_by"] for x in rows}
-    assert shapes[0] == shapes[1] == shapes[2]
+    assert len(set(shapes)) == 1
     assert any(b.startswith("m:") for b in by["openai_compat"])
     assert any(b.startswith("c:") for b in by["cli"])
     assert all(b.startswith("h:") for b in by["heuristic"])
@@ -82,6 +87,8 @@ def test_all_model_backends_removed_still_ingests_and_searches(tmp_path):
     svc = build(cfg)
     ids = submit_notes(svc)
     assert all(svc.inbox.get(i)["status"] == "processed" for i in ids)
+    live = db(svc).execute(LIVE_ITEMS).fetchall()  # implicit heuristic backend carries its own name
+    assert live and all(r[0] == "heuristic:heuristic" for r in live)
     assert search(svc, "fusion")
 
 

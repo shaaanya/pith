@@ -31,4 +31,5 @@ markers = [
 
 [tool.pylint.main]
 source-roots = ["src", "tests"]
+# init-hook assumes the repo root as the working directory
 init-hook = "import sys; sys.path.insert(0, 'src')"
