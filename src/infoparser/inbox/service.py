@@ -51,7 +51,7 @@ class Inbox:
         now = utcnow()
         with self._tx():
             if external_id:
-                seen = self.conn.execute("SELECT id FROM inbox_items WHERE adapter=? AND external_id=?",
+                seen = self.conn.execute("SELECT inbox_id AS id FROM external_ids WHERE adapter=? AND external_id=?",
                                          (adapter, external_id)).fetchone()
                 if seen:
                     return SubmitResult(seen["id"], seen["id"], False)
@@ -74,6 +74,7 @@ class Inbox:
                 )
                 if requeue:
                     self._requeue(old["id"], now)
+                self._record_external(adapter, external_id, old["id"])
                 return SubmitResult(old["id"], old["id"], requeue)
             iid = new_id()
             self.conn.execute(
@@ -84,10 +85,17 @@ class Inbox:
                  mime, url, user_context or None, Status.PENDING, now, external_id),
             )
             self._insert_job(iid)
+            self._record_external(adapter, external_id, iid)
         return SubmitResult(iid)
 
+    def _record_external(self, adapter, external_id, iid) -> None:
+        if external_id:
+            self.conn.execute("INSERT OR IGNORE INTO external_ids(adapter, external_id, inbox_id) VALUES (?,?,?)",
+                              (adapter, external_id, iid))
+
     def _append_context(self, iid: str, ctx: str | None, now: str) -> None:
-        if ctx:
+        cur = self.conn.execute("SELECT user_context FROM inbox_items WHERE id=?", (iid,)).fetchone()
+        if ctx and ctx not in (cur["user_context"] or "").split("\n\n"):
             self.conn.execute(
                 "UPDATE inbox_items SET user_context = CASE WHEN user_context IS NULL OR user_context=''"
                 " THEN ? ELSE user_context || char(10,10) || ? END, updated_at=? WHERE id=?",

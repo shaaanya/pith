@@ -149,7 +149,7 @@ def _watch(a):
     fa = FsAdapter(s.inbox, s.cfg.watch_dirs)
     if a.once:
         fa.poll()  # first sighting only records sizes; use two polls for a one-shot scan
-        print(f"submitted {fa.poll()} file(s)")
+        print(f"submitted {fa.poll()} file(s) (files modified in the last 2s are skipped by the mtime guard)")
         return
     try:
         fa.run_forever()
@@ -167,7 +167,10 @@ def _adapters_run(a):
 
 def _import_telegram(a):
     from infoparser.adapters.telegram_export import import_export
-    r = import_export(_services(a).inbox, Path(a.path), since=a.since)
+    try:
+        r = import_export(_services(a).inbox, Path(a.path), since=a.since)
+    except (ValueError, OSError) as e:
+        sys.exit(f"error: {e}")
     print(f"submitted {r.submitted}, duplicates {r.duplicates}, skipped {r.skipped}")
 
 

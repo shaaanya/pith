@@ -59,10 +59,15 @@ def load_token(cfg) -> str:
         return cfg.http_token
     p = Path(cfg.home) / "http_token"
     if p.exists():
-        return p.read_text().strip()
+        tok = p.read_text().strip()
+        if tok:
+            if p.stat().st_mode & 0o077:
+                p.chmod(0o600)
+            return tok
     Path(cfg.home).mkdir(parents=True, exist_ok=True)
     tok = secrets.token_urlsafe(32)
-    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w") as f:
         f.write(tok + "\n")
     return tok
@@ -85,6 +90,7 @@ def _parse_multipart(ctype: str, raw: bytes) -> dict:
 class _Handler(BaseHTTPRequestHandler):
     server_version = "InfoParser"
     protocol_version = "HTTP/1.1"
+    timeout = 30  # per-connection socket timeout: a slow-drip client cannot hold a thread forever
 
     def log_message(self, *a):  # quiet
         pass
@@ -129,6 +135,18 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         self._guard(self._post)
 
+    def _405(self):
+        data = b'{"error": "method not allowed"}'
+        self.send_response(405)
+        self.send_header("Allow", "GET, POST")
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(data)
+
+    do_PUT = do_DELETE = do_PATCH = do_HEAD = do_OPTIONS = _405
+
     def _get(self):
         m = re.fullmatch(r"/v1/inbox/([A-Za-z0-9]+)", self.path.split("?")[0])
         if not m:
@@ -161,6 +179,8 @@ class _Handler(BaseHTTPRequestHandler):
                 body = json.loads(raw.decode("utf-8"))
             except ValueError as e:
                 raise ValueError("malformed JSON") from e
+            if isinstance(body, dict) and ("file" in body or "filename" in body):
+                raise ValueError("file upload requires raw or multipart body")
         elif base == "multipart/form-data":
             body = _parse_multipart(ctype, raw)
         else:

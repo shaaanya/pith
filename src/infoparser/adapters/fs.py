@@ -13,6 +13,7 @@ import plistlib
 import re
 import shutil
 import time
+import uuid
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -89,12 +90,15 @@ class FsAdapter:
         return done
 
     def _submit(self, p: Path) -> None:
+        st = p.stat()
+        key = f"{p.name}:{st.st_size}:{st.st_mtime_ns}"  # same unchanged file re-seen after a crash = no-op
         urls = _link_urls(p)
         if urls:
             for u in urls:
-                self.inbox.submit(adapter=self.name, text=u, user_context=f"from {p.name}")
+                self.inbox.submit(adapter=self.name, text=u, user_context=f"from {p.name}",
+                                  external_id=f"{key}:{u}")
         else:
-            self.inbox.submit(adapter=self.name, file=p, filename=p.name)
+            self.inbox.submit(adapter=self.name, file=p, filename=p.name, external_id=key)
 
     @staticmethod
     def _move(d: Path, p: Path) -> None:
@@ -102,7 +106,7 @@ class FsAdapter:
         dest.mkdir(exist_ok=True)
         target = dest / p.name
         if target.exists():
-            target = dest / f"{int(time.time())}-{p.name}"
+            target = dest / f"{uuid.uuid4().hex[:8]}-{p.name}"
         shutil.move(str(p), str(target))
 
     def run_forever(self, interval: float = 5.0, stop=None) -> None:

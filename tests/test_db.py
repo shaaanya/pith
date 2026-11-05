@@ -10,8 +10,8 @@ TABLES = {
 
 def test_migrate_fresh_creates_all_tables(tmp_path):
     conn = connect(tmp_path / "t.db")
-    assert migrate(conn) == 2
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+    assert migrate(conn) == 3
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
     names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master")}
     assert TABLES <= names
     conn.execute("INSERT INTO segments_fts(rowid, text) VALUES (1, 'hello world')")
@@ -22,8 +22,8 @@ def test_migrate_fresh_creates_all_tables(tmp_path):
 
 def test_migrate_idempotent(tmp_path):
     conn = connect(tmp_path / "t.db")
-    assert migrate(conn) == 2
-    assert migrate(conn) == 2
+    assert migrate(conn) == 3
+    assert migrate(conn) == 3
 
 
 def test_wal_enabled(tmp_path):
@@ -63,4 +63,4 @@ def test_migrate_concurrent_fresh_db(tmp_path):
     ts = [threading.Thread(target=go, args=(c,)) for c in conns]
     [t.start() for t in ts]
     [t.join() for t in ts]
-    assert not errs and out == [2, 2]
+    assert not errs and out == [3, 3]

@@ -47,11 +47,16 @@ def _urls(msg: dict) -> list[str]:
 
 def import_export(inbox, export_json: Path, *, since: str | None = None) -> ImportReport:
     export_json = Path(export_json)
-    data = json.loads(export_json.read_text("utf-8"))
+    try:
+        data = json.loads(export_json.read_text("utf-8"))
+    except (OSError, ValueError) as e:  # missing, unreadable, empty, truncated, not UTF-8
+        raise ValueError(f"not a Telegram export: {export_json}: {e}") from e
+    if not isinstance(data, dict) or not isinstance(data.get("messages"), list):
+        raise ValueError(f"not a Telegram export: {export_json}: expected an object with a messages list")
     root = export_json.parent.resolve()
     chat = data.get("id", data.get("name", "chat"))
     rep = ImportReport()
-    for m in data.get("messages", []):
+    for m in data["messages"]:
         if not isinstance(m, dict) or m.get("type") != "message" or "id" not in m:
             rep.skipped += 1
             continue
@@ -75,6 +80,9 @@ def import_export(inbox, export_json: Path, *, since: str | None = None) -> Impo
                 text = (text + f"\n[missing media: {media}]").strip()
         elif media is not None:
             text = (text + "\n[missing media]").strip()
+        if media is not None and path is None and not flatten_text(m.get("text")).strip() and not urls:
+            rep.skipped += 1  # nothing but media we cannot find
+            continue
         for u in urls:  # text_link hrefs not visible in the text
             if u not in text:
                 text += f"\n{u}"

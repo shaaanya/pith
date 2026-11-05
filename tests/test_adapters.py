@@ -239,7 +239,10 @@ def test_http_server_auth_routes_and_errors(server, svc):
     c.endheaders()
     assert c.getresponse().status == 413
     c.close()
-    assert req(server, "OPTIONS", "/v1/inbox", token=None)[0] in (401, 404, 405, 501)
+    for m in ("PUT", "DELETE", "PATCH", "HEAD"):
+        st, _, h = req(server, m, "/v1/inbox", b"" if m != "HEAD" else None)
+        assert st == 405 and "POST" in h.get("Allow", ""), m
+    assert req(server, "POST", "/v1/inbox", json.dumps({"file": "abc"}).encode(), J)[0] == 400
 
 
 def test_http_file_upload_raw_and_multipart(server, svc):
@@ -273,5 +276,132 @@ def test_cli_import_telegram_and_adapters_list(tmp_path):
     run = lambda *a: subprocess.run([sys.executable, "-m", "infoparser.cli", *a], env=env, capture_output=True, text=True, timeout=60)
     assert "telegram_export" in run("adapters", "list").stdout
     r1 = run("import-telegram", str(FIX / "result.json"))
-    assert r1.returncode == 0 and "submitted 7" in r1.stdout, r1.stdout + r1.stderr
-    assert "submitted 0, duplicates 7" in run("import-telegram", str(FIX / "result.json")).stdout
+    assert r1.returncode == 0 and "submitted 6" in r1.stdout, r1.stdout + r1.stderr
+    assert "submitted 0, duplicates 6" in run("import-telegram", str(FIX / "result.json")).stdout
+
+
+# ---------- fix round 1 ----------
+def _bad(tmp_path, content):
+    p = tmp_path / "result.json"
+    if content is not None:
+        p.write_text(content)
+    return p
+
+
+@pytest.mark.parametrize("content", ["", '{"messages": [{"id": 1,', "[1, 2]", '{"messages": 5}', '"str"', None])
+def test_telegram_bad_export_raises_valueerror(svc, tmp_path, content):
+    with pytest.raises(ValueError, match="not a Telegram export"):
+        import_export(svc.inbox, _bad(tmp_path, content))
+
+
+def test_telegram_non_dict_messages_skipped(svc, tmp_path):
+    p = _bad(tmp_path, json.dumps({"id": 1, "messages": [1, "x", None, {"id": 2, "type": "message", "text": "ok"}]}))
+    r = import_export(svc.inbox, p)
+    assert r.submitted == 1 and r.skipped == 3
+
+
+def test_cli_import_telegram_bad_file_clean_error(tmp_path):
+    import subprocess, sys
+    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
+    for target in (tmp_path / "missing.json", _bad(tmp_path, "{")):
+        r = subprocess.run([sys.executable, "-m", "infoparser.cli", "import-telegram", str(target)],
+                           env=env, capture_output=True, text=True, timeout=60)
+        assert r.returncode != 0 and "Traceback" not in r.stderr and r.stderr.startswith("error:")
+
+
+def _counts(svc):
+    return (svc.conn.execute("SELECT count(*) FROM provenance_log").fetchone()[0],
+            svc.conn.execute("SELECT coalesce(sum(length(user_context)),0) FROM inbox_items").fetchone()[0],
+            svc.conn.execute("SELECT count(*) FROM inbox_items").fetchone()[0],
+            svc.conn.execute("SELECT count(*) FROM jobs").fetchone()[0])
+
+
+def test_telegram_reimport_is_pure_noop_for_deduped_messages(svc, tmp_path):
+    exp = tmp_path / "exp"
+    (exp / "photos").mkdir(parents=True)
+    (exp / "photos" / "a.jpg").write_bytes(PNG)
+    (exp / "photos" / "b.jpg").write_bytes(PNG)  # same blob twice
+    msgs = [
+        {"id": 1, "type": "message", "date": "d1", "text": "same words again"},
+        {"id": 2, "type": "message", "date": "d2", "text": [{"type": "link", "text": "https://example.com/dup"}]},
+        {"id": 3, "type": "message", "date": "d3", "text": [{"type": "link", "text": "https://example.com/dup?utm_source=z"}]},
+        {"id": 4, "type": "message", "date": "d4", "forwarded_from": "X", "text": "cap", "photo": "photos/a.jpg"},
+        {"id": 5, "type": "message", "date": "d5", "forwarded_from": "X", "text": "cap", "photo": "photos/b.jpg"},
+    ]
+    p = exp / "result.json"
+    p.write_text(json.dumps({"id": 9, "messages": msgs}))
+    import_export(svc.inbox, p)
+    # make the deduped URL item dead: a re-run must not revive it
+    svc.conn.execute("UPDATE inbox_items SET status='failed' WHERE canonical_url IS NOT NULL")
+    before = _counts(svc)
+    r2 = import_export(svc.inbox, p)
+    assert _counts(svc) == before and r2.submitted == 0
+    assert svc.conn.execute("SELECT count(*) FROM inbox_items WHERE status='failed'").fetchone()[0] == 1
+
+
+def test_fs_rerun_after_crash_is_pure_noop(svc, tmp_path):
+    d = tmp_path / "drop"
+    mk(d, "links.txt", "https://example.com/q1\nhttps://example.com/q2\n")
+    p = mk(d, "n.md", "# note")
+    fa = FsAdapter(svc.inbox, [d], stable_polls=1)
+    real_move = shutil.move
+    shutil.move = lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
+    try:
+        fa.poll()
+    finally:
+        shutil.move = real_move
+    before = _counts(svc)
+    assert fa.poll() == 2
+    assert _counts(svc) == before
+
+
+def test_fs_processed_name_collision_never_overwrites(svc, tmp_path):
+    d = tmp_path / "drop"
+    fa = FsAdapter(svc.inbox, [d], stable_polls=1)
+    mk(d, "same.md", "first content")
+    fa.poll()
+    mk(d, "same.md", "second content")
+    fa.poll()
+    mk(d, "same.md", "third content")
+    fa.poll()
+    kept = sorted(f.read_text() for f in (d / ".processed").iterdir())
+    assert kept == ["first content", "second content", "third content"]
+
+
+def test_telegram_only_missing_media_is_skipped(svc, tmp_path):
+    p = _bad(tmp_path, json.dumps({"id": 1, "messages": [
+        {"id": 1, "type": "message", "date": "d", "text": "", "photo": "photos/none.jpg"}]}))
+    r = import_export(svc.inbox, p)
+    assert (r.submitted, r.skipped) == (0, 1) and rows(svc) == []
+
+
+def test_http_token_empty_or_loose_mode(svc):
+    from infoparser.adapters.http_ingest import load_token
+    tf = svc.cfg.home / "http_token"
+    tf.parent.mkdir(parents=True, exist_ok=True)
+    tf.write_text("\n")
+    t = load_token(svc.cfg)
+    assert t and tf.read_text().strip() == t
+    tf.chmod(0o644)
+    assert load_token(svc.cfg) == t and (tf.stat().st_mode & 0o777) == 0o600
+
+
+def test_http_slow_client_times_out(server):
+    import socket
+    from infoparser.adapters import http_ingest
+    assert http_ingest._Handler.timeout and http_ingest._Handler.timeout <= 60
+
+
+def test_migrate_v1_db_with_rows_keeps_data(tmp_path):
+    from infoparser.store import db
+    conn = db.connect(tmp_path / "v1.db")
+    sql = (Path(db.__file__).parent / "migrations" / "001_init.sql").read_text()
+    for st in db._split(sql):
+        conn.execute(st)
+    conn.execute("PRAGMA user_version=1")
+    conn.execute("INSERT INTO inbox_items(id,adapter,submitted_at,status,payload_text,canonical_url,updated_at)"
+                 " VALUES ('a','cli','t','pending','hi','http://x','t')")
+    assert db.migrate(conn) == 3
+    r = conn.execute("SELECT * FROM inbox_items WHERE id='a'").fetchone()
+    assert r["payload_text"] == "hi" and r["external_id"] is None
+    conn.execute("INSERT INTO external_ids(adapter, external_id, inbox_id) VALUES ('x','1','a')")
