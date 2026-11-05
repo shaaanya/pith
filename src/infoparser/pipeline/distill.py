@@ -65,12 +65,21 @@ def _parse(text: str):
         return _first_object(t)
 
 
+def _drop_null_quotes(o):
+    """A model may send `"quote": null` for an unquoted item: treat it as absent."""
+    if isinstance(o, dict) and o.get("quote", 0) is None:
+        del o["quote"]
+    for v in o.values() if isinstance(o, dict) else o if isinstance(o, list) else ():
+        _drop_null_quotes(v)
+
+
 def _ask(backend, msgs, schema, lenient=False, profile=None):
     """One generate + one repair retry. Returns (obj, GenResult) or (None, None).
     ProviderError propagates."""
     for _ in range(2):
         res = backend.generate(msgs, json_schema=schema)
         obj = _parse(res.text)
+        _drop_null_quotes(obj)
         err = "not valid JSON" if obj is None else validate(obj, schema)
         # only the final heuristic fallback may answer in the generic shape; normalize() adapts it
         if lenient and obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:

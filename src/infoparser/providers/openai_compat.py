@@ -88,6 +88,16 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         except (urllib.error.URLError, OSError, TimeoutError, ValueError) as e:
             raise ProviderError(f"{self.name}: {e}") from e
 
+    def _content(self, data) -> str:
+        """The reply text; a refusal (content null), a parts list or a missing field is an error."""
+        try:
+            text = data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as e:
+            raise ProviderError(f"{self.name}: malformed response") from e
+        if not isinstance(text, str):
+            raise ProviderError(f"{self.name}: reply has no text content")
+        return text
+
     def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
         """Chat completion; a JSON schema goes in response_format or into the prompt."""
         body = {"model": self.model, "messages": list(messages)}
@@ -101,11 +111,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
                 body["messages"] = [
                     *messages, {"role": "user", "content": schema_instruction(json_schema)}]
         data = self._call("/chat/completions", json.dumps(body).encode())
-        try:
-            return GenResult(data["choices"][0]["message"]["content"],
-                             data.get("model", self.model), self.name)
-        except (KeyError, IndexError, TypeError) as e:
-            raise ProviderError(f"{self.name}: malformed response") from e
+        return GenResult(self._content(data), data.get("model", self.model), self.name)
 
     def embed(self, texts) -> EmbedResult:
         """Embed texts with embed_model."""
@@ -149,10 +155,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
             parts.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}})
         body = {"model": self.vision_model, "messages": [{"role": "user", "content": parts}]}
         data = self._call("/chat/completions", json.dumps(body).encode())
-        try:
-            return data["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as e:
-            raise ProviderError(f"{self.name}: malformed response") from e
+        return self._content(data)
 
     def rerank(self, query: str, docs: list[str]) -> list[float]:
         """Relevance scores in `docs` order from a Jina-style /rerank endpoint (UNVERIFIED live)."""
@@ -163,7 +166,9 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         try:
             scores = [0.0] * len(docs)
             for res in data["results"]:
-                scores[int(res["index"])] = float(res["relevance_score"])
+                if not 0 <= (i := int(res["index"])) < len(docs):
+                    raise IndexError(i)
+                scores[i] = float(res["relevance_score"])
         except (KeyError, IndexError, TypeError, ValueError) as e:
             raise ProviderError(f"{self.name}: malformed response") from e
         return scores
