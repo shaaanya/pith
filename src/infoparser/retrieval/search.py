@@ -1,7 +1,8 @@
-"""Search: FTS (items + segments) and, when an embedder with vectors exists, cosine (items + segments),
-fused with RRF, per-source capped, optionally reranked. Every optional stage degrades, never raises:
-`SearchResult.mode` is "hybrid" only if the vector path actually ran; failures land in `warnings`.
-`egress` lists remote backends that received query text. `search()` returns just the hits."""
+"""Search: FTS (items + segments) and, when an embedder with vectors exists, cosine (items +
+segments), fused with RRF, per-source capped, optionally reranked. Every optional stage degrades,
+never raises: `SearchResult.mode` is "hybrid" only if the vector path actually ran; failures land
+in `warnings`. `egress` lists remote backends that received query text. `search()` returns just
+the hits."""
 import json
 import re
 from dataclasses import dataclass, field
@@ -20,6 +21,8 @@ TEXT_CAP = 1500
 
 @dataclass
 class SearchResult:
+    """Hits plus how they were found, degradation warnings and remote backends used."""
+
     hits: list
     mode: str = "fts"  # "hybrid" | "fts"
     warnings: list[str] = field(default_factory=list)
@@ -27,7 +30,9 @@ class SearchResult:
 
 
 @dataclass
-class SearchHit:
+class SearchHit:  # pylint: disable=too-many-instance-attributes  # flat record
+    """One result: an item or a raw segment, with its source and locator."""
+
     item_id: str | None  # None for raw-segment hits (kind == "segment")
     title: str
     snippet: str
@@ -42,17 +47,18 @@ class SearchHit:
     platform: str | None = None
 
 
-STOPWORDS = frozenset("""a about above after again all also am an and any are as at be because been before being below
-between both but by can could did do does doing down during each few for from further had has have having he her here
-hers him his how i if in into is it its just me more most my no nor not of off on once only or other our out over own
-same she should so some such than that the their them then there these they this those through to too under until up
-very was we were what when where which while who whom why will with would you your""".split())
+STOPWORDS = frozenset("""a about above after again all also am an and any are as at be because been
+before being below between both but by can could did do does doing down during each few for from
+further had has have having he her here hers him his how i if in into is it its just me more most
+my no nor not of off on once only or other our out over own same she should so some such than that
+the their them then there these they this those through to too under until up very was we were what
+when where which while who whom why will with would you your""".split())
 
 
 def fts_query(q: str) -> str | None:
-    """Quote every \\w+ token (neutralises FTS operators/syntax) and OR them (bm25 ranks). English stopwords are
-    dropped unless every token is one; the last kept token is prefix-matched only if it is a content word
-    longer than 2 chars (so "and"* can never widen to "android")."""
+    """Quote every \\w+ token (neutralises FTS operators/syntax) and OR them (bm25 ranks). English
+    stopwords are dropped unless every token is one; the last kept token is prefix-matched only if
+    it is a content word longer than 2 chars (so "and"* can never widen to "android")."""
     toks = _TOKEN.findall(q)
     if not toks:
         return None
@@ -60,7 +66,8 @@ def fts_query(q: str) -> str | None:
     use = content or toks
     last = use[-1]
     prefix = bool(content) and len(last) > 2
-    return " OR ".join([f'"{t}"' for t in use[:-1]] + [f'"{last}"' + ("*" if prefix else "")])
+    quoted = [f'"{t}"' for t in use[:-1]] + [f'"{last}"' + ("*" if prefix else "")]
+    return " OR ".join(quoted)
 
 
 _FILTERS = {"kind": "k.kind", "provenance": "k.provenance", "platform": "s.platform"}
@@ -89,7 +96,8 @@ _LIVE_SOURCE = (" AND NOT (EXISTS (SELECT 1 FROM knowledge_items x WHERE x.sourc
 
 
 def _seg_where(filters):
-    """`since` = ingestion time: items use created_at, raw segments use their source's fetched_at."""
+    """`since` = ingestion time: items use created_at, raw segments use their source's
+    fetched_at."""
     where, args = _LIVE_SOURCE, []
     if "platform" in filters:
         where += " AND s.platform=?"
@@ -102,28 +110,33 @@ def _seg_where(filters):
 
 _ITEM_ONLY = {"kind", "provenance", "topic"}  # filters that exclude raw segments
 
-_ITEM_COLS = ("k.id, k.title, k.body, k.provenance, k.kind, k.segment_refs, k.source_id, s.url, s.platform")
+_ITEM_COLS = ("k.id, k.title, k.body, k.provenance, k.kind, k.segment_refs, k.source_id,"
+              " s.url, s.platform")
 
 
 def _item_hit(services, r, snip, score):
     refs = json.loads(r["segment_refs"] or "[]")
     loc = None
     if refs:
-        seg = services.conn.execute("SELECT locator FROM segments WHERE id=?", (refs[0],)).fetchone()
+        seg = services.conn.execute("SELECT locator FROM segments WHERE id=?",
+                                    (refs[0],)).fetchone()
         loc = seg["locator"] if seg else None
     return SearchHit(r["id"], r["title"], snip, r["url"], loc, r["provenance"], r["kind"], score,
-                     source_id=r["source_id"], text=f"{r['title']}\n{r['body'] or ''}"[:TEXT_CAP], platform=r["platform"])
+                     source_id=r["source_id"], text=f"{r['title']}\n{r['body'] or ''}"[:TEXT_CAP],
+                     platform=r["platform"])
 
 
 def _seg_hit(r, snip, score):
-    return SearchHit(None, r["title"] or "", snip, r["url"], r["locator"], None, "segment", score, r["id"],
-                     r["source_id"], text=(r["text"] or "")[:TEXT_CAP], platform=r["platform"])
+    return SearchHit(None, r["title"] or "", snip, r["url"], r["locator"], None, "segment", score,
+                     r["id"], r["source_id"], text=(r["text"] or "")[:TEXT_CAP],
+                     platform=r["platform"])
 
 
 def _fts_items(services, match, filters, n):
     where, args = _item_where(filters)
     rows = services.conn.execute(
-        f"SELECT {_ITEM_COLS}, bm25(items_fts) AS r, snippet(items_fts, 1, '[', ']', '...', 16) AS snip"
+        f"SELECT {_ITEM_COLS}, bm25(items_fts) AS r,"
+        " snippet(items_fts, 1, '[', ']', '...', 16) AS snip"
         " FROM items_fts JOIN knowledge_items k ON k.rowid = items_fts.rowid"
         " LEFT JOIN sources s ON s.id = k.source_id"
         f" WHERE items_fts MATCH ? AND k.deleted_at IS NULL{where} ORDER BY r LIMIT ?",
@@ -134,16 +147,19 @@ def _fts_items(services, match, filters, n):
 def _fts_segments(services, match, filters, n):
     where, args = _seg_where(filters)
     rows = services.conn.execute(
-        "SELECT g.id, g.source_id, g.locator, g.text, s.url, s.title, s.platform, bm25(segments_fts) AS r,"
+        "SELECT g.id, g.source_id, g.locator, g.text, s.url, s.title, s.platform,"
+        " bm25(segments_fts) AS r,"
         " snippet(segments_fts, 0, '[', ']', '...', 16) AS snip"
         " FROM segments_fts JOIN segments g ON g.id = segments_fts.rowid"
-        f" JOIN sources s ON s.id = g.source_id WHERE segments_fts MATCH ?{where} ORDER BY r LIMIT ?",
+        " JOIN sources s ON s.id = g.source_id WHERE segments_fts MATCH ?"
+        f"{where} ORDER BY r LIMIT ?",
         (match, *args, n)).fetchall()
     return [_seg_hit(r, r["snip"], -r["r"]) for r in rows]
 
 
 def _fts_only(services, match, filters, limit):
-    """FTS path: item hits, then at most one raw-segment hit per source not already represented by an item."""
+    """FTS path: item hits, then at most one raw-segment hit per source not already represented
+    by an item."""
     out = _fts_items(services, match, filters, limit)
     if (set(filters) & _ITEM_ONLY) or len(out) >= limit:
         return out
@@ -172,7 +188,8 @@ def _hydrate_segments(services, ids, filters):
     q = ",".join("?" * len(ids))
     rows = services.conn.execute(
         "SELECT g.id, g.source_id, g.locator, g.text, s.url, s.title, s.platform FROM segments g"
-        f" JOIN sources s ON s.id=g.source_id WHERE g.id IN ({q}){where}", (*[int(i) for i in ids], *args)).fetchall()
+        f" JOIN sources s ON s.id=g.source_id WHERE g.id IN ({q}){where}",
+        (*[int(i) for i in ids], *args)).fetchall()
     return {str(r["id"]): _seg_hit(r, (r["text"] or "")[:200], 0.0) for r in rows}
 
 
@@ -191,17 +208,21 @@ def _vector_lists(services, query, filters, res):
         er = emb.embed([query])
         qv = er.vectors[0]
         over = CANDIDATES * OVERFETCH  # filters apply after cosine, so over-fetch
-        iv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, over, "item") if sc > 0]
-        sv = [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, over, "segment") if sc > 0]
-    except Exception as e:  # embedder down, bad vectors, ...: FTS still answers
+        iv, sv = (
+            [(i, sc) for i, sc in vectors.cosine_topk(services.conn, er.model_id, qv, over, kind)
+             if sc > 0] for kind in ("item", "segment"))
+    except Exception as e:  # pylint: disable=broad-exception-caught  # embedder down, bad vectors: FTS still answers
         res.warnings.append(f"vector search unavailable ({type(e).__name__}: {e}); using FTS only")
         return None
-    if not services.conn.execute("SELECT 1 FROM embeddings WHERE model_id=? LIMIT 1", (er.model_id,)).fetchone():
-        res.warnings.append(f"no vectors for embedding model {er.model_id!r}; run `infoparser reindex`; using FTS only")
+    if not services.conn.execute("SELECT 1 FROM embeddings WHERE model_id=? LIMIT 1",
+                                 (er.model_id,)).fetchone():
+        res.warnings.append(f"no vectors for embedding model {er.model_id!r}; "
+                            "run `infoparser reindex`; using FTS only")
         return None
     items = _hydrate_items(services, [i for i, _ in iv], filters)
     segs = _hydrate_segments(services, [i for i, _ in sv], filters)
-    return ([items[i] for i, _ in iv if i in items][:CANDIDATES], [segs[i] for i, _ in sv if i in segs][:CANDIDATES])
+    return ([items[i] for i, _ in iv if i in items][:CANDIDATES],
+            [segs[i] for i, _ in sv if i in segs][:CANDIDATES])
 
 
 def _cap_per_source(hits, cap):
@@ -224,7 +245,7 @@ def _rerank(services, query, hits, res):
         scores = rr.rerank(query, [f"{h.title}\n{h.text or h.snippet}" for h in top])
         if len(scores) != len(top):
             raise ValueError("rerank returned wrong number of scores")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught  # degrade: keep FTS/vector order
         res.warnings.append(f"rerank skipped ({type(e).__name__}: {e})")
         return hits
     order = sorted(range(len(top)), key=lambda i: (-scores[i], i))
@@ -237,8 +258,26 @@ def _key(h):
     return f"i:{h.item_id}" if h.item_id else f"s:{h.segment_id}"
 
 
-def search_ex(services, query: str, *, limit: int = 10, filters: dict | None = None,
-              mode: str = "hybrid", per_source: int = PER_SOURCE_CAP) -> SearchResult:
+def _fused(services, match, filters, vec, per_source):
+    """FTS and vector lists fused with RRF, then capped per source."""
+    fi = _fts_items(services, match, filters, CANDIDATES) if match else []
+    only_items = bool(set(filters) & _ITEM_ONLY)
+    fs = _fts_segments(services, match, filters, CANDIDATES) if match and not only_items else []
+    by_key = {}
+    for h in [*vec[1], *vec[0], *fs, *fi]:  # FTS hits last: their highlighted snippets win
+        by_key[_key(h)] = h
+    fused = rrf([[_key(h) for h in lst] for lst in (fi, fs, *vec)], k=RRF_K)
+    ranked = []
+    for key, score in fused:
+        by_key[key].score = score
+        ranked.append(by_key[key])
+    return _cap_per_source(ranked, per_source)
+
+
+def search_ex(services, query: str, *, limit: int = 10,  # pylint: disable=too-many-arguments
+              filters: dict | None = None, mode: str = "hybrid",
+              per_source: int = PER_SOURCE_CAP) -> SearchResult:
+    """Search saved knowledge; never raises for an unavailable optional stage."""
     res = SearchResult([])
     match = fts_query(query)
     filters = {k: v for k, v in (filters or {}).items() if v}
@@ -249,21 +288,12 @@ def search_ex(services, query: str, *, limit: int = 10, filters: dict | None = N
             res.hits = _rerank(services, query, res.hits, res)[:limit]
         return res
     res.mode = "hybrid"
-    fi = _fts_items(services, match, filters, CANDIDATES) if match else []
-    fs = _fts_segments(services, match, filters, CANDIDATES) if match and not (set(filters) & _ITEM_ONLY) else []
-    by_key = {}
-    for h in [*vec[1], *vec[0], *fs, *fi]:  # FTS hits last: their highlighted snippets win
-        by_key[_key(h)] = h
-    fused = rrf([[_key(h) for h in lst] for lst in (fi, fs, *vec)], k=RRF_K)
-    ranked = []
-    for key, score in fused:
-        by_key[key].score = score
-        ranked.append(by_key[key])
-    ranked = _rerank(services, query, _cap_per_source(ranked, per_source), res)
+    ranked = _rerank(services, query, _fused(services, match, filters, vec, per_source), res)
     res.hits = ranked[:limit]
     return res
 
 
 def search(services, query: str, *, limit: int = 10, filters: dict | None = None,
            mode: str = "hybrid") -> list[SearchHit]:
+    """Like `search_ex` but returns only the hits."""
     return search_ex(services, query, limit=limit, filters=filters, mode=mode).hits
