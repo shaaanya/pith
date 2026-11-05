@@ -40,6 +40,10 @@ class WhisperCppBackend:
         path = Path(path)
         if not path.is_file():
             raise ProviderError(f"{self.name}: audio file not found: {path}")
+        with path.open("rb") as f:
+            head = f.read(12)
+        if not (head[:4] == b"RIFF" and head[8:12] == b"WAVE"):
+            raise ProviderError(f"{self.name}: input must be a 16 kHz mono wav file (RIFF/WAVE header missing)")
         lang = language or self.language
         with tempfile.TemporaryDirectory() as tmp:
             prefix = str(Path(tmp) / "out")
@@ -49,13 +53,13 @@ class WhisperCppBackend:
             if self.threads:
                 argv += ["-t", str(self.threads)]
             try:
-                p = subprocess.run(argv, capture_output=True, text=True, timeout=self.timeout)
+                p = subprocess.run(argv, capture_output=True, text=True, errors="replace", timeout=self.timeout)
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise ProviderError(f"{self.name}: {e}") from e
             if p.returncode != 0:
                 raise ProviderError(f"{self.name}: exit {p.returncode}: {p.stderr.strip()[:300]}")
             try:
-                data = json.loads(Path(prefix + ".json").read_text())
+                data = json.loads(Path(prefix + ".json").read_text(encoding="utf-8", errors="replace"))
                 out = []
                 for seg in data["transcription"]:
                     if "offsets" in seg:

@@ -405,3 +405,36 @@ def test_migrate_v1_db_with_rows_keeps_data(tmp_path):
     r = conn.execute("SELECT * FROM inbox_items WHERE id='a'").fetchone()
     assert r["payload_text"] == "hi" and r["external_id"] is None
     conn.execute("INSERT INTO external_ids(adapter, external_id, inbox_id) VALUES ('x','1','a')")
+
+
+def test_http_405_drains_body_and_closes_connection(server):
+    import socket
+    s = socket.create_connection(("127.0.0.1", server.server_address[1]), timeout=5)
+    body = b"x" * 5000
+    s.sendall(f"PUT /v1/inbox HTTP/1.1\r\nHost: x\r\nAuthorization: Bearer {server.token}\r\n"
+              f"Content-Length: {len(body)}\r\n\r\n".encode() + body)
+    resp = b""
+    while chunk := s.recv(4096):
+        resp += chunk  # server must close the socket (Connection: close) or this would hang to timeout
+    assert resp.startswith(b"HTTP/1.1 405") and b"connection: close" in resp.lower()
+    s.close()
+
+
+def test_load_token_is_exclusive_and_never_rewrites(svc):
+    tf = svc.cfg.home / "http_token"
+    tf.parent.mkdir(parents=True, exist_ok=True)
+    tf.write_text("existing-token\n")
+    assert load_token(svc.cfg) == "existing-token" and tf.read_text() == "existing-token\n"
+    tf.unlink()
+    out = []
+    ts = [threading.Thread(target=lambda: out.append(load_token(svc.cfg))) for _ in range(8)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(set(out)) == 1 and tf.read_text().strip() == out[0]
+
+
+def test_context_dedupe_with_blank_lines_inside_context(svc):
+    a = svc.inbox.submit(adapter="t", text="https://example.com/ctx", user_context="line one\n\nline two")
+    svc.inbox.submit(adapter="t", text="https://example.com/ctx", user_context="line one\n\nline two")
+    svc.inbox.submit(adapter="t", text="https://example.com/ctx", user_context="line two")
+    assert svc.inbox.get(a.id)["user_context"] == "line one\n\nline two"

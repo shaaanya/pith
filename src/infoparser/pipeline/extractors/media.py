@@ -113,7 +113,7 @@ def _login_clarification(url: str, err: str, info: dict | None) -> NeedsClarific
     msg = f"login or rate limit from {url.split('/')[2] if '//' in url else url}; paste the transcript or text"
     if caption:
         msg += f". Caption found: {caption[:300]}"
-    return NeedsClarificationError(msg)
+    return NeedsClarificationError(msg, pasteable=True)
 
 
 def _frames(cfg, video: Path, tmpdir: Path) -> list[Path]:

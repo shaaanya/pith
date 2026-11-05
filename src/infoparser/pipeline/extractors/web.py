@@ -124,7 +124,7 @@ def extract(ctx: ExtractCtx) -> Extracted:
     if ct == "application/pdf":
         raise NeedsClarificationError("URL serves a PDF; download it and submit the file")
     if ct and not (ct.startswith("text/") or ct in ("application/xhtml+xml", "application/xml")):
-        raise NeedsClarificationError(f"URL serves {ct}, not a web page; download it and submit the file or paste the text")
+        raise NeedsClarificationError(f"URL serves {ct}, not a web page; download it and submit the file instead")
     sha = ctx.blobs.put_bytes(res.body)
     html = _decode(res)
     title, text, links, meta = extract_main(html, res.final_url)

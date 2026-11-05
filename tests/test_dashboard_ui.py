@@ -23,3 +23,9 @@ def test_raw_append_and_replace_only_inside_render_helpers():
 def test_put_helper_skips_null_and_false():
     m = re.search(r"function put\(.*?\n}\n", JS, re.S).group(0)
     assert "!= null" in m and "!== false" in m
+
+
+def test_clarify_textarea_placeholder_says_pasted_text_replaces_content():
+    from pathlib import Path
+    html = (Path(__file__).parent.parent / "src/infoparser/dashboard/static/index.html").read_text()
+    assert "replaces the content" in html

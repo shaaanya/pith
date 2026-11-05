@@ -64,3 +64,10 @@ def test_migrate_concurrent_fresh_db(tmp_path):
     [t.start() for t in ts]
     [t.join() for t in ts]
     assert not errs and out == [3, 3]
+
+
+def test_knowledge_items_source_id_is_indexed(tmp_path):
+    conn = connect(tmp_path / "t.db")
+    migrate(conn)
+    cols = [[c[2] for c in conn.execute(f"PRAGMA index_info({i[1]})")] for i in conn.execute("PRAGMA index_list(knowledge_items)")]
+    assert ["source_id"] in cols

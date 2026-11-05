@@ -5,9 +5,7 @@ from pathlib import Path
 import pytest
 
 from infoparser.pipeline import runner
-from infoparser.providers.cli_backend import CliBackend
 from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.openai_compat import OpenAICompatBackend
 from infoparser.providers.ports import Capabilities, GenResult, ProviderError
 from infoparser.providers.registry import Registry
 from infoparser.retrieval.ask import ask, deep_link, strip_citations, SYSTEM
@@ -166,52 +164,6 @@ def test_strip_citations_unit():
 def test_ask_stopword_only_overlap_returns_no_excerpts_and_skips_generator(loaded):
     g = Gen("x [1]")
     route(loaded, g)
-    b = ask(loaded, "oligopoly")
-    assert b.mode == "answer" and b.citations == [1] and b.generated_by.startswith("c:")
-
-
-def _cfg(svc, backends):
-    svc.cfg.backends, svc.cfg.tasks = backends, {"answer": list(backends)}
-    return svc.cfg
-
-
-def test_ask_egress_lists_remote_backends_only(loaded):
-    route(loaded, Gen("ok [1]", "local1"))
-    assert ask(loaded, "oligopoly").egress == []
-    route(loaded, Gen("ok [1]", "cloud", locality="remote"), allow_remote=True)
-    assert ask(loaded, "oligopoly").egress == ["cloud"]
-    route(loaded, Gen("ok [1]", "cloud", locality="remote"), allow_remote=False)
-    a = ask(loaded, "oligopoly")
-    assert a.egress == [] and a.mode == "retrieval-only"
-
-
-def test_ask_vector_failure_warns(loaded, use_embedder):
-    class Boom(ConceptEmbedder):
-        def embed(self, texts):
-            raise RuntimeError("down")
-    route(loaded, Gen("ok [1]"))
-    use_embedder(loaded, Boom())
-    a = ask(loaded, "oligopoly")
-    assert a.mode == "answer" and a.retrieval_mode == "fts" and any("vector" in w for w in a.warnings)
-
-
-def test_deep_link_youtube_timestamp():
-    yt = "https://www.youtube.com/watch?v=abc"
-    assert deep_link("youtube", yt, "t=83.4-90") == yt + "&t=83s"
-    assert deep_link("youtube", "https://youtu.be/abc", "t=5-9") == "https://youtu.be/abc?t=5s"
-    assert deep_link("web", "https://x.y/doc.pdf", "page=3") == "https://x.y/doc.pdf#page=3"
-    assert deep_link("web", "https://x.y/a", "char=0-10") == "https://x.y/a"
-    assert deep_link("web", None, "page=3") is None
-
-
-def test_strip_citations_unit():
-    t, used, bad = strip_citations("A [1][2]. B [3, 1]! C [0].", 2)
-    assert used == [1, 2] and bad == [0, 3] and "[3" not in t and "[1]" in t
-
-
-def test_ask_stopword_only_overlap_returns_no_excerpts_and_skips_generator(loaded):
-    g = Gen("x [1]")
-    route(loaded, g)
     b = ask(loaded, "what is the zzzqqq of and by to")
     assert b.retrieved == [] and "no matching" in b.message and g.prompts == []
 
@@ -238,3 +190,9 @@ def test_ask_vs_registry_generators_exclude_heuristic_explicitly(loaded):
 def test_strip_citations_ranges():
     t, used, bad = strip_citations("A [1-3]. B [2\u20134]. C [5-99999].", 4)
     assert used == [1, 2, 3, 4] and 5 in bad and "[5" not in t
+
+
+@pytest.mark.parametrize("marker", ["[3-1]", "[1-99999]", "[0-2]"])
+def test_reversed_or_out_of_bounds_ranges_are_wholly_invalid(marker):
+    t, used, bad = strip_citations(f"Claim {marker}.", 3)
+    assert used == [] and bad and "[" not in t

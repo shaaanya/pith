@@ -77,7 +77,7 @@ def test_run_processes_submission_in_background(cfg):
         stop.set()
         t.join(30)
     assert not t.is_alive() and not err
-    assert not (cfg.home / "run.lock").exists()
+    assert _lock_free(cfg)
     with pytest.raises(OSError):
         urllib.request.urlopen(f"http://127.0.0.1:{info['port']}/", timeout=2)
 
@@ -90,6 +90,16 @@ def test_second_run_same_home_is_a_clear_error(cfg):
     finally:
         stop.set()
         t.join(30)
+
+
+def _lock_free(cfg) -> bool:
+    import fcntl
+    with open(cfg.home / "run.lock", "a+") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        return True
 
 
 def test_stale_lock_is_taken_over(cfg):
@@ -111,7 +121,7 @@ def test_port_in_use_is_a_clear_error(cfg, tmp_path):
             run_all.run(cfg, port=sock.getsockname()[1], stop=threading.Event())
     finally:
         sock.close()
-    assert not (cfg.home / "run.lock").exists()  # lock released on failed start
+    assert _lock_free(cfg)  # lock released on failed start
 
 
 def test_no_dashboard_and_no_watch_flags(cfg):
@@ -135,13 +145,13 @@ def test_crashed_worker_stops_the_process_loudly(cfg, monkeypatch, capsys):
             run_all.run(cfg, port=0, watch=False)
         except BaseException as e:  # noqa: BLE001
             err.append(e)
-    t = threading.Thread(target=go)
+    t = threading.Thread(target=go, daemon=True)
     t.start()
     t.join(15)
     assert not t.is_alive(), "run() kept serving a dead worker"
     assert err and isinstance(err[0], run_all.RunError) and "worker" in str(err[0])
     assert "worker exploded" in capsys.readouterr().err
-    assert not (cfg.home / "run.lock").exists()
+    assert (cfg.home / "run.lock").exists()  # persistent file: never unlinked while a flock may be held
 
 
 def test_lock_is_a_real_flock_not_just_a_pid_file(cfg):

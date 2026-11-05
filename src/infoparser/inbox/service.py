@@ -95,7 +95,8 @@ class Inbox:
 
     def _append_context(self, iid: str, ctx: str | None, now: str) -> None:
         cur = self.conn.execute("SELECT user_context FROM inbox_items WHERE id=?", (iid,)).fetchone()
-        if ctx and ctx not in (cur["user_context"] or "").split("\n\n"):
+        have = "\n\n" + (cur["user_context"] or "") + "\n\n"  # block-wise match; ctx may itself hold blank lines
+        if ctx and "\n\n" + ctx + "\n\n" not in have:
             self.conn.execute(
                 "UPDATE inbox_items SET user_context = CASE WHEN user_context IS NULL OR user_context=''"
                 " THEN ? ELSE user_context || char(10,10) || ? END, updated_at=? WHERE id=?",

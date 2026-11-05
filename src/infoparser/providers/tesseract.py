@@ -22,7 +22,7 @@ class TesseractBackend:
     def read(self, image: Path) -> str:
         try:
             p = subprocess.run([self.binary, str(image), "stdout", "-l", self.lang],
-                               capture_output=True, text=True, timeout=self.timeout)
+                               capture_output=True, text=True, errors="replace", timeout=self.timeout)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise ProviderError(f"{self.name}: {e}") from e
         if p.returncode != 0:

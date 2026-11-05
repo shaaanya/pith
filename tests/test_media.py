@@ -334,3 +334,8 @@ def test_vtt_hours_and_empty_cue():
     got = parse_vtt("WEBVTT\n\n01:02:03.500 --> 01:02:05.000\nhour cue\n\n"
                     "01:02:05.000 --> 01:02:06.000\n\n01:02:06.000 --> 01:02:07.000\n<c></c>\n")
     assert [(t.start, t.end, t.text) for t in got] == [(3723.5, 3725.0, "hour cue")]
+
+
+def test_login_clarification_is_pasteable_because_it_invites_pasting():
+    e = media._login_clarification("https://www.instagram.com/reel/x/", "login", {"title": "t"})
+    assert "paste" in e.reason and e.pasteable is True

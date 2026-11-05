@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 import secrets
+import time
 from email.parser import BytesParser
 from email.policy import HTTP
 from pathlib import Path
@@ -45,19 +46,27 @@ def load_token(cfg) -> str:
     if cfg.http_token:
         return cfg.http_token
     p = Path(cfg.home) / "http_token"
-    if p.exists():
-        tok = p.read_text().strip()
-        if tok:
-            if p.stat().st_mode & 0o077:
-                p.chmod(0o600)
-            return tok
     Path(cfg.home).mkdir(parents=True, exist_ok=True)
-    tok = secrets.token_urlsafe(32)
-    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(fd, 0o600)
-    with os.fdopen(fd, "w") as f:
-        f.write(tok + "\n")
-    return tok
+    for _ in range(50):
+        try:  # O_EXCL: exactly one creator wins; everyone else re-reads the winner's token
+            fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            tok = p.read_text().strip()
+            if tok:
+                if p.stat().st_mode & 0o077:
+                    p.chmod(0o600)
+                return tok
+            if _ >= 5:  # empty for 100ms: a leftover, not a creator mid-write; fill it in place
+                tok = secrets.token_urlsafe(32)
+                with open(p, "w") as f:
+                    f.write(tok + "\n")
+                p.chmod(0o600)
+                return tok
+            time.sleep(0.02)  # creator may not have written yet
+            continue
+        with os.fdopen(fd, "w") as f:
+            f.write(secrets.token_urlsafe(32) + "\n")
+    raise RuntimeError(f"cannot obtain a token from {p} (empty file?)")
 
 
 def parse_multipart(ctype: str, raw: bytes) -> dict:

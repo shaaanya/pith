@@ -131,7 +131,7 @@ function inboxRow(r) {
   if (r.error) put(c, h("p", { class: "err" }, r.error));
   if (r.status === "failed") put(c, h("button", { class: "btn sec", onclick: act(async () => { await api("POST", `/api/inbox/${r.id}/retry`, {}); toast("requeued"); show("inbox"); }) }, "Retry"));
   if (r.status === "needs_clarification") {
-    const t = h("textarea", { "aria-label": "Paste the text or add context", placeholder: "Paste the text or add context, then submit" });
+    const t = h("textarea", { "aria-label": "Paste the text or add context", placeholder: "Pasted text replaces the content; submit to re-run" });
     put(c, t, h("button", { class: "btn", onclick: act(async () => { const res = await api("POST", `/api/inbox/${r.id}/clarify`, { text: t.value }); toast(res.note || "requeued"); show("inbox"); }) }, "Submit"));
   }
   if (r.source_id) put(c, h("button", { class: "btn sec", onclick: act(async () => {

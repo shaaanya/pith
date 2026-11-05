@@ -36,3 +36,14 @@ def test_image_end_to_end_through_ocr_backend(svc, drain):
     assert svc.inbox.get(iid)["status"] == "processed"
     text = " ".join(r[0] for r in svc.conn.execute("SELECT text FROM segments")).lower()
     assert "sourdough" in text and "hello" in text
+
+
+def test_tesseract_non_utf8_output_does_not_raise_unicode_error(tmp_path):
+    import sys
+    exe = tmp_path / "bad"
+    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stdout.buffer.write(b'ab\\xff\\xfecd')\n")
+    exe.chmod(0o755)
+    assert TesseractBackend("t", binary=str(exe)).read(IMG).startswith("ab")
+    exe.write_text(f"#!{sys.executable}\nimport sys\nsys.stderr.buffer.write(b'\\xff')\nsys.exit(1)\n")
+    with pytest.raises(ProviderError):
+        TesseractBackend("t", binary=str(exe)).read(IMG)

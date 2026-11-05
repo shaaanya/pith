@@ -76,11 +76,16 @@ class _Handler(BaseHTTPRequestHandler):
         self._guard(self._post)
 
     def _405(self):
+        n = self.headers.get("Content-Length")
+        if n and n.isdigit():
+            self.rfile.read(min(int(n), 1 << 20))  # drain so the unread body is not parsed as the next request
+        self.close_connection = True
         data = b'{"error": "method not allowed"}'
         self.send_response(405)
         self.send_header("Allow", "GET, POST")
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Connection", "close")
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(data)

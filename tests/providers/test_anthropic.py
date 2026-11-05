@@ -71,3 +71,41 @@ def test_anthropic_blocked_when_remote_disallowed(make_cfg):
         r.get("cloud")
     assert Registry.from_config(make_cfg(be, tasks, True)).get("cloud").type == "anthropic"
     assert {d["name"] for d in r.describe()} >= {"cloud"}
+
+
+def test_anthropic_never_forwards_key_on_redirect(key):
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    with AnthropicStub() as target:
+        class R(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                self.send_response(307)
+                self.send_header("Location", target.base_url + "/v1/messages")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), R)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            b = AnthropicBackend("a", "m", "IP_ANTH_KEY", base_url=f"http://127.0.0.1:{srv.server_port}")
+            with pytest.raises(ProviderError, match="redirect"):
+                b.generate(MSGS[1:2])
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        assert target.requests == []  # the second server never saw the request, let alone the key
+
+
+def test_anthropic_requires_https_for_non_loopback():
+    with pytest.raises(ValueError, match="https"):
+        AnthropicBackend("a", "m", "K", base_url="http://api.example.com")
+    AnthropicBackend("a", "m", "K", base_url="https://api.example.com")
+    AnthropicBackend("a", "m", "K", base_url="http://localhost:9")
+    with pytest.raises(ValueError, match="'a'"):
+        Registry.from_config(__import__("types").SimpleNamespace(
+            backends={"a": {"type": "anthropic", "model": "m", "api_key_env": "K", "base_url": "http://evil.example"}},
+            tasks={}, allow_remote=True))

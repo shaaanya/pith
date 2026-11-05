@@ -16,9 +16,19 @@ context_window (optional int).
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from .ports import Capabilities, CapabilityError, GenResult, ProviderError, schema_instruction
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):  # never follow: the x-api-key header must not leave base_url
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+_LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 
 class AnthropicBackend:
@@ -26,6 +36,9 @@ class AnthropicBackend:
 
     def __init__(self, name, model, api_key_env, base_url="https://api.anthropic.com",
                  anthropic_version="2023-06-01", max_tokens=4096, timeout=120, context_window=200_000):
+        u = urllib.parse.urlsplit(base_url)
+        if u.scheme != "https" and not (u.scheme == "http" and u.hostname in _LOOPBACK):
+            raise ValueError("base_url must be https (http only for loopback)")
         self.name, self.model, self.api_key_env = name, model, api_key_env
         self.base_url, self.anthropic_version = base_url.rstrip("/"), anthropic_version
         self.max_tokens, self.timeout = max_tokens, timeout
@@ -53,9 +66,11 @@ class AnthropicBackend:
             headers={"x-api-key": key, "anthropic-version": self.anthropic_version,
                      "content-type": "application/json"})
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            with _OPENER.open(req, timeout=self.timeout) as r:
                 data = json.loads(r.read())
         except urllib.error.HTTPError as e:
+            if 300 <= e.code < 400:
+                raise ProviderError(f"{self.name}: refusing to follow HTTP {e.code} redirect") from None
             raise ProviderError(f"{self.name}: HTTP {e.code} {self._api_message(e)}") from None
         except (urllib.error.URLError, OSError, TimeoutError, ValueError) as e:
             raise ProviderError(f"{self.name}: {type(e).__name__}: {e}") from None

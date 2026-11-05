@@ -87,7 +87,10 @@ def strip_citations(text: str, n_excerpts: int) -> tuple[str, list[int], list[in
         for part in re.split(r"\s*,\s*", m.group(1)):
             lo, _, hi = part.replace("\u2013", "-").partition("-")
             lo, hi = int(lo), int(hi or lo)
-            nums += list(range(lo, hi + 1)) if 0 <= hi - lo <= 100 else [lo, hi]
+            if hi != lo and not (1 <= lo < hi <= n_excerpts):  # reversed / out-of-bounds range: wholly invalid
+                bad.update((lo, hi))
+                continue
+            nums.append(lo) if lo == hi else nums.extend(range(lo, hi + 1))
         ok = [x for x in nums if 1 <= x <= n_excerpts]
         used.update(ok)
         bad.update(x for x in nums if x not in ok)

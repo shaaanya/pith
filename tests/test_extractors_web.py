@@ -173,3 +173,10 @@ def test_pathological_nesting_fails_cleanly(svc):
         assert isinstance(out, (Failed, NeedsClarification, Processed))  # must not crash the worker
         if isinstance(out, Failed):
             assert "nest" in out.error
+
+
+def test_non_page_content_type_clarification_does_not_invite_pasting():
+    from infoparser.pipeline.extractors import web
+    import inspect
+    src = inspect.getsource(web)
+    assert "submit the file or paste the text" not in src

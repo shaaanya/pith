@@ -40,7 +40,7 @@ class _Lock:
         self.f.flush()
 
     def release(self) -> None:
-        self.path.unlink(missing_ok=True)  # while still holding the lock
+        self.f.truncate(0)  # persistent file: never unlinked while a flock may be held (avoids lock-on-orphan-inode races)
         self.f.close()
 
 
