@@ -9,7 +9,7 @@ from infoparser.domain.models import SegmentIn
 from infoparser.ids import utcnow
 from infoparser.pipeline.chunk import chunk_text, chunk_timed
 from infoparser.pipeline.detect import detect
-from infoparser.pipeline import dedupe, entities
+from infoparser.pipeline import dedupe, entities, provenance
 from infoparser.providers import egress
 from infoparser.pipeline.distill import distill
 from infoparser.pipeline.schemas import profile_for
@@ -141,6 +141,7 @@ def _save(s, row, ex, ct, distilled):
                            " VALUES (?,?,?,?)", (sid, inbox_id, ex.url, utcnow()))
         seg_ids = knowledge.save_segments(s.conn, sid, segs)
         item_ids = knowledge.save_items(s.conn, sid, cands, by, seg_ids)
+        provenance.recheck_edited(s.conn, sid)
         s.conn.execute("UPDATE inbox_items SET source_id=?, content_type=? WHERE id=?",
                        (sid, ct, inbox_id))
     return sid, item_ids
