@@ -19,6 +19,6 @@ def extract(ctx: ExtractCtx) -> Extracted:
         raise NeedsClarificationError(NO_OCR)
     text = (text or "").replace("\x00", "").strip()
     if not text:
-        raise NeedsClarificationError("no text found in image")
+        raise NeedsClarificationError("no text found in image", pasteable=True)
     return Extracted(ctx.row["original_filename"] or "Image", None, ctx.row["canonical_url"], "image", text,
                      metadata={"via": how}, original_sha=sha)

@@ -101,6 +101,6 @@ def extract(ctx: ExtractCtx) -> Extracted:
             raise NeedsClarificationError("unsupported document format (supported: docx, pptx, xlsx)")
     sections = [(loc, t) for loc, t in sections if t.strip()]
     if not sections:
-        raise NeedsClarificationError("empty document: nothing to extract")
+        raise NeedsClarificationError("empty document: nothing to extract", pasteable=True)
     return Extracted(ctx.row["original_filename"] or "Untitled document", None, ctx.row["canonical_url"],
                      "document", "\n\n".join(t for _, t in sections), sections=sections, original_sha=sha)

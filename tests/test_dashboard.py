@@ -72,6 +72,7 @@ def test_auth_required_and_cookie_bootstrap(srv, client):
     assert st == 302 and r.getheader("Location") == "/"
     cookie = r.getheader("Set-Cookie")
     assert "HttpOnly" in cookie and "SameSite=Strict" in cookie and "ip_token=" in cookie
+    assert "Max-Age=604800" in cookie
     assert Client(srv, client.token, cookie=True).req("GET", "/api/inbox")[0] == 200
     assert Client(srv, "wrong").req("GET", "/api/inbox")[0] == 401
     st, page, r = anon.req("GET", "/")

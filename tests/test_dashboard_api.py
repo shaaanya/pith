@@ -46,7 +46,8 @@ def test_retry_and_clarify_flow(svc):
     assert api.inbox_get(svc, r["id"])["status"] == "needs_clarification"
     with pytest.raises(ValueError):
         api.clarify(svc, r["id"], "  ")
-    api.clarify(svc, r["id"], NOTE)
+    note = api.clarify(svc, r["id"], NOTE)
+    assert note["ok"] and "login" in note["note"] and "cannot fix" in note["note"]
     row = api.inbox_get(svc, r["id"])
     assert row["status"] == "pending" and NOTE in row["user_context"]
     with pytest.raises(KeyError):
@@ -122,3 +123,19 @@ def test_blob_lookup_only_by_known_sha(svc):
     sha2 = svc.inbox.get(r2["id"])["blob_sha256"]
     _, ctype2, inline2 = api.blob(svc, sha2)
     assert not inline2 and ctype2 == "application/octet-stream"
+
+
+def test_hostile_strings_come_back_as_plain_data(svc):
+    evil = "<img src=x onerror=alert(1)>"
+    r = api.inbox_submit(svc, {"text": evil + " quokkas marsupials live on Rottnest Island eat grass", "context": "javascript:alert(1)"})
+    rows = api.inbox_list(svc, None)
+    assert rows[0]["what"].startswith(evil) and rows[0]["url"] is None  # data, never markup
+    assert rows[0]["user_context"] == "javascript:alert(1)"
+    process(svc, r["id"])
+    iid = api.inbox_get(svc, r["id"])["items"][0]["id"]
+    api.item_update(svc, iid, {"title": evil})
+    assert api.item_detail(svc, iid)["title"] == evil
+    svc.conn.execute("UPDATE sources SET url='javascript:alert(1)'")
+    d = api.item_detail(svc, iid)
+    assert d["source"]["url"] is None
+    assert all(h["source_url"] is None for h in api.search(svc, "quokkas", {})["hits"])

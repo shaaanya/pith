@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from infoparser.adapters.http_ingest import handle, safe_filename  # noqa: F401  (safe_filename re-exported)
+from infoparser.inbox.ingest import handle
 from infoparser.ids import utcnow
 from infoparser.retrieval import ask as ask_mod
 from infoparser.retrieval import search as search_mod
@@ -108,7 +108,10 @@ def retry(s, iid: str) -> dict:
 def clarify(s, iid: str, text) -> dict:
     t = _str({"text": text}, "text")
     s.inbox.clarify(_id(iid), t.strip())
-    return {"ok": True}
+    return {"ok": True, "note": "queued. Your text replaces the content only for a login/paywall, blocked page or "
+                                "empty/textless item; limits (file too large) and missing backends (OCR, "
+                                "transcriber) stay as they are, because pasted text cannot fix them (you will see "
+                                "'cannot fix this')."}
 
 
 # ---- items

@@ -90,7 +90,7 @@ def _reddit(url: str, ctx: ExtractCtx) -> Extracted:
 
 def _check_status(res: FetchResult) -> None:
     if res.status in (401, 402, 403, 451):
-        raise NeedsClarificationError(f"HTTP {res.status}: {PASTE}")
+        raise NeedsClarificationError(f"HTTP {res.status}: {PASTE}", pasteable=True)
     if res.status >= 400:
         raise RuntimeError(f"HTTP {res.status} fetching {res.final_url}")
 
@@ -130,6 +130,6 @@ def extract(ctx: ExtractCtx) -> Extracted:
     title, text, links, meta = extract_main(html, res.final_url)
     # wall markers only count on short pages: a long tutorial may legitimately say "enable JavaScript"
     if len(text) < 200 or (len(text) < 1500 and _WALL.search(text)):
-        raise NeedsClarificationError(PASTE)
+        raise NeedsClarificationError(PASTE, pasteable=True)
     return Extracted(title or url, meta.get("author"), url, "web", text,
                      metadata={**meta, "links": links[:200]}, original_sha=sha)

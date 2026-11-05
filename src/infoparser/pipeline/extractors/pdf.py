@@ -50,7 +50,7 @@ def extract(ctx: ExtractCtx) -> Extracted:
         raise NeedsClarificationError(HINT)
     sections = [(f"page={i}", t.replace("\x00", "").strip()) for i, t in enumerate(pages, 1) if t.strip()]
     if not sections:
-        raise NeedsClarificationError("PDF has no text layer (scanned?); OCR for PDFs is not supported")
+        raise NeedsClarificationError("PDF has no text layer (scanned?); OCR for PDFs is not supported", pasteable=True)
     name = ctx.row["original_filename"] or "Untitled PDF"
     return Extracted(name, None, ctx.row["canonical_url"], "pdf", "\n\n".join(t for _, t in sections),
                      sections=sections, metadata={"pages": len(pages)}, original_sha=sha)

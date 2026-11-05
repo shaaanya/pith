@@ -6,6 +6,7 @@ Security model (loopback, single user):
 - Host header must be a loopback name + our port (or the explicit bind host): defeats DNS rebinding.
 - Cookie-authenticated requests that change state must carry an Origin equal to the Host (CSRF). No CORS headers.
 - CSP default-src 'none' with a per-response nonce for the one inline script/style; no external hosts at all.
+- The dashboard shares the local ingest token (<home>/http_token) on purpose: one secret per home.
 - Non-loopback bind is refused unless an explicit token is passed.
 - Every request opens its own SQLite connection; errors are JSON {error}, never tracebacks.
 """
@@ -21,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-from infoparser.adapters.http_ingest import LOOPBACK, _parse_multipart, load_token
+from infoparser.inbox.ingest import LOOPBACK, load_token, parse_multipart
 from infoparser.dashboard import api
 from infoparser.inbox.service import Inbox
 from infoparser.jobs import JobQueue
@@ -149,7 +150,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return self._err(403, "bad token")
             return self._send(302, b"", "text/plain", extra=[
                 ("Location", "/"),
-                ("Set-Cookie", f"ip_token={quote(tok, safe='')}; HttpOnly; SameSite=Strict; Path=/")])
+                ("Set-Cookie", f"ip_token={quote(tok, safe='')}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800")])
         nonce = secrets.token_urlsafe(16)
         self._send(200, self.server.index.replace("{{nonce}}", nonce).encode(), "text/html; charset=utf-8", nonce=nonce)
 
@@ -236,7 +237,7 @@ class _Handler(BaseHTTPRequestHandler):
             return body
         raw = self._body(cap=self.server.services.cfg.max_fetch_bytes)
         if base == "multipart/form-data":
-            return _parse_multipart(ctype, raw)
+            return parse_multipart(ctype, raw)
         if not raw:
             raise ValueError("empty body")
         return {"file": raw, "filename": self.headers.get("X-Filename"), "context": self.headers.get("X-Context")}

@@ -152,4 +152,6 @@ class Inbox:
             self.get(id)  # KeyError on unknown id
             now = utcnow()
             self._append_context(id, text, now)
+            # explicit record: the runner uses ONLY the latest clarification as content (never submit-time context)
+            self.add_event(id, "clarified", "info", text)
             self._requeue(id, now)

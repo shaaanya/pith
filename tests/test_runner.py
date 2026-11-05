@@ -105,13 +105,58 @@ def test_runner_no_extractor_branch(svc, monkeypatch):
     assert isinstance(out, NeedsClarification) and "no extractor available" in out.reason
 
 
-def test_runner_pasted_clarification_becomes_content(svc):
-    from infoparser.worker import Processed
-    paste = "Quokkas are small marsupials from Australia and they live on Rottnest Island eating grass."
-    iid = svc.inbox.submit(adapter="t", text="   ").id
+LONG_CTX = "Telegram message 2026-01-02 from Alice Example / forwarded from Some Channel about animals and travel plans"
+PASTE = "Quokkas are small marsupials from Australia and they live on Rottnest Island eating grass."
+
+
+def wall_url(srv):
+    return srv.base + "/wall"
+
+
+def test_long_submit_context_never_becomes_content(svc):
+    from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
+    with FixtureServer({"/wall": Route(FIXTURES / "login_wall.html")}) as srv:
+        iid = svc.inbox.submit(adapter="t", text=wall_url(srv), user_context=LONG_CTX).id
+        out = runner.process(svc, iid)
+    assert isinstance(out, NeedsClarification) and "paste the text" in out.reason
+    iid = svc.inbox.submit(adapter="t", text="   ", user_context=LONG_CTX).id  # telegram-style
     assert isinstance(runner.process(svc, iid), NeedsClarification)
-    svc.inbox.clarify(iid, "short hint")
-    assert isinstance(runner.process(svc, iid), NeedsClarification)  # hints stay hints
-    svc.inbox.clarify(iid, paste)
-    assert isinstance(runner.process(svc, iid), Processed)
-    assert svc.conn.execute("SELECT count(*) FROM segments WHERE text LIKE '%Rottnest%'").fetchone()[0] == 1
+    assert svc.conn.execute("SELECT count(*) FROM sources").fetchone()[0] == 0
+
+
+def test_clarify_writes_event_and_context(svc):
+    iid = svc.inbox.submit(adapter="t", text="   ").id
+    svc.inbox.clarify(iid, PASTE)
+    ev = svc.conn.execute("SELECT detail FROM processing_events WHERE inbox_id=? AND stage='clarified'", (iid,)).fetchone()
+    assert ev["detail"] == PASTE and PASTE in svc.inbox.get(iid)["user_context"]
+
+
+def test_clarification_text_becomes_user_supplied_source(svc):
+    from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
+    from infoparser.worker import Processed
+    with FixtureServer({"/wall": Route(FIXTURES / "login_wall.html")}) as srv:
+        iid = svc.inbox.submit(adapter="t", text=wall_url(srv)).id
+        assert isinstance(runner.process(svc, iid), NeedsClarification)
+        svc.inbox.clarify(iid, "short but real")  # any non-empty clarification counts once gating passes
+        svc.inbox.clarify(iid, PASTE)
+        assert isinstance(runner.process(svc, iid), Processed)
+        src = svc.conn.execute("SELECT * FROM sources").fetchone()
+        assert src["extractor"] == "user_clarification" and src["url"] is None and src["content_type"] == "note"
+        assert src["title"].startswith("Quokkas")
+        assert svc.conn.execute("SELECT count(*) FROM segments WHERE text LIKE '%Rottnest%'").fetchone()[0] == 1
+        ev = svc.conn.execute("SELECT detail FROM processing_events WHERE inbox_id=? AND stage='user_text'", (iid,)).fetchone()
+        assert ev and svc.inbox.get(iid)["canonical_url"] in ev["detail"]  # original URL kept as a note, not as source url
+
+
+def test_clarify_cannot_fix_oversize_or_missing_backend(svc):
+    svc.cfg.max_fetch_bytes = 50
+    iid = svc.inbox.submit(adapter="t", file=b"x" * 200, filename="big.txt").id
+    svc.inbox.clarify(iid, PASTE)
+    out = runner.process(svc, iid)
+    assert isinstance(out, NeedsClarification) and "max_fetch_bytes" in out.reason and "cannot fix" in out.reason
+    svc.cfg.max_fetch_bytes = 50_000_000
+    iid = svc.inbox.submit(adapter="t", file=b"\x89PNG\r\n\x1a\n" + b"x" * 20, filename="p.png").id
+    svc.inbox.clarify(iid, PASTE)
+    out = runner.process(svc, iid)
+    assert isinstance(out, NeedsClarification) and "no OCR backend" in out.reason
+    assert svc.conn.execute("SELECT count(*) FROM sources").fetchone()[0] == 0

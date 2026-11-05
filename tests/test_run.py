@@ -120,3 +120,41 @@ def test_no_dashboard_and_no_watch_flags(cfg):
     stop.set()
     t.join(30)
     assert not err
+
+
+def test_crashed_worker_stops_the_process_loudly(cfg, monkeypatch, capsys):
+    from infoparser.worker import Worker
+
+    def boom(self):
+        raise RuntimeError("worker exploded")
+    monkeypatch.setattr(Worker, "run_once", boom)
+    err = []
+
+    def go():
+        try:
+            run_all.run(cfg, port=0, watch=False)
+        except BaseException as e:  # noqa: BLE001
+            err.append(e)
+    t = threading.Thread(target=go)
+    t.start()
+    t.join(15)
+    assert not t.is_alive(), "run() kept serving a dead worker"
+    assert err and isinstance(err[0], run_all.RunError) and "worker" in str(err[0])
+    assert "worker exploded" in capsys.readouterr().err
+    assert not (cfg.home / "run.lock").exists()
+
+
+def test_lock_is_a_real_flock_not_just_a_pid_file(cfg):
+    import fcntl
+    cfg.home.mkdir(parents=True, exist_ok=True)
+    held = open(cfg.home / "run.lock", "a+")
+    fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    held.seek(0)
+    held.truncate()
+    held.write("1")  # PID 1 is alive, but the point is the flock
+    held.flush()
+    try:
+        with pytest.raises(run_all.RunError, match="already running"):
+            run_all.run(cfg, port=0, stop=threading.Event())
+    finally:
+        held.close()

@@ -16,7 +16,20 @@ from infoparser.store import knowledge
 from infoparser.store.db import transaction
 from infoparser.worker import Failed, NeedsClarification, Processed
 
-MIN_PASTED_CHARS = 80  # shorter clarifications are hints (context), not content
+def _from_clarification(conn, row, err):
+    """The user answered a needs_clarification. Their LATEST explicit clarification becomes the content, but only
+    for problems pasted text can solve (err.pasteable). Anything else keeps its original reason."""
+    last = conn.execute("SELECT detail FROM processing_events WHERE inbox_id=? AND stage='clarified'"
+                        " ORDER BY id DESC LIMIT 1", (row["id"],)).fetchone()
+    text = (last["detail"] if last else "").strip()
+    if not text:
+        raise err
+    if not err.pasteable:
+        raise NeedsClarificationError(f"{err.reason} (pasted text cannot fix this)") from None
+    _stage(conn, row["id"], "user_text", time.monotonic(),
+           f"text supplied by the user; original url: {row['canonical_url'] or '-'}")
+    return Extracted(text.splitlines()[0][:80], None, None, "note", text, original_sha=row["blob_sha256"],
+                     extractor="user_clarification")
 
 
 def _stage(conn, iid, stage, t0, detail="", model=None, level="info"):
@@ -44,13 +57,9 @@ def process(services, inbox_id: str):
         t0 = time.monotonic()
         try:
             ex = EXTRACTORS[ct](ExtractCtx(row, s.blobs, s.registry, s.cfg))
-        except NeedsClarificationError:
-            # the user answered "paste the text": a substantial clarification becomes the content itself
-            ctx = (row["user_context"] or "").strip()
-            if len(ctx) < MIN_PASTED_CHARS:
-                raise
-            ex = Extracted(None, None, row["canonical_url"], "note", ctx, original_sha=row["blob_sha256"])
-            ex.title = ctx.splitlines()[0][:80]
+        except NeedsClarificationError as e:
+            ex = _from_clarification(s.conn, row, e)
+            ct = ex.content_type  # the stored source is the user's note, not the unreadable original
         _stage(s.conn, inbox_id, "extract", t0, f"{len(ex.text)} chars")
         text_sha = hashlib.sha256(ex.text.encode()).hexdigest()
         if not row["source_id"]:  # same text already ingested (e.g. via another URL): share the source
@@ -85,12 +94,12 @@ def process(services, inbox_id: str):
             sid = row["source_id"]
             if sid:
                 s.conn.execute("UPDATE sources SET title=?, author=?, content_type=?, text_sha256=?, extractor=?,"
-                               " fetched_at=? WHERE id=?", (ex.title, ex.author, ct, text_sha, ct, utcnow(), sid))
+                               " fetched_at=? WHERE id=?", (ex.title, ex.author, ct, text_sha, ex.extractor or ct, utcnow(), sid))
             else:
                 sid = knowledge.save_source(
                     s.conn, url=ex.url, title=ex.title, author=ex.author, platform=row["platform"],
                     content_type=ct, blob_sha256=ex.original_sha or row["blob_sha256"],
-                    text_sha256=text_sha, extractor=ct)
+                    text_sha256=text_sha, extractor=ex.extractor or ct)
                 s.conn.execute("INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
                                (sid, inbox_id, ex.url, utcnow()))
             seg_ids = knowledge.save_segments(s.conn, sid, segs)

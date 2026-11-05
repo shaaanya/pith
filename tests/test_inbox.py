@@ -105,7 +105,8 @@ def test_retry_clarify_list_events(inbox):
     assert [r["id"] for r in inbox.list(status="pending")] == [a.id]
     assert inbox.list(status="failed") == []
     inbox.add_event(a.id, "detect", "info", "ok", {"k": 1}, model="m")
-    ev = inbox.conn.execute("SELECT * FROM processing_events").fetchone()
+    assert inbox.conn.execute("SELECT stage, detail FROM processing_events ORDER BY id").fetchone()[:] == ("clarified", "it is about X")
+    ev = inbox.conn.execute("SELECT * FROM processing_events WHERE stage='detect'").fetchone()
     assert ev["stage"] == "detect" and ev["status"] == "info" and ev["model"] == "m"
     assert '"k": 1' in ev["detail"]
 

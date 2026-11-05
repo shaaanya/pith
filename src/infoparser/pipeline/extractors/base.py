@@ -7,9 +7,10 @@ from infoparser.providers.ports import TimedText
 
 
 class NeedsClarificationError(Exception):
-    def __init__(self, reason: str):
+    def __init__(self, reason: str, pasteable: bool = False):
         super().__init__(reason)
         self.reason = reason
+        self.pasteable = pasteable  # True only when text the user pastes can actually solve the problem
 
 
 @dataclass
@@ -23,6 +24,7 @@ class Extracted:
     sections: list[tuple[str, str]] | None = None  # (locator, text), chunked independently
     metadata: dict = field(default_factory=dict)
     original_sha: str | None = None
+    extractor: str | None = None  # defaults to the content type
 
 
 @dataclass

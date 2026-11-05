@@ -19,6 +19,6 @@ def extract(ctx: ExtractCtx) -> Extracted:
         text = row["payload_text"] or ""
     text = text.replace("\r\n", "\n").replace("\x00", "")
     if not text.strip():
-        raise NeedsClarificationError("empty content: nothing to extract")
+        raise NeedsClarificationError("empty content: nothing to extract", pasteable=True)
     return Extracted(row["original_filename"] or _title(text), None, row["canonical_url"],
                      "note", text, original_sha=sha)

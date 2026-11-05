@@ -59,9 +59,15 @@ function h(tag, props, ...kids) {
     else if (v === true) e.setAttribute(k, "");
     else if (v !== false && v != null) e.setAttribute(k, v);
   }
-  for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return e;
+  return put(e, ...kids);
 }
+// The ONLY place children are attached: skips null/false (Element.append would print "null") and never parses HTML.
+function put(parent, ...kids) {
+  const nodes = kids.flat(Infinity).filter((k) => k != null && k !== false).map((k) => (k instanceof Node ? k : document.createTextNode(String(k))));
+  parent.append(...nodes);
+  return parent;
+}
+function clear(parent) { parent.replaceChildren(); }
 const isHttp = (u) => typeof u === "string" && /^https?:\/\//i.test(u);
 const link = (url, label) => isHttp(url)
   ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, label || url)
@@ -96,10 +102,10 @@ let current = "inbox";
 function show(name, arg) {
   current = name;
   for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", String(b.dataset.v === name));
-  main.replaceChildren();
-  views[name](arg).catch((e) => main.append(h("p", { class: "err" }, e.message)));
+  clear(main);
+  views[name](arg).catch((e) => put(main, h("p", { class: "err" }, e.message)));
 }
-$("#tabs").append(...Object.keys(labels).map((k) =>
+put($("#tabs"), ...Object.keys(labels).map((k) =>
   h("button", { role: "tab", "data-v": k, onclick: () => show(k) }, labels[k])));
 
 async function inbox(filter) {
@@ -117,18 +123,18 @@ async function inbox(filter) {
   const chips = h("div", { class: "row" }, ["", "pending", "processing", "processed", "failed", "needs_clarification"].map((s) =>
     h("button", { class: "btn sec", "aria-pressed": String(s === filter), onclick: () => show("inbox", s) }, s || "all")));
   const rows = await api("GET", "/api/inbox" + (filter ? "?status=" + encodeURIComponent(filter) : ""));
-  main.append(add, chips, ...rows.map(inboxRow), rows.length ? null : h("p", { class: "mut" }, "Nothing here yet."));
+  put(main, add, chips, ...rows.map(inboxRow), rows.length ? null : h("p", { class: "mut" }, "Nothing here yet."));
 }
 function inboxRow(r) {
   const c = h("div", { class: "card" },
     h("div", { class: "row" }, badge(r.status), h("span", { class: "grow" }, r.what || "(empty)"), h("span", { class: "mut" }, r.content_type || "")));
-  if (r.error) c.append(h("p", { class: "err" }, r.error));
-  if (r.status === "failed") c.append(h("button", { class: "btn sec", onclick: act(async () => { await api("POST", `/api/inbox/${r.id}/retry`, {}); toast("requeued"); show("inbox"); }) }, "Retry"));
+  if (r.error) put(c, h("p", { class: "err" }, r.error));
+  if (r.status === "failed") put(c, h("button", { class: "btn sec", onclick: act(async () => { await api("POST", `/api/inbox/${r.id}/retry`, {}); toast("requeued"); show("inbox"); }) }, "Retry"));
   if (r.status === "needs_clarification") {
     const t = h("textarea", { "aria-label": "Paste the text or add context", placeholder: "Paste the text or add context, then submit" });
-    c.append(t, h("button", { class: "btn", onclick: act(async () => { await api("POST", `/api/inbox/${r.id}/clarify`, { text: t.value }); toast("requeued"); show("inbox"); }) }, "Submit"));
+    put(c, t, h("button", { class: "btn", onclick: act(async () => { const res = await api("POST", `/api/inbox/${r.id}/clarify`, { text: t.value }); toast(res.note || "requeued"); show("inbox"); }) }, "Submit"));
   }
-  if (r.source_id) c.append(h("button", { class: "btn sec", onclick: act(async () => {
+  if (r.source_id) put(c, h("button", { class: "btn sec", onclick: act(async () => {
     const d = await api("GET", `/api/inbox/${r.id}`); if (d.items.length) detail(d.items[0].id); else toast("no items", true);
   }) }, "Open"));
   return c;
@@ -145,13 +151,13 @@ async function library(arg) {
   const go = act(async () => {
     const p = new URLSearchParams({ q: q.value, kind: kind.value, topic: topic.value, provenance: prov.value });
     const r = await api("GET", "/api/search?" + p);
-    out.replaceChildren(h("div", { class: "row" }, badge("mode: " + r.mode, ""), r.egress.length ? badge("sent to: " + r.egress.join(", "), "failed") : null),
+    clear(out); put(out, h("div", { class: "row" }, badge("mode: " + r.mode, ""), r.egress.length ? badge("sent to: " + r.egress.join(", "), "failed") : null),
       ...r.warnings.map((w) => h("p", { class: "warn" }, "⚠ " + w)),
       ...r.hits.map(hit), r.hits.length ? null : h("p", { class: "mut" }, "No results."));
     out.hidden = false;
   });
   q.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
-  main.append(h("div", { class: "card row" }, q, kind, topic, prov, h("button", { class: "btn", onclick: go }, "Search")), out);
+  put(main, h("div", { class: "card row" }, q, kind, topic, prov, h("button", { class: "btn", onclick: go }, "Search")), out);
   if (state.q || state.topic) go();
   q.focus();
 }
@@ -164,7 +170,7 @@ function hit(x) {
 
 async function detail(id) {
   const it = await api("GET", "/api/items/" + id);
-  main.replaceChildren();
+  clear(main);
   const title = h("input", { class: "grow", value: it.title || "", "aria-label": "Title" });
   const body = h("textarea", { "aria-label": "Body" }); body.value = it.body || "";
   const c = h("div", { class: "card" },
@@ -175,16 +181,16 @@ async function detail(id) {
       h("button", { class: "btn", onclick: act(async () => { await api("PATCH", "/api/items/" + id, { title: title.value, body: body.value }); toast("saved"); detail(id); }) }, "Save edits"),
       h("button", { class: "btn sec", onclick: act(async () => { await api("POST", `/api/items/${id}/reprocess`, {}); toast("queued for reprocessing"); }) }, "Reprocess"),
       h("button", { class: "btn danger", onclick: act(async () => { if (confirm("Delete this item?")) { await api("DELETE", "/api/items/" + id); toast("deleted"); show("search"); } }) }, "Delete")));
-  main.append(c);
-  if (it.evidence) main.append(h("div", { class: "card" }, h("b", {}, "Evidence"), h("div", { class: "q" }, it.evidence)));
-  if (it.source) main.append(h("div", { class: "card" }, h("b", {}, "Source "), link(it.source.url, it.source.title || it.source.url),
+  put(main, c);
+  if (it.evidence) put(main, h("div", { class: "card" }, h("b", {}, "Evidence"), h("div", { class: "q" }, it.evidence)));
+  if (it.source) put(main, h("div", { class: "card" }, h("b", {}, "Source "), link(it.source.url, it.source.title || it.source.url),
     h("div", { class: "mut" }, [it.source.platform, it.source.content_type].filter(Boolean).join(" · ")),
     it.source.blob_sha256 ? h("div", {}, link(location.origin + "/api/blob/" + it.source.blob_sha256, "original file")) : null,
     ...it.citations.map((x) => h("div", { class: "q" }, h("span", { class: "mut" }, x.locator || ""), h("pre", {}, x.text))),
     ...it.inbox.map((x) => h("div", { class: "mut" }, "submitted " + x.added_at + " ", link(x.url)))));
   const tags = [...it.topics.map((t) => h("button", { class: "badge", onclick: () => show("search", { topic: t }) }, "#" + t)), ...it.entities.map((t) => badge(t, ""))];
-  if (tags.length) main.append(h("div", { class: "card row" }, tags));
-  if (it.related.length) main.append(h("div", { class: "card" }, h("b", {}, "Related"), ...it.related.map((r) =>
+  if (tags.length) put(main, h("div", { class: "card row" }, tags));
+  if (it.related.length) put(main, h("div", { class: "card" }, h("b", {}, "Related"), ...it.related.map((r) =>
     h("div", {}, badge(r.type, ""), " ", h("a", { href: "#", onclick: (e) => { e.preventDefault(); detail(r.id); } }, r.title || r.id)))));
 }
 
@@ -193,7 +199,7 @@ async function ask() {
   const out = h("div", {});
   const go = act(async () => {
     const a = await api("POST", "/api/ask", { q: q.value });
-    out.replaceChildren(h("div", { class: "card" }, h("div", { class: "row" }, badge(a.mode, ""), badge("retrieval: " + a.retrieval_mode, ""), a.generated_by ? badge(a.generated_by, "") : null,
+    clear(out); put(out, h("div", { class: "card" }, h("div", { class: "row" }, badge(a.mode, ""), badge("retrieval: " + a.retrieval_mode, ""), a.generated_by ? badge(a.generated_by, "") : null,
         a.egress.length ? badge("sent to: " + a.egress.join(", "), "failed") : null),
       a.interpretation ? h("pre", {}, a.interpretation) : h("p", { class: "mut" }, a.message),
       ...a.warnings.map((w) => h("p", { class: "warn" }, "⚠ " + w))),
@@ -201,28 +207,28 @@ async function ask() {
         link(e.deep_link || e.url, e.locator || "source"), h("pre", {}, (e.text || "").slice(0, 400)))));
   });
   q.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
-  main.append(h("div", { class: "card row" }, q, h("button", { class: "btn", onclick: go }, "Ask")), out); q.focus();
+  put(main, h("div", { class: "card row" }, q, h("button", { class: "btn", onclick: go }, "Ask")), out); q.focus();
 }
 async function topics() {
   const t = await api("GET", "/api/topics");
-  main.append(h("div", { class: "card row" }, t.map((x) => h("button", { class: "badge", onclick: () => show("search", { topic: x.name }) }, `#${x.name} (${x.n})`)),
+  put(main, h("div", { class: "card row" }, t.map((x) => h("button", { class: "badge", onclick: () => show("search", { topic: x.name }) }, `#${x.name} (${x.n})`)),
     t.length ? null : h("span", { class: "mut" }, "No topics yet.")));
 }
 async function duplicates() {
   const d = await api("GET", "/api/duplicates");
-  main.append(...d.map((x) => h("div", { class: "card" }, badge(x.score.toFixed(2), ""), " ",
+  put(main, ...d.map((x) => h("div", { class: "card" }, badge(x.score.toFixed(2), ""), " ",
     h("a", { href: "#", onclick: (e) => { e.preventDefault(); detail(x.a.id); } }, x.a.title || x.a.id), " ≈ ",
     h("a", { href: "#", onclick: (e) => { e.preventDefault(); detail(x.b.id); } }, x.b.title || x.b.id))), d.length ? null : h("p", { class: "mut" }, "No duplicates found."));
 }
 async function digest() {
   const d = await api("GET", "/api/digest");
-  main.append(h("p", { class: "mut" }, `${d.total} item(s) added in the last ${d.days} days`), ...d.items.map((i) =>
+  put(main, h("p", { class: "mut" }, `${d.total} item(s) added in the last ${d.days} days`), ...d.items.map((i) =>
     h("div", { class: "card item", tabindex: "0", role: "button", onclick: () => detail(i.id), onkeydown: (e) => { if (e.key === "Enter") detail(i.id); } },
       badge(i.provenance), " ", i.title, " ", h("span", { class: "mut" }, i.created_at))));
 }
 async function status() {
   const [s, p] = await Promise.all([api("GET", "/api/state"), api("GET", "/api/privacy")]);
-  main.append(h("div", { class: "card" }, h("b", {}, "Inbox"), h("div", { class: "row" }, Object.entries(s.counts).map(([k, v]) => badge(`${k}: ${v}`, k))), h("div", { class: "mut" }, s.items + " knowledge items")),
+  put(main, h("div", { class: "card" }, h("b", {}, "Inbox"), h("div", { class: "row" }, Object.entries(s.counts).map(([k, v]) => badge(`${k}: ${v}`, k))), h("div", { class: "mut" }, s.items + " knowledge items")),
     h("div", { class: "card" }, h("b", {}, "Privacy"), h("p", {}, p.allow_remote ? "Remote backends are ALLOWED: text may leave this machine." : "Nothing leaves this machine (allow_remote is off)."),
       ...p.backends.map((b) => h("div", {}, badge(b.locality, b.locality === "remote" ? "failed" : "stated"), " ", b.name, " ", h("span", { class: "mut" }, b.type || ""))),
       ...p.skipped.map((k) => h("div", { class: "warn" }, `skipped ${k.name} (${k.task}): ${k.reason}`))));
