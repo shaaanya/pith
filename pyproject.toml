@@ -1,0 +1,29 @@
+[project]
+name = "infoparser"
+version = "0.1.0"
+description = "Local-first, model-agnostic personal knowledge system"
+requires-python = ">=3.13"
+dependencies = ["numpy"]
+
+[project.scripts]
+infoparser = "infoparser.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"infoparser.store" = ["migrations/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "live_ollama: needs a running local Ollama (skipped by default)",
+  "slow: slow tests",
+]

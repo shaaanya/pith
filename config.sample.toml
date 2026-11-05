@@ -1,0 +1,32 @@
+# Copy to infoparser.toml (or point INFOPARSER_CONFIG at it).
+# Env overrides: INFOPARSER_HOME, INFOPARSER_CONFIG.
+home = "~/InfoParser"
+
+[privacy]
+allow_remote = false   # remote-tagged backends refuse to run until true
+
+[limits]
+max_attempts = 5
+lease_seconds = 300
+max_fetch_bytes = 50000000
+
+[watch]
+dirs = [
+  "~/InfoParser/inbox",
+  "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/Claude Inbox",
+]
+
+# Backends: model names live here only, never in code.
+[backends.local]
+type = "openai_compat"
+locality = "local"
+base_url = "http://localhost:11434/v1"
+model = "REPLACE_WITH_LOCAL_MODEL"
+
+[backends.heuristic]
+type = "heuristic"
+
+# Task routing: ordered fallback lists, "name" or "name:model".
+[tasks]
+distill = ["local", "heuristic"]
+classify = ["local", "heuristic"]
