@@ -10,9 +10,25 @@ class ConfigError(ValueError):
     """A configuration value is unusable."""
 
 
+def _table(data: dict, name: str) -> dict:
+    """data[name] as a table ({} when absent), else ConfigError."""
+    v = data.get(name, {})
+    if not isinstance(v, dict):
+        raise ConfigError(f"[{name}] must be a table, got {v!r}")
+    return v
+
+
+def _str(data: dict, section: str, key: str, default):
+    """data[section][key] as a string (default when absent), else ConfigError."""
+    v = _table(data, section).get(key, default)
+    if v is not None and not isinstance(v, str):
+        raise ConfigError(f"{section}.{key} must be a string, got {v!r}")
+    return v
+
+
 def _int(data: dict, section: str, key: str, default: int, minimum: int = 0) -> int:
     """data[section][key] as an int >= minimum (a quoted integer is coerced), else ConfigError."""
-    v = data.get(section, {}).get(key, default)
+    v = _table(data, section).get(key, default)
     if isinstance(v, str) and v.strip().isascii() and v.strip().isdigit():
         v = int(v)
     if isinstance(v, bool) or not isinstance(v, int) or v < minimum:
@@ -65,36 +81,34 @@ def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
     home = Path(env.get("INFOPARSER_HOME") or data.get("home") or "~/InfoParser").expanduser()
     if not home.is_absolute():
         home = Path.home() / home
-    watch = data.get("watch", {}).get("dirs", [str(home / "inbox")])
+    watch = _table(data, "watch").get("dirs", [str(home / "inbox")])
     if not isinstance(watch, list):  # a bare string would be iterated per character
         raise ConfigError(f"watch.dirs must be a list of strings, got {watch!r}")
-    tasks = {k: _strs(v, f"tasks.{k}") for k, v in data.get("tasks", {}).items()}
-    for k, v in data.get("backends", {}).items():
+    tasks = {k: _strs(v, f"tasks.{k}") for k, v in _table(data, "tasks").items()}
+    for k, v in _table(data, "backends").items():
         if not isinstance(v, dict):
             raise ConfigError(f"backends.{k} must be a table, got {v!r}")
-    allow_remote = data.get("privacy", {}).get("allow_remote", False)
+    allow_remote = _table(data, "privacy").get("allow_remote", False)
     if not isinstance(allow_remote, bool):  # bool("false") is True: fail closed instead
         raise ConfigError(f"privacy.allow_remote must be true or false, got {allow_remote!r}")
-    bind = data.get("http", {}).get("bind", "127.0.0.1")
-    if not isinstance(bind, str):
-        raise ConfigError(f"http.bind must be a string, got {bind!r}")
+    bind = _str(data, "http", "bind", "127.0.0.1")
     return Config(
         home=home,
         db_path=home / "infoparser.db",
         blobs_dir=home / "blobs",
         vault_dir=home / "vault",
         watch_dirs=[Path(d).expanduser() for d in _strs(watch, 'watch.dirs')],
-        backends={k: dict(v) for k, v in data.get("backends", {}).items()},
+        backends={k: dict(v) for k, v in _table(data, "backends").items()},
         tasks=tasks,
         allow_remote=allow_remote,
         max_attempts=_int(data, "limits", "max_attempts", 5, 1),
         lease_seconds=_int(data, "limits", "lease_seconds", 300, 1),
         http_bind=bind,
         http_port=_int(data, "http", "port", 8787),
-        http_token=env.get("INFOPARSER_HTTP_TOKEN") or data.get("http", {}).get("token"),
+        http_token=env.get("INFOPARSER_HTTP_TOKEN") or _str(data, "http", "token", None),
         digest_interval_days=_int(data, "digest", "interval_days", 7),
         digest_max_items=_int(data, "digest", "max_items", 20),
         max_fetch_bytes=_int(data, "limits", "max_fetch_bytes", 50_000_000, 1),
-        yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or data.get("media", {}).get("yt_dlp", "yt-dlp"),
-        ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or data.get("media", {}).get("ffmpeg", "ffmpeg"),
+        yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or _str(data, "media", "yt_dlp", "yt-dlp"),
+        ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or _str(data, "media", "ffmpeg", "ffmpeg"),
     )

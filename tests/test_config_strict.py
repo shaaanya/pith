@@ -86,3 +86,26 @@ def test_every_bad_config_is_one_clean_error_line(tmp_path, toml, argv):
     assert "Traceback" not in res.stderr
     # doctor reports an unbuildable registry as its own ERROR line on stdout
     assert "error:" in res.stderr or (argv[0] == "doctor" and "ERROR" in res.stdout)
+
+
+@pytest.mark.parametrize("toml", ["privacy = true\n", 'tasks = "x"\n', "backends = []\n",
+                                  'watch = "x"\n', "http = 1\n", "limits = 3\n", "digest = 1\n",
+                                  'media = "x"\n'])
+def test_non_table_section_is_a_configerror(tmp_path, toml):
+    """A section that is not a table names itself instead of crashing with AttributeError."""
+    with pytest.raises(ConfigError, match=toml.split(" ")[0]):
+        _load(tmp_path, toml)
+
+
+@pytest.mark.parametrize("toml", ["[http]\ntoken = 123\n", "[media]\nyt_dlp = 5\n",
+                                  "[media]\nffmpeg = []\n"])
+def test_non_string_http_token_and_media_binaries(tmp_path, toml):
+    """Strings only: a number would fail per request later."""
+    with pytest.raises(ConfigError):
+        _load(tmp_path, toml)
+
+
+def test_cli_non_table_section_is_one_clean_line(tmp_path):
+    """No traceback from a command that loads the config."""
+    res = _cli(tmp_path, "privacy = true\n", "inbox")
+    assert res.returncode != 0 and "Traceback" not in res.stderr and "error:" in res.stderr
