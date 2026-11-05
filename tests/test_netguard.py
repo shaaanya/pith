@@ -1,6 +1,9 @@
 """SSRF guard: untrusted fetches reach public addresses only; redirects are re-checked per hop."""
+import http.client
 import ipaddress
 import socket
+import socketserver
+import threading
 import urllib.request
 
 import pytest
@@ -194,3 +197,27 @@ def test_proxy_skips_peer_check_but_not_the_target_check(monkeypatch):
         with pytest.raises(netguard.BlockedURL):
             web.fetch("http://10.0.0.5/x", max_bytes=100, untrusted=True)
         assert proxy.hits == ["http://public.test/x"] * 2
+
+
+def test_https_through_a_proxy_skips_the_peer_check(monkeypatch):
+    """https via a loopback proxy: the tunnel request is detected, so the proxy peer is accepted.
+
+    Exercised: ProxyHandler's real https tunnel setup, `_proxied`, and the peer-checked connection
+    class. Not exercised: CONNECT and TLS (HTTPSConnection.connect is replaced by a plain connect
+    to the stub proxy, which hangs up), so the fetch ends in a connection error, not BlockedURL.
+    """
+    with socketserver.TCPServer(("127.0.0.1", 0), socketserver.BaseRequestHandler) as srv:
+        threading.Thread(target=srv.handle_request, daemon=True).start()
+        monkeypatch.setenv("https_proxy", f"http://127.0.0.1:{srv.server_address[1]}")
+        monkeypatch.delenv("no_proxy", raising=False)
+        monkeypatch.delenv("NO_PROXY", raising=False)
+
+        def plain_connect(self):
+            self.sock = socket.create_connection((self.host, self.port), timeout=5)
+
+        monkeypatch.setattr(http.client.HTTPSConnection, "connect", plain_connect)
+        with pytest.raises(OSError) as err:  # RemoteDisconnected/URLError, not BlockedURL
+            web.fetch("https://public.test/x", max_bytes=100, timeout=5)
+        assert not isinstance(err.value, netguard.BlockedURL)
+    with pytest.raises(netguard.BlockedURL):  # the target check still applies behind the proxy
+        web.fetch("https://10.0.0.5/x", max_bytes=100, untrusted=True)

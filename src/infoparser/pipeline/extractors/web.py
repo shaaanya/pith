@@ -59,6 +59,11 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def _proxied(req) -> bool:
+    """True when a proxy carries the request (https goes through a CONNECT tunnel host)."""
+    return req.has_proxy() or bool(req._tunnel_host)  # pylint: disable=protected-access
+
+
 class _Policy:  # pylint: disable=too-few-public-methods  # shared mutable flag
     """Whether private addresses are still allowed; only true while every hop so far was private."""
 
@@ -96,7 +101,7 @@ def _opener(policy):
 
         def http_open(self, req):
             """Open over a connection that vets its peer."""
-            conn = _peer_checked(http.client.HTTPConnection, policy, req.has_proxy())
+            conn = _peer_checked(http.client.HTTPConnection, policy, _proxied(req))
             return self.do_open(conn, req)
 
     class Https(urllib.request.HTTPSHandler):
@@ -104,7 +109,7 @@ def _opener(policy):
 
         def https_open(self, req):
             """Open over a connection that vets its peer."""
-            conn = _peer_checked(http.client.HTTPSConnection, policy, req.has_proxy())
+            conn = _peer_checked(http.client.HTTPSConnection, policy, _proxied(req))
             return self.do_open(conn, req, context=self._context)  # pylint: disable=protected-access
 
     return urllib.request.build_opener(_Redirects(policy), Http, Https)
