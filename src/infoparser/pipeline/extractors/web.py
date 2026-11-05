@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import urllib.error
@@ -9,6 +10,7 @@ import urllib.request
 from dataclasses import dataclass
 from urllib.parse import urlparse, urlunparse
 
+from infoparser import netguard
 from infoparser.pipeline.extractors.base import (
     Extracted,
     ExtractCtx,
@@ -29,7 +31,6 @@ _WALL = re.compile(
 _REDDIT_PATH = re.compile(r"^/r/[^/]+/comments/")
 REDDIT_HOSTS = ("reddit.com",)  # module-level so tests can point it at the fixture server
 PASTE = "login or paywall; paste the text"
-# ponytail: private-IP/SSRF blocking not done (own machine, fixture server needs localhost)
 
 
 @dataclass
@@ -43,13 +44,57 @@ class FetchResult:
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
-    """Follow redirects only to http(s)."""
+    """Follow redirects only to http(s) targets the trust boundary allows, checked on every hop."""
+
+    def __init__(self, allow_private: bool = True):
+        self.allow_private = allow_private
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # urllib's signature
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urlparse(newurl).scheme not in ("http", "https"):
             raise urllib.error.URLError(f"refusing redirect to non-http(s) scheme: {newurl}")
+        netguard.check_url(newurl, allow_private=self.allow_private)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _peer_checked(base, allow_private: bool):
+    """A connection class that vets the address it really connected to (DNS rebinding).
+
+    ponytail: the TCP/TLS handshake happens before the check (no request is sent); with an
+    env proxy the peer is the proxy, so a private proxy fails closed for untrusted URLs.
+    """
+    class Conn(base):  # pylint: disable=too-few-public-methods  # extends an http.client class
+        """Refuses to send a request over a connection to a non-public peer."""
+
+        def connect(self):
+            """Connect, then refuse a non-public peer before anything is sent."""
+            super().connect()
+            try:
+                netguard.check_peer(self.sock.getpeername()[0], allow_private=allow_private)
+            except netguard.BlockedURL:
+                self.close()
+                raise
+
+    return Conn
+
+
+def _opener(allow_private: bool):
+    class Http(urllib.request.HTTPHandler):
+        """HTTP over peer-checked connections."""
+
+        def http_open(self, req):
+            """Open over a connection that vets its peer."""
+            return self.do_open(_peer_checked(http.client.HTTPConnection, allow_private), req)
+
+    class Https(urllib.request.HTTPSHandler):
+        """HTTPS over peer-checked connections."""
+
+        def https_open(self, req):
+            """Open over a connection that vets its peer."""
+            conn = _peer_checked(http.client.HTTPSConnection, allow_private)
+            return self.do_open(conn, req, context=self._context)  # pylint: disable=protected-access
+
+    return urllib.request.build_opener(_Redirects(allow_private), Http, Https)
 
 
 def _read_capped(resp, max_bytes: int) -> bytes:
@@ -62,12 +107,20 @@ def _read_capped(resp, max_bytes: int) -> bytes:
     return body
 
 
-def fetch(url: str, *, max_bytes: int, timeout: float | None = None) -> FetchResult:
-    """GET url (http/https only); the body is capped at max_bytes."""
+def fetch(url: str, *, max_bytes: int, timeout: float | None = None,
+          untrusted: bool = False) -> FetchResult:
+    """GET url (http/https only); the body is capped at max_bytes.
+
+    untrusted (imported chat content): public addresses only. Otherwise a private target is
+    allowed only when the submitted URL itself is private. Every redirect hop and the connected
+    peer are re-checked, so a public host can never bounce the fetch into private space.
+    """
     if urlparse(url).scheme not in ("http", "https"):
         raise ValueError(f"unsupported URL scheme: {url!r} (only http/https)")
+    allow_private = not untrusted and netguard.private_target(url)
+    netguard.check_url(url, allow_private=allow_private)
     req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "*/*"})
-    opener = urllib.request.build_opener(_Redirects)
+    opener = _opener(allow_private)
     try:
         resp = opener.open(req, timeout=timeout or FETCH_TIMEOUT)
     except urllib.error.HTTPError as e:  # non-2xx: still hand back status + capped body
@@ -99,7 +152,7 @@ def _decode(res: FetchResult) -> str:
 def _reddit(url: str, ctx: ExtractCtx) -> Extracted:
     p = urlparse(url)
     jurl = urlunparse(p._replace(path=p.path.rstrip("/") + ".json", query="", fragment=""))
-    res = fetch(jurl, max_bytes=ctx.cfg.max_fetch_bytes)
+    res = fetch(jurl, max_bytes=ctx.cfg.max_fetch_bytes, untrusted=netguard.untrusted(ctx.row))
     _check_status(res)
     data = json.loads(_decode(res))
     post = data[0]["data"]["children"][0]["data"]
@@ -146,7 +199,7 @@ def extract(ctx: ExtractCtx) -> Extracted:
         host == h or host.endswith("." + h) for h in REDDIT_HOSTS
     ):
         return _reddit(url, ctx)
-    res = fetch(url, max_bytes=ctx.cfg.max_fetch_bytes)
+    res = fetch(url, max_bytes=ctx.cfg.max_fetch_bytes, untrusted=netguard.untrusted(ctx.row))
     _check_status(res)
     ct = res.content_type.split(";")[0].strip().lower()
     if ct == "application/pdf":
