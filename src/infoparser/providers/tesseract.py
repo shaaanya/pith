@@ -1,6 +1,8 @@
-"""OCR via the tesseract CLI (`tesseract <img> stdout -l <lang>`). Verified locally (real binary in tests).
+"""OCR via the tesseract CLI (`tesseract <img> stdout -l <lang>`). Verified locally (real binary
+in tests).
 
-Spec keys: type = "tesseract"; binary (default "tesseract"); lang (default "eng"); timeout (seconds, 120).
+Spec keys: type = "tesseract"; binary (default "tesseract"); lang (default "eng"); timeout
+(seconds, 120).
 """
 import subprocess
 from pathlib import Path
@@ -9,6 +11,8 @@ from .ports import Capabilities, ProviderError
 
 
 class TesseractBackend:
+    """OCR backend that shells out to tesseract."""
+
     locality = "local"
     capabilities = Capabilities(ocr=True)
 
@@ -17,12 +21,16 @@ class TesseractBackend:
 
     @classmethod
     def from_spec(cls, name, spec):
-        return cls(name, spec.get("binary", "tesseract"), spec.get("lang", "eng"), spec.get("timeout", 120))
+        """Build from a `[backends.<name>]` spec."""
+        return cls(name, spec.get("binary", "tesseract"), spec.get("lang", "eng"),
+                   spec.get("timeout", 120))
 
     def read(self, image: Path) -> str:
+        """OCR text of the image; ProviderError on failure or timeout."""
         try:
             p = subprocess.run([self.binary, str(image), "stdout", "-l", self.lang],
-                               capture_output=True, text=True, errors="replace", timeout=self.timeout)
+                               capture_output=True, text=True, errors="replace",
+                               timeout=self.timeout, check=False)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise ProviderError(f"{self.name}: {e}") from e
         if p.returncode != 0:

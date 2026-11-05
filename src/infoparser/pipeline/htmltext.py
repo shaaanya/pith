@@ -1,20 +1,23 @@
-"""Stdlib main-content extraction (no trafilatura dependency; ponytail: heuristic, upgrade to trafilatura if quality matters)."""
+"""Stdlib main-content extraction (no trafilatura dependency; ponytail: heuristic, upgrade to
+trafilatura if quality matters)."""
 from __future__ import annotations
 
 import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin
 
-_VOID = {"br", "img", "hr", "input", "meta", "link", "source", "wbr", "area", "base", "col", "embed", "track"}
-_DROP = {"nav", "header", "footer", "aside", "script", "style", "form", "noscript", "svg", "iframe", "template"}
-_JUNK_TOKENS = {"ad", "ads", "advert", "advertisement", "sponsored", "promo", "cookie", "cookies", "banner",
-                "newsletter", "sidebar", "share", "social", "popup", "modal"}
-_BLOCK = {"p", "div", "section", "article", "main", "li", "ul", "ol", "tr", "table", "blockquote", "pre",
-          "figure", "figcaption", "dd", "dt", "dl"}
+_VOID = {"br", "img", "hr", "input", "meta", "link", "source", "wbr", "area", "base", "col",
+         "embed", "track"}
+_DROP = {"nav", "header", "footer", "aside", "script", "style", "form", "noscript", "svg", "iframe",
+         "template"}
+_JUNK_TOKENS = {"ad", "ads", "advert", "advertisement", "sponsored", "promo", "cookie", "cookies",
+                "banner", "newsletter", "sidebar", "share", "social", "popup", "modal"}
+_BLOCK = {"p", "div", "section", "article", "main", "li", "ul", "ol", "tr", "table", "blockquote",
+          "pre", "figure", "figcaption", "dd", "dt", "dl"}
 _HEADING = {f"h{i}": "#" * i for i in range(1, 7)}
 
 
-class _Node:
+class _Node:  # pylint: disable=too-few-public-methods  # plain slotted tree node
     __slots__ = ("tag", "attrs", "kids", "parent", "sem")
 
     def __init__(self, tag, attrs, parent):
@@ -139,6 +142,7 @@ def _walk(n: _Node):
 
 
 def extract_main(html: str, base_url: str) -> tuple[str, str, list[tuple[str, str]], dict]:
+    """-> (title, text, links, meta) of the page's main content; RuntimeError if nested too deep."""
     try:
         return _extract_main(html, base_url)
     except RecursionError:
@@ -149,7 +153,8 @@ def _extract_main(html: str, base_url: str):
     b = _Builder()
     b.feed(html)
     b.close()
-    cands = [(n, *_text_of(n)) for n in _walk(b.root) if n.tag in ("article", "main", "div", "section", "body")]
+    cands = [(n, *_text_of(n)) for n in _walk(b.root)
+             if n.tag in ("article", "main", "div", "section", "body")]
     best = None
     sem = [c for c in cands if c[0].tag in ("article", "main") and c[1] >= 200]
     if sem:
@@ -171,5 +176,6 @@ def _extract_main(html: str, base_url: str):
         _render(h1, tmp, None, base_url)
         title = re.sub(r"\s+", " ", "".join(tmp)).strip()
     meta = {"author": b.meta.get("author") or b.meta.get("article:author"),
-            "published": b.meta.get("article:published_time"), "description": b.meta.get("description")}
+            "published": b.meta.get("article:published_time"),
+            "description": b.meta.get("description")}
     return title, _clean(out), links, {k: v for k, v in meta.items() if v}
