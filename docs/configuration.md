@@ -68,7 +68,11 @@ The dashboard port is not a config key: `infoparser run --port N` / `infoparser 
 `NAME` is yours. `type` selects the implementation; the other keys depend on it. Unknown types, missing
 required keys and unknown task references fail at load with a message naming the backend.
 
-Common: `type`, `locality` (`local` default, or `remote`), `timeout` (seconds).
+Common: `type`, `locality` (`local` or `remote`; anything else is a config error), `timeout` (seconds).
+When `locality` is absent: an `openai_compat` backend is `local` only if its `base_url` host is loopback
+(`localhost`, `127.0.0.0/8`, `::1`) and `remote` for every other host; a `cli` backend is `local`
+(a command cannot be inspected). An explicit `locality = "local"` on a non-loopback `openai_compat` host
+is honoured (a LAN server you trust), and `infoparser doctor` warns about it.
 
 | `type` | Keys |
 |---|---|

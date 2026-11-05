@@ -64,8 +64,9 @@ Build checklist: [docs/CHECKLIST.md](docs/CHECKLIST.md). Sample config: [config.
 
 ## Privacy in one paragraph
 
-Nothing leaves the machine unless you configure a backend with `locality = "remote"` AND set
-`[privacy] allow_remote = true`; remote backends are otherwise refused. Web pages you submit are fetched
+Hosted backends are blocked unless `[privacy] allow_remote = true`. An `openai_compat` backend with a
+non-loopback `base_url` counts as remote even if you forget to say so; `cli` backends are trusted as
+declared (their locality cannot be detected). Web pages you submit are fetched
 from their own sites, and `yt-dlp` contacts the video sites you submit. `infoparser egress` and
 `infoparser doctor` show which routes could send text off the machine. See the privacy section of
 [docs/providers.md](docs/providers.md).

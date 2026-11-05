@@ -2,10 +2,10 @@
 
 Spec keys: type = "openai_compat"; base_url (required, e.g. http://localhost:11434/v1);
 model (required); api_key_env (env var NAME holding the key, optional); locality
-("local"|"remote", default "local"); embed_model (enables embeddings); timeout
-(seconds, default 120); capabilities (list of extra Capabilities field names, e.g.
-["json_mode", "transcribe", "vision"]; "text" is always on); transcribe_model
-(default: model); context_window.
+("local"|"remote"; default: local for a loopback host, remote for any other host);
+embed_model (enables embeddings); timeout (seconds, default 120); capabilities (list of extra
+Capabilities field names, e.g. ["json_mode", "transcribe"]; "text" is always on);
+transcribe_model (default: model); context_window.
 json_mode declared -> response_format json_schema; otherwise the schema is put in the prompt.
 /audio/transcriptions is UNVERIFIED against a real server (only the in-process stub).
 """
@@ -16,11 +16,33 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from .ports import (Capabilities, CapabilityError, EmbedResult, GenResult, ProviderError,
-                    TimedText, schema_instruction)
+from .locality import resolve
+from .ports import (
+    Capabilities,
+    CapabilityError,
+    EmbedResult,
+    GenResult,
+    ProviderError,
+    TimedText,
+    schema_instruction,
+)
 
 
-class OpenAICompatBackend:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect: the Authorization header must not leave base_url."""
+
+    def redirect_request(self, *_a, **_k):  # pylint: disable=signature-differs
+        """Refuse: the 30x then surfaces as an HTTPError."""
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # plain spec values
+    """Chat, embeddings and transcription over an OpenAI-style HTTP API."""
+
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # mirrors spec keys
     def __init__(self, name, base_url, model, api_key_env=None, locality="local",
                  embed_model=None, timeout=120, capabilities: Capabilities | None = None,
                  transcribe_model=None):
@@ -33,11 +55,12 @@ class OpenAICompatBackend:
 
     @classmethod
     def from_spec(cls, name, spec):
+        """Build from a config spec (see module docstring)."""
         caps = {c: True for c in spec.get("capabilities", [])}
         if "context_window" in spec:
             caps["context_window"] = spec["context_window"]
         return cls(name, spec["base_url"], spec["model"], spec.get("api_key_env"),
-                   spec.get("locality", "local"), spec.get("embed_model"),
+                   resolve(spec, spec["base_url"]), spec.get("embed_model"),
                    spec.get("timeout", 120), Capabilities(**caps), spec.get("transcribe_model"))
 
     def _headers(self):
@@ -53,7 +76,7 @@ class OpenAICompatBackend:
         req = urllib.request.Request(self.base_url + path, data=body, method="POST",
                                      headers={"Content-Type": content_type, **self._headers()})
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            with _OPENER.open(req, timeout=self.timeout) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
             raise ProviderError(f"{self.name}: HTTP {e.code} {e.read()[:200]!r}") from e
@@ -61,6 +84,7 @@ class OpenAICompatBackend:
             raise ProviderError(f"{self.name}: {e}") from e
 
     def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
+        """Chat completion; a JSON schema goes in response_format or into the prompt."""
         body = {"model": self.model, "messages": list(messages)}
         if max_tokens:
             body["max_tokens"] = max_tokens
@@ -69,17 +93,21 @@ class OpenAICompatBackend:
                 body["response_format"] = {"type": "json_schema", "json_schema": {
                     "name": "output", "schema": json_schema, "strict": True}}
             else:
-                body["messages"] = [*messages, {"role": "user", "content": schema_instruction(json_schema)}]
+                body["messages"] = [
+                    *messages, {"role": "user", "content": schema_instruction(json_schema)}]
         data = self._call("/chat/completions", json.dumps(body).encode())
         try:
-            return GenResult(data["choices"][0]["message"]["content"], data.get("model", self.model), self.name)
+            return GenResult(data["choices"][0]["message"]["content"],
+                             data.get("model", self.model), self.name)
         except (KeyError, IndexError, TypeError) as e:
             raise ProviderError(f"{self.name}: malformed response") from e
 
     def embed(self, texts) -> EmbedResult:
+        """Embed texts with embed_model."""
         if not self.embed_model:
             raise CapabilityError(f"{self.name}: no embed_model configured")
-        data = self._call("/embeddings", json.dumps({"model": self.embed_model, "input": texts}).encode())
+        data = self._call("/embeddings",
+                          json.dumps({"model": self.embed_model, "input": texts}).encode())
         try:
             vecs = [d["embedding"] for d in sorted(data["data"], key=lambda d: d.get("index", 0))]
         except (KeyError, TypeError) as e:
@@ -87,15 +115,18 @@ class OpenAICompatBackend:
         return EmbedResult(f"{self.name}:{self.embed_model}", vecs)
 
     def transcribe(self, path: Path, language=None) -> list[TimedText]:
+        """Timed transcript through /audio/transcriptions (UNVERIFIED against a real server)."""
         if not self.capabilities.transcribe:
             raise CapabilityError(f"{self.name}: transcribe not declared")
         b = uuid.uuid4().hex
         fields = {"model": self.transcribe_model, "response_format": "verbose_json"}
         if language:
             fields["language"] = language
-        parts = b"".join(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
-                         for k, v in fields.items())
-        parts += (f'--{b}\r\nContent-Disposition: form-data; name="file"; filename="{Path(path).name}"\r\n'
+        parts = b"".join(
+            f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode()
+            for k, v in fields.items())
+        parts += (f'--{b}\r\nContent-Disposition: form-data; name="file"; '
+                  f'filename="{Path(path).name}"\r\n'
                   "Content-Type: application/octet-stream\r\n\r\n").encode()
         parts += Path(path).read_bytes() + f"\r\n--{b}--\r\n".encode()
         data = self._call("/audio/transcriptions", parts, f"multipart/form-data; boundary={b}")

@@ -156,7 +156,10 @@ def _reindex(a):
 
 def _doctor(a):
     from infoparser import doctor
-    checks = doctor.run(_cfg(a), full=a.full)  # config only: never builds Services (no db created)
+    from infoparser.providers import locality
+    cfg = _cfg(a)
+    checks = doctor.run(cfg, full=a.full)  # config only: never builds Services (no db created)
+    checks += [doctor.Check("locality", "WARN", w) for w in locality.warnings(cfg.backends)]
     print(doctor.to_json(checks) if a.json else doctor.render(checks))
     sys.exit(doctor.exit_code(checks))
 
@@ -165,6 +168,8 @@ def _egress(a):
     from infoparser import doctor
     r = doctor.egress_report(_cfg(a))
     print(json.dumps(r, indent=2) if a.json else doctor.render_egress(r))
+    if not a.json:
+        print("cli backends are trusted as declared: their locality cannot be detected.")
 
 
 def _export(a):

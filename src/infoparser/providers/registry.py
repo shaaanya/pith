@@ -2,10 +2,12 @@
 so modules not yet shipped (tesseract/whisper_cpp/anthropic arrive in Task 9) never break a build
 unless a config actually uses them.
 
-Config shape: cfg.backends = {name: {"type": ..., ...spec}}; cfg.tasks = {task: ["name" | "name:model"]}.
+Config shape: cfg.backends = {name: {"type": ..., ...spec}};
+cfg.tasks = {task: ["name" | "name:model"]}.
 Remote enforcement: chain() silently filters remote backends when allow_remote=False but records
 each skip in Registry.skipped (shown by describe()); get()/_resolve() for an explicitly requested
-remote backend raise RemoteBlocked. Backends do not check the flag themselves.
+remote backend raise RemoteBlocked. Backends do not check the flag themselves. An openai_compat
+backend with no declared locality is remote unless its host is loopback (see locality.py).
 Accepted spec keys per type are documented in each backend module's docstring.
 """
 import importlib
@@ -53,20 +55,25 @@ BLOCKED = "remote blocked: allow_remote=false"
 
 
 class Registry:
+    """The configured backends, the task routing and the remote-block policy."""
+
     def __init__(self, backends: dict[str, Backend], specs: dict[str, dict],
                  tasks: dict[str, list[str]], allow_remote: bool):
-        self.backends, self.specs, self.tasks, self.allow_remote = backends, specs, tasks, allow_remote
+        self.backends, self.specs, self.tasks = backends, specs, tasks
+        self.allow_remote = allow_remote
         self.derived: dict[str, Backend] = {}  # "name:model" overrides
         self._skips: dict[tuple[str, str], dict] = {}
         self._lock = threading.RLock()
 
     @property
     def skipped(self) -> list[dict]:
+        """Backends filtered out of a chain, with the reason."""
         with self._lock:
             return list(self._skips.values())
 
     @classmethod
     def from_config(cls, cfg: Config) -> "Registry":
+        """Build every configured backend; fail at load on any bad spec or task reference."""
         specs = {k: dict(v) for k, v in cfg.backends.items()}
         backends = {n: _build(n, s) for n, s in specs.items()}
         if not any(b.type == "heuristic" for b in backends.values()):
@@ -80,6 +87,7 @@ class Registry:
         return reg
 
     def _lookup(self, ref: str) -> Backend:
+        """Backend for "name" or a derived "name:model" override."""
         name, _, model = ref.partition(":")
         if not model:
             return self.backends[name]
@@ -98,8 +106,10 @@ class Registry:
     get = _resolve
 
     def chain(self, task: str) -> list[Backend]:
+        """Backends that can serve the task, in order, minus remote ones when blocked."""
         cap = TASK_CAPABILITY.get(task, "text")
-        refs = self.tasks.get(task) or list(self.specs)  # unrouted task: all configured, config order
+        # unrouted task: all configured, in config order
+        refs = self.tasks.get(task) or list(self.specs)
         out = [b for b in map(self._lookup, refs) if getattr(b.capabilities, cap)]
         if cap in IMPLICIT_LAST:  # heuristic always last, even if configured earlier
             h = next(b for b in self.backends.values() if b.type == "heuristic")
@@ -110,7 +120,8 @@ class Registry:
                 allowed.append(b)
             else:
                 with self._lock:
-                    self._skips[(b.name, task)] = {"name": b.name, "task": task, "reason": BLOCKED}
+                    self._skips[(b.name, task)] = {
+                        "name": b.name, "task": task, "reason": BLOCKED}
         return allowed
 
     def generators(self, task: str) -> list[Backend]:
@@ -118,10 +129,12 @@ class Registry:
         return [b for b in self.chain(task) if b.type != "heuristic"]
 
     def first(self, task: str) -> Backend | None:
+        """The first usable backend for the task, or None."""
         c = self.chain(task)
         return c[0] if c else None
 
     def describe(self) -> list[dict]:
+        """Per backend: type, locality, capabilities, routed tasks and why it is blocked."""
         names = [*self.backends]
         route = {n: [] for n in names}
         for t in {*self.tasks, *TASK_CAPABILITY}:
@@ -133,5 +146,6 @@ class Registry:
             blocked[sk["name"]] = sk["reason"]
         return [{"name": n, "type": self.backends[n].type, "locality": self.backends[n].locality,
                  "capabilities": asdict(self.backends[n].capabilities), "tasks": sorted(route[n]),
-                 "blocked_reason": blocked.get(n), "skipped": [s for s in self.skipped if s["name"] == n]}
+                 "blocked_reason": blocked.get(n),
+                 "skipped": [s for s in self.skipped if s["name"] == n]}
                 for n in names]

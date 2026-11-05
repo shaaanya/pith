@@ -13,6 +13,7 @@ replays those onto a line buffer so only the text a terminal would show remains.
 import re
 import subprocess
 
+from .locality import resolve
 from .ports import (Capabilities, CapabilityError, GenResult, ProviderError, flatten_messages,
                     schema_instruction)
 
@@ -85,7 +86,7 @@ class CliBackend:
         if "context_window" in spec:
             caps["context_window"] = spec["context_window"]
         return cls(name, spec["command"], spec.get("prompt_via", "stdin"),
-                   spec.get("locality", "local"), spec.get("timeout", 300), Capabilities(**caps))
+                   resolve(spec), spec.get("timeout", 300), Capabilities(**caps))
 
     def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
         """Run the command with the flattened prompt; `max_tokens` is not expressible here."""
