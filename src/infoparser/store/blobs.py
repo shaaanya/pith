@@ -1,3 +1,4 @@
+"""Content-addressed blob store."""
 import hashlib
 import os
 import re
@@ -14,17 +15,21 @@ class BlobStore:
         self.root = Path(root)
 
     def path(self, sha: str) -> Path:
-        if not isinstance(sha, str) or not _SHA.fullmatch(sha):  # never build a path from unvalidated text
+        """Location of blob `sha` (validated; ValueError for anything but a sha256 hex)."""
+        # never build a path from unvalidated text
+        if not isinstance(sha, str) or not _SHA.fullmatch(sha):
             raise ValueError("invalid blob id")
         return self.root / sha[:2] / sha[2:4] / sha
 
     def exists(self, sha: str) -> bool:
+        """True if `sha` is valid and its blob file is present."""
         try:
             return self.path(sha).is_file()
         except ValueError:
             return False
 
     def put_bytes(self, data: bytes) -> str:
+        """Store `data` atomically (no-op if present); returns its sha256."""
         sha = hashlib.sha256(data).hexdigest()
         dest = self.path(sha)
         if not dest.is_file():
@@ -42,5 +47,6 @@ class BlobStore:
         return sha
 
     def put_file(self, path: Path) -> str:
+        """Store a file's bytes; returns its sha256."""
         # ponytail: reads whole file into memory; stream if max_fetch_bytes grows
         return self.put_bytes(Path(path).read_bytes())

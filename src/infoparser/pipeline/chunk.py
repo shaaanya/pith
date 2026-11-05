@@ -1,3 +1,4 @@
+"""Splitting extracted text into citable chunks with locators."""
 import re
 
 from infoparser.providers.ports import TimedText
@@ -28,14 +29,14 @@ def _span(text: str, a: int, b: int) -> tuple[str, str]:
 
 
 def chunk_text(text: str, *, max_chars=1200, overlap=100) -> list[tuple[str, str]]:
+    """Pack blocks into chunks of <= max_chars with a `char=a-b` locator; headings start a chunk."""
     out: list[tuple[str, str]] = []
-    cur: list[int] | None = None  # [start, end] of the chunk being packed
+    cur: list[int] = []  # [start, end] of the chunk being packed; empty when none
 
     def flush():
-        nonlocal cur
         if cur:
             out.append(_span(text, *cur))
-        cur = None
+        cur.clear()
 
     for a, b, heading in _blocks(text):
         if b - a > max_chars:  # oversized block: sliding windows with overlap
@@ -48,7 +49,7 @@ def chunk_text(text: str, *, max_chars=1200, overlap=100) -> list[tuple[str, str
             continue
         if cur and (heading or len(text[cur[0]:b].strip()) > max_chars):
             flush()
-        cur = [cur[0], b] if cur else [a, b]
+        cur[:] = [cur[0], b] if cur else [a, b]
     flush()
     return out
 
@@ -58,11 +59,13 @@ def _fmt(x: float) -> str:
 
 
 def chunk_timed(items: list[TimedText], max_chars=800) -> list[tuple[str, str]]:
+    """Group timed segments into chunks of <= max_chars with a `t=start-end` locator."""
     out, buf = [], []
 
     def flush():
         if buf:
-            out.append((" ".join(t.text for t in buf), f"t={_fmt(buf[0].start)}-{_fmt(buf[-1].end)}"))
+            span = f"t={_fmt(buf[0].start)}-{_fmt(buf[-1].end)}"
+            out.append((" ".join(t.text for t in buf), span))
             buf.clear()
 
     for it in items:

@@ -1,3 +1,4 @@
+"""URL canonicalisation (the dedupe key only) and platform detection."""
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
 _TRACKING = ("utm_",)
@@ -22,6 +23,7 @@ def _host(netloc: str) -> str:
 
 
 def canonicalize_url(url: str) -> str:
+    """Dedupe key: https, no www/tracking params, sorted query. Never used to fetch or cite."""
     s = urlsplit(url.strip())
     host = _host(s.netloc)
     path = s.path.rstrip("/")
@@ -39,6 +41,7 @@ def canonicalize_url(url: str) -> str:
 
 
 def detect_platform(url: str | None) -> str:
+    """Name of a known platform for the URL, 'web' for other http(s), else 'unknown'."""
     if not url:
         return "unknown"
     s = urlsplit(url.strip())

@@ -1,3 +1,4 @@
+"""Sortable ids and UTC timestamps."""
 import os
 import time
 
@@ -11,4 +12,5 @@ def new_id() -> str:
 
 
 def utcnow() -> str:
+    """Current UTC time as an ISO-8601 string (second precision)."""
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

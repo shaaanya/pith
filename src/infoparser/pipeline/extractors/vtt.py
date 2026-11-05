@@ -4,7 +4,8 @@ import re
 
 from infoparser.providers.ports import TimedText
 
-_TIME = re.compile(r"(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})\s*-->\s*(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})")
+_STAMP = r"(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})"
+_TIME = re.compile(_STAMP + r"\s*-->\s*" + _STAMP)
 _TAG = re.compile(r"<[^>]*>")
 
 
@@ -13,8 +14,9 @@ def _secs(h, m, s, ms) -> float:
 
 
 def parse_vtt(text: str) -> list[TimedText]:
-    """A rolling cue repeats the previous cue's last line; only lines not in the previous cue are emitted,
-    each with its cue's timing. Inline tags, cue settings and NOTE/STYLE blocks are dropped."""
+    """A rolling cue repeats the previous cue's last line; only lines not in the previous cue are
+    emitted, each with its cue's timing. Inline tags, cue settings and NOTE/STYLE blocks are
+    dropped."""
     out: list[TimedText] = []
     prev: list[str] = []
     for block in re.split(r"\n\s*\n", text.replace("\r\n", "\n").lstrip("﻿")):

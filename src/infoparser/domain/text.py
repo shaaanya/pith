@@ -1,3 +1,4 @@
+"""Text normalisation helpers."""
 import re
 
 

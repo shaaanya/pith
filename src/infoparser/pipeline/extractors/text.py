@@ -1,4 +1,6 @@
-from infoparser.pipeline.extractors.base import Extracted, ExtractCtx, NeedsClarificationError, register
+"""Extractor for plain text, notes and code."""
+from infoparser.pipeline.extractors.base import (
+    Extracted, ExtractCtx, NeedsClarificationError, register)
 
 
 def _title(text: str) -> str:
@@ -8,12 +10,14 @@ def _title(text: str) -> str:
 
 @register("note", "text", "code")
 def extract(ctx: ExtractCtx) -> Extracted:
+    """Decode the pasted text or stored file into a note (size-capped, NULs removed)."""
     row = ctx.row
     sha = row["blob_sha256"]
     if sha:
         path = ctx.blobs.path(sha)
         if path.stat().st_size > ctx.cfg.max_fetch_bytes:
-            raise NeedsClarificationError(f"file larger than max_fetch_bytes ({ctx.cfg.max_fetch_bytes})")
+            raise NeedsClarificationError(
+                f"file larger than max_fetch_bytes ({ctx.cfg.max_fetch_bytes})")
         text = path.read_bytes().decode("utf-8", errors="replace")
     else:
         text = row["payload_text"] or ""

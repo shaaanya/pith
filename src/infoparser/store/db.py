@@ -1,3 +1,4 @@
+"""SQLite connection, transactions and schema migrations."""
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -6,6 +7,7 @@ from pathlib import Path
 
 
 def connect(path: Path | str) -> sqlite3.Connection:
+    """Open (creating parent dirs) an autocommit WAL connection with foreign keys on."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     # isolation_level=None: autocommit, callers manage transactions (BEGIN IMMEDIATE)
@@ -28,6 +30,7 @@ def _migrations() -> list[tuple[int, str]]:
 
 @contextmanager
 def transaction(conn: sqlite3.Connection):
+    """Context manager: BEGIN IMMEDIATE .. COMMIT, ROLLBACK on error; joins an open transaction."""
     # connection is autocommit (isolation_level=None), so `with conn:` would not open a txn.
     # Re-entrant: inside an open transaction this joins it (outermost owner commits/rolls back).
     if conn.in_transaction:
@@ -43,7 +46,9 @@ def transaction(conn: sqlite3.Connection):
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    # take the write lock first, then read user_version: concurrent migrators serialize and the loser no-ops
+    """Apply pending migrations; returns the resulting schema version."""
+    # take the write lock first, then read user_version: concurrent migrators serialize and the
+    # loser no-ops
     with transaction(conn):
         current = conn.execute("PRAGMA user_version").fetchone()[0]
         for version, sql in _migrations():
