@@ -39,6 +39,7 @@ import uuid
 from importlib import metadata
 from pathlib import Path, PurePosixPath
 
+from infoparser import locks
 from infoparser.store.db import _migrations, connect, migrate
 
 DB_NAME = "infoparser.db"
@@ -359,8 +360,15 @@ def _restore_locked(archive: Path, home: Path, lockf) -> None:
 
 
 def restore(archive: Path, home: Path, force: bool = False) -> None:
-    """Restore `archive` into `home`; a non-empty home needs force=True."""
+    """Restore `archive` into `home`; a non-empty home needs force=True.
+
+    Refuses (locks.InUseError) while a standalone process or live job lease uses `home`."""
     home = Path(home)
+    with locks.restore_guard(home, home / DB_NAME):
+        _restore_guarded(archive, home, force)
+
+
+def _restore_guarded(archive: Path, home: Path, force: bool) -> None:
     if _non_empty(home) and not force:
         raise RestoreError(f"{home} is not empty; refusing to overwrite "
                            "(use --force to replace the database, blobs and vault)")

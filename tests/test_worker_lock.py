@@ -103,3 +103,41 @@ def test_long_running_commands_refuse_to_start_during_a_restore(tmp_path):
             with pytest.raises(SystemExit) as ex:
                 cli.main(["--home", str(_home(tmp_path)), *cmd])
             assert "restore is running" in str(ex.value)
+
+
+def test_library_restore_refuses_while_in_use_lock_is_held(tmp_path):
+    """backup.restore itself enforces the guard: no caller can bypass it."""
+    svc, archive = _populated(tmp_path)
+    svc.conn.close()
+    before = (_home(tmp_path) / "infoparser.db").read_bytes()
+    with locks.in_use(_home(tmp_path)):
+        with pytest.raises(locks.InUseError, match="is using"):
+            backup.restore(archive, _home(tmp_path), force=True)
+    assert (_home(tmp_path) / "infoparser.db").read_bytes() == before
+
+
+def test_library_restore_refuses_while_a_lease_is_live(tmp_path):
+    """The live-lease check also lives in the library call."""
+    svc, archive = _populated(tmp_path)
+    assert svc.queue.claim("some-worker") is not None
+    svc.conn.close()
+    with pytest.raises(locks.InUseError, match="live lease"):
+        backup.restore(archive, _home(tmp_path), force=True)
+
+
+def test_library_restore_refuses_while_run_lock_is_held(tmp_path):
+    """A running `infoparser run` holds run.lock; the library call still refuses."""
+    svc, archive = _populated(tmp_path)
+    svc.conn.close()
+    with open(_home(tmp_path) / "run.lock", "a+", encoding="utf-8") as f:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(backup.RestoreError, match="running"):
+            backup.restore(archive, _home(tmp_path), force=True)
+
+
+def test_library_restore_works_when_nothing_holds_a_lock(tmp_path):
+    """Guard acquired inside restore is released afterwards (second restore succeeds)."""
+    svc, archive = _populated(tmp_path)
+    svc.conn.close()
+    backup.restore(archive, _home(tmp_path), force=True)
+    backup.restore(archive, _home(tmp_path), force=True)

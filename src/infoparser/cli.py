@@ -221,8 +221,7 @@ def _restore(a):
     from infoparser import backup, locks
     cfg = _cfg(a)
     try:
-        with locks.restore_guard(cfg.home, cfg.db_path):
-            backup.restore(Path(a.archive), cfg.home, force=a.force)
+        backup.restore(Path(a.archive), cfg.home, force=a.force)
     except (backup.RestoreError, locks.InUseError, OSError) as e:
         sys.exit(f"error: {e}")
     print(f"restored {a.archive} into {cfg.home}")
