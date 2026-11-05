@@ -4,10 +4,9 @@ in tests).
 Spec keys: type = "tesseract"; binary (default "tesseract"); lang (default "eng"); timeout
 (seconds, 120).
 """
-import subprocess
 from pathlib import Path
 
-from .ports import Capabilities, ProviderError
+from .ports import Capabilities, run_cli
 
 
 class TesseractBackend:
@@ -27,12 +26,5 @@ class TesseractBackend:
 
     def read(self, image: Path) -> str:
         """OCR text of the image; ProviderError on failure or timeout."""
-        try:
-            p = subprocess.run([self.binary, str(image), "stdout", "-l", self.lang],
-                               capture_output=True, text=True, errors="replace",
-                               timeout=self.timeout, check=False)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            raise ProviderError(f"{self.name}: {e}") from e
-        if p.returncode != 0:
-            raise ProviderError(f"{self.name}: exit {p.returncode}: {p.stderr.strip()[:300]}")
-        return p.stdout.strip()
+        argv = [self.binary, str(image), "stdout", "-l", self.lang]
+        return run_cli(self.name, argv, self.timeout).stdout.strip()

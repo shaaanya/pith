@@ -25,13 +25,14 @@ class HeuristicBackend:
         self.name, self.top_n = name, top_n
 
     @classmethod
-    def from_spec(cls, name: str, spec: dict) -> "HeuristicBackend":  # pylint: disable=unused-argument
+    def from_spec(cls, name: str, spec: dict) -> "HeuristicBackend":
         """Build from config; the spec has no keys (signature fixed by the registry)."""
+        del spec
         return cls(name)
 
-    def generate(self, messages, *, json_schema=None,
-                 max_tokens=None) -> GenResult:  # pylint: disable=unused-argument
+    def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
         """Pick the top sentences by term frequency (max_tokens is part of the port, unused)."""
+        del max_tokens
         text = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         sents = [s.strip() for s in _SENT.split(text) if len(s.strip()) > 20]
         tf = Counter(w for w in _WORD.findall(text.lower()) if len(w) > 3)

@@ -11,10 +11,8 @@ rewrites such as "erase line" / "cursor left", spinner frames). clean_terminal_o
 replays those onto a line buffer so only the text a terminal would show remains.
 """
 import re
-import subprocess
-
 from .locality import resolve
-from .ports import (Capabilities, CapabilityError, GenResult, ProviderError, flatten_messages,
+from .ports import (Capabilities, CapabilityError, GenResult, flatten_messages, run_cli,
                     schema_instruction)
 
 _ESC = re.compile(r"\x1b(?:\[([0-9;?]*)([ -/]*[@-~])|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])")
@@ -97,14 +95,7 @@ class CliBackend:
         if json_schema is not None:
             prompt += "\n\n" + schema_instruction(json_schema)
         argv = self.command + ([prompt] if self.prompt_via == "arg" else [])
-        try:
-            p = subprocess.run(argv, input=prompt if self.prompt_via == "stdin" else None,
-                               capture_output=True, text=True, errors="replace",
-                               timeout=self.timeout, check=False)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            raise ProviderError(f"{self.name}: {e}") from e
-        if p.returncode != 0:
-            raise ProviderError(f"{self.name}: exit {p.returncode}: {p.stderr.strip()[:300]}")
+        p = run_cli(self.name, argv, self.timeout, prompt if self.prompt_via == "stdin" else None)
         return GenResult(clean_terminal_output(p.stdout).strip(), " ".join(self.command[:1]),
                          self.name)
 

@@ -11,11 +11,10 @@ Spec keys: type = "whisper_cpp"; binary (required); model_path (required); langu
 whisper code; per-call `language` overrides); threads (optional int); timeout (seconds, 3600).
 """
 import json
-import subprocess
 import tempfile
 from pathlib import Path
 
-from .ports import Capabilities, ProviderError, TimedText
+from .ports import Capabilities, ProviderError, TimedText, run_cli
 
 
 def _ts(s: str) -> float:
@@ -72,13 +71,7 @@ class WhisperCppBackend:
                 argv += ["-l", lang]
             if self.threads:
                 argv += ["-t", str(self.threads)]
-            try:
-                p = subprocess.run(argv, capture_output=True, text=True, errors="replace",
-                                   timeout=self.timeout, check=False)
-            except (OSError, subprocess.TimeoutExpired) as e:
-                raise ProviderError(f"{self.name}: {e}") from e
-            if p.returncode != 0:
-                raise ProviderError(f"{self.name}: exit {p.returncode}: {p.stderr.strip()[:300]}")
+            run_cli(self.name, argv, self.timeout)
             try:
                 text = Path(prefix + ".json").read_text(encoding="utf-8", errors="replace")
                 return _segments(json.loads(text))

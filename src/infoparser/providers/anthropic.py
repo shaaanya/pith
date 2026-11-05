@@ -23,7 +23,10 @@ from .ports import Capabilities, CapabilityError, GenResult, ProviderError, sche
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *a, **k):  # never follow: the x-api-key header must not leave base_url
+    """Redirect handler that refuses every redirect."""
+
+    def redirect_request(self, *_args, **_kwargs):
+        """Never follow: the x-api-key header must not leave base_url."""
         return None
 
 
@@ -31,11 +34,15 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 
 
-class AnthropicBackend:
+class AnthropicBackend:  # pylint: disable=too-many-instance-attributes  # one attribute per spec key
+    """Remote text backend for the Anthropic Messages API."""
+
     locality = "remote"
 
-    def __init__(self, name, model, api_key_env, base_url="https://api.anthropic.com",
-                 anthropic_version="2023-06-01", max_tokens=4096, timeout=120, context_window=200_000):
+    # config record: each argument is one spec key
+    def __init__(self, name, model, api_key_env,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+                 base_url="https://api.anthropic.com", anthropic_version="2023-06-01",
+                 max_tokens=4096, timeout=120, context_window=200_000):
         u = urllib.parse.urlsplit(base_url)
         if u.scheme != "https" and not (u.scheme == "http" and u.hostname in _LOOPBACK):
             raise ValueError("base_url must be https (http only for loopback)")
@@ -46,11 +53,14 @@ class AnthropicBackend:
 
     @classmethod
     def from_spec(cls, name, spec):
-        return cls(name, spec["model"], spec["api_key_env"], spec.get("base_url", "https://api.anthropic.com"),
+        """Build from a `[backends.<name>]` spec (model and api_key_env required)."""
+        return cls(name, spec["model"], spec["api_key_env"],
+                   spec.get("base_url", "https://api.anthropic.com"),
                    spec.get("anthropic_version", "2023-06-01"), spec.get("max_tokens", 4096),
                    spec.get("timeout", 120), spec.get("context_window", 200_000))
 
     def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
+        """Call the Messages API; ProviderError on any failure (the key is never in the message)."""
         key = os.environ.get(self.api_key_env)
         if not key:
             raise ProviderError(f"{self.name}: env var {self.api_key_env} is not set")
@@ -58,7 +68,8 @@ class AnthropicBackend:
         if json_schema is not None:
             system.append(schema_instruction(json_schema))
         body = {"model": self.model, "max_tokens": max_tokens or self.max_tokens,
-                "messages": [{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"]}
+                "messages": [{"role": m["role"], "content": m["content"]}
+                             for m in messages if m["role"] != "system"]}
         if system:
             body["system"] = "\n\n".join(system)
         req = urllib.request.Request(
@@ -70,7 +81,8 @@ class AnthropicBackend:
                 data = json.loads(r.read())
         except urllib.error.HTTPError as e:
             if 300 <= e.code < 400:
-                raise ProviderError(f"{self.name}: refusing to follow HTTP {e.code} redirect") from None
+                raise ProviderError(
+                    f"{self.name}: refusing to follow HTTP {e.code} redirect") from None
             raise ProviderError(f"{self.name}: HTTP {e.code} {self._api_message(e)}") from None
         except (urllib.error.URLError, OSError, TimeoutError, ValueError) as e:
             raise ProviderError(f"{self.name}: {type(e).__name__}: {e}") from None
@@ -82,6 +94,7 @@ class AnthropicBackend:
 
     @staticmethod
     def _api_message(e: urllib.error.HTTPError) -> str:
+        """Error type/message from the API body, else the HTTP reason."""
         try:
             err = json.loads(e.read())["error"]
             return f"{err.get('type', '')}: {err.get('message', '')}".strip(": ")
@@ -89,4 +102,5 @@ class AnthropicBackend:
             return str(e.reason)
 
     def embed(self, texts):
+        """Not supported: raises CapabilityError."""
         raise CapabilityError(f"{self.name}: embeddings not supported")
