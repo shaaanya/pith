@@ -121,8 +121,10 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
                           json.dumps({"model": self.embed_model, "input": texts}).encode())
         try:
             vecs = [d["embedding"] for d in sorted(data["data"], key=lambda d: d.get("index", 0))]
-        except (KeyError, TypeError) as e:
+        except (KeyError, TypeError, AttributeError) as e:
             raise ProviderError(f"{self.name}: malformed response") from e
+        if not all(isinstance(v, list) for v in vecs):
+            raise ProviderError(f"{self.name}: malformed response (embedding is not a list)")
         return EmbedResult(f"{self.name}:{self.embed_model}", vecs)
 
     def transcribe(self, path: Path, language=None) -> list[TimedText]:

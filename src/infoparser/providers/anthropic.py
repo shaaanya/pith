@@ -81,8 +81,10 @@ class AnthropicBackend:  # pylint: disable=too-many-instance-attributes  # one a
             raise ProviderError(f"{self.name}: {type(e).__name__}: {e}") from None
         try:
             text = "".join(b["text"] for b in data["content"] if b.get("type") == "text")
-        except (KeyError, TypeError) as e:
+        except (KeyError, TypeError, AttributeError) as e:
             raise ProviderError(f"{self.name}: malformed response") from e
+        if not text.strip():  # e.g. a refusal: no text block at all
+            raise ProviderError(f"{self.name}: reply has no text content")
         return GenResult(text, data.get("model", self.model), self.name)
 
     @staticmethod

@@ -5,6 +5,7 @@ from stubs.json_server import JsonHandler, JsonStub
 from infoparser.domain.models import SegmentIn
 from infoparser.pipeline.distill import distill
 from infoparser.providers.heuristic import HeuristicBackend
+from infoparser.providers.anthropic import AnthropicBackend
 from infoparser.providers.openai_compat import OpenAICompatBackend
 from infoparser.providers.ports import Capabilities, ProviderError
 from infoparser.providers.registry import Registry
@@ -59,3 +60,21 @@ def test_negative_rerank_index_is_rejected():
         b = OpenAICompatBackend("oa", s.base_url, "m", capabilities=Capabilities(rerank=True))
         with pytest.raises(ProviderError):
             b.rerank("q", ["a", "b"])
+
+
+@pytest.mark.parametrize("canned", [{"data": [[0.1]]}, {"data": [{"embedding": None}]},
+                                    {"data": [{"embedding": "abc"}]}])
+def test_malformed_embedding_entries_are_provider_errors(canned):
+    """Non-dict entries or non-list vectors must not leak AttributeError or None vectors."""
+    with _stub(canned) as s:
+        with pytest.raises(ProviderError):
+            OpenAICompatBackend("oa", s.base_url, "m", embed_model="e").embed(["x"])
+
+
+@pytest.mark.parametrize("content", [[], [None], ["text"], [{"type": "thinking", "thinking": "x"}]])
+def test_anthropic_reply_without_a_usable_text_block_is_a_provider_error(content, monkeypatch):
+    """A refusal (no text) or a non-dict block must fail the call, not return '' or crash."""
+    monkeypatch.setenv("IP_ANTH_KEY", "dummy-key-not-real")
+    with _stub({"content": content}) as s:
+        with pytest.raises(ProviderError):
+            AnthropicBackend("a", "m", "IP_ANTH_KEY", base_url=s.base_url).generate(MSG)
