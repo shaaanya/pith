@@ -1,6 +1,7 @@
 """SSRF guard: untrusted fetches reach public addresses only; redirects are re-checked per hop."""
 import ipaddress
 import socket
+import urllib.request
 
 import pytest
 from stubs.http_fixture_server import FixtureServer, Route
@@ -155,3 +156,41 @@ def test_untrusted_row_is_decided_by_adapter():
     """Rows from the Telegram importer are untrusted; direct adapters are not."""
     row = {"adapter": "telegram_export"}
     assert netguard.untrusted(row) and not netguard.untrusted({"adapter": "http"})
+
+
+@pytest.mark.parametrize("url", ["http://[::127.0.0.1]/x", "http://[::a9fe:a9fe]/x",
+                                 "http://[::ffff:0:7f00:1]/x", "http://[::ffff:0:a9fe:a9fe]/x"])
+def test_v4_compatible_and_siit_forms_are_refused(url):
+    """IPv4-compatible and SIIT embeds are unwrapped and judged as the IPv4 address."""
+    with pytest.raises(netguard.BlockedURL):
+        netguard.check_url(url, allow_private=False)
+
+
+@pytest.mark.parametrize("final", ["http://169.254.169.254/x", "http://10.0.0.5/x"])
+def test_private_public_private_chain_is_refused(final):
+    """Private access ends with the first public hop: private -> public -> private is refused."""
+    handler = web._Redirects(web._Policy(True))  # pylint: disable=protected-access
+    req = urllib.request.Request("http://192.168.1.10/go")
+
+    def hop(url):
+        return handler.redirect_request(req, None, 302, "Found", {}, url)
+
+    assert hop("http://10.0.0.7/next")  # private -> private stays allowed
+    assert hop("http://public.test/x")  # private -> public is fine, and ends private access
+    with pytest.raises(netguard.BlockedURL):
+        hop(final)
+
+
+def test_proxy_skips_peer_check_but_not_the_target_check(monkeypatch):
+    """Behind a loopback proxy a public target is fetched; a private target is still refused."""
+    routes = {"http://public.test/x": Route(b"via proxy", ctype="text/plain")}
+    with FixtureServer(routes) as proxy:
+        monkeypatch.setenv("http_proxy", proxy.base)
+        monkeypatch.delenv("no_proxy", raising=False)
+        monkeypatch.delenv("NO_PROXY", raising=False)
+        for untrusted in (False, True):
+            res = web.fetch("http://public.test/x", max_bytes=100, untrusted=untrusted)
+            assert res.body == b"via proxy"
+        with pytest.raises(netguard.BlockedURL):
+            web.fetch("http://10.0.0.5/x", max_bytes=100, untrusted=True)
+        assert proxy.hits == ["http://public.test/x"] * 2

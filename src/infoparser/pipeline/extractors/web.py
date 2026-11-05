@@ -46,22 +46,32 @@ class FetchResult:
 class _Redirects(urllib.request.HTTPRedirectHandler):
     """Follow redirects only to http(s) targets the trust boundary allows, checked on every hop."""
 
-    def __init__(self, allow_private: bool = True):
-        self.allow_private = allow_private
+    def __init__(self, policy):
+        self.policy = policy
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # urllib's signature
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urlparse(newurl).scheme not in ("http", "https"):
             raise urllib.error.URLError(f"refusing redirect to non-http(s) scheme: {newurl}")
-        netguard.check_url(newurl, allow_private=self.allow_private)
+        if self.policy.allow_private and not netguard.private_target(newurl):
+            self.policy.allow_private = False  # one public hop ends private access for the chain
+        netguard.check_url(newurl, allow_private=self.policy.allow_private)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _peer_checked(base, allow_private: bool):
+class _Policy:  # pylint: disable=too-few-public-methods  # shared mutable flag
+    """Whether private addresses are still allowed; only true while every hop so far was private."""
+
+    def __init__(self, allow_private: bool):
+        self.allow_private = allow_private
+
+
+def _peer_checked(base, policy, proxied: bool):
     """A connection class that vets the address it really connected to (DNS rebinding).
 
-    ponytail: the TCP/TLS handshake happens before the check (no request is sent); with an
-    env proxy the peer is the proxy, so a private proxy fails closed for untrusted URLs.
+    ponytail: the TCP/TLS handshake happens before the check (no request is sent). Behind a
+    proxy the peer is the proxy, so the peer check is skipped and rebinding is the proxy's
+    concern; the pre-connect host check on the target and every hop still applies.
     """
     class Conn(base):  # pylint: disable=too-few-public-methods  # extends an http.client class
         """Refuses to send a request over a connection to a non-public peer."""
@@ -69,8 +79,10 @@ def _peer_checked(base, allow_private: bool):
         def connect(self):
             """Connect, then refuse a non-public peer before anything is sent."""
             super().connect()
+            if proxied:
+                return
             try:
-                netguard.check_peer(self.sock.getpeername()[0], allow_private=allow_private)
+                netguard.check_peer(self.sock.getpeername()[0], allow_private=policy.allow_private)
             except netguard.BlockedURL:
                 self.close()
                 raise
@@ -78,23 +90,24 @@ def _peer_checked(base, allow_private: bool):
     return Conn
 
 
-def _opener(allow_private: bool):
+def _opener(policy):
     class Http(urllib.request.HTTPHandler):
         """HTTP over peer-checked connections."""
 
         def http_open(self, req):
             """Open over a connection that vets its peer."""
-            return self.do_open(_peer_checked(http.client.HTTPConnection, allow_private), req)
+            conn = _peer_checked(http.client.HTTPConnection, policy, req.has_proxy())
+            return self.do_open(conn, req)
 
     class Https(urllib.request.HTTPSHandler):
         """HTTPS over peer-checked connections."""
 
         def https_open(self, req):
             """Open over a connection that vets its peer."""
-            conn = _peer_checked(http.client.HTTPSConnection, allow_private)
+            conn = _peer_checked(http.client.HTTPSConnection, policy, req.has_proxy())
             return self.do_open(conn, req, context=self._context)  # pylint: disable=protected-access
 
-    return urllib.request.build_opener(_Redirects(allow_private), Http, Https)
+    return urllib.request.build_opener(_Redirects(policy), Http, Https)
 
 
 def _read_capped(resp, max_bytes: int) -> bytes:
@@ -120,7 +133,7 @@ def fetch(url: str, *, max_bytes: int, timeout: float | None = None,
     allow_private = not untrusted and netguard.private_target(url)
     netguard.check_url(url, allow_private=allow_private)
     req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "*/*"})
-    opener = _opener(allow_private)
+    opener = _opener(_Policy(allow_private))
     try:
         resp = opener.open(req, timeout=timeout or FETCH_TIMEOUT)
     except urllib.error.HTTPError as e:  # non-2xx: still hand back status + capped body

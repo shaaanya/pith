@@ -32,6 +32,9 @@ def resolve(host: str) -> list[str]:
         raise BlockedURL(f"cannot resolve {host!r}: {e}") from e
 
 
+_V4_EMBEDS = ("64:ff9b::/96", "::/96", "::ffff:0:0:0/96")  # NAT64, v4-compatible, SIIT
+
+
 def _embedded_v4(ip):
     """The IPv4 address hidden in a mapped, 6to4 or NAT64 IPv6 address, else None."""
     if ip.version != 6:
@@ -40,7 +43,7 @@ def _embedded_v4(ip):
         return ip.ipv4_mapped
     if ip.sixtofour:
         return ip.sixtofour
-    if ip in ipaddress.ip_network("64:ff9b::/96"):
+    if any(ip in ipaddress.ip_network(n) for n in _V4_EMBEDS):
         return ipaddress.IPv4Address(ip.packed[-4:])
     return None
 

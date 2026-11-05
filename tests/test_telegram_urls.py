@@ -2,6 +2,7 @@
 import ipaddress
 import json
 import os
+import socket
 import subprocess
 import sys
 
@@ -108,3 +109,23 @@ def test_cli_flag_and_default(tmp_path):
     helped = subprocess.run([sys.executable, "-m", "infoparser.cli", "import-telegram", "-h"],
                             env=env, capture_output=True, text=True, timeout=60, check=False)
     assert "--fetch-urls" in helped.stdout
+
+
+def test_untrusted_caption_fallback_cannot_rebind_to_loopback(tmp_path, monkeypatch):
+    """The login-wall caption fetch is untrusted too: a host that turns private is not fetched."""
+    monkeypatch.setenv("FAKE_YTDLP_MODE", "login")
+    fake = os.path.join(os.path.dirname(__file__), "stubs", "fake_ytdlp.py")
+    svc = build(load_config(env={"INFOPARSER_HOME": str(tmp_path / "h"),
+                                 "INFOPARSER_YT_DLP": fake}))
+    answers = iter([["93.184.216.34"]])  # public once, then loopback (DNS rebinding)
+    monkeypatch.setattr(netguard, "resolve", lambda h: next(answers, ["127.0.0.1"]))
+    real_gai = socket.getaddrinfo
+    monkeypatch.setattr(socket, "getaddrinfo", lambda h, *a, **k: real_gai(
+        "127.0.0.1" if h == "rebind.test" else h, *a, **k))
+    routes = {"/private.mp4": Route(b'<meta property="og:description" content="SECRET">')}
+    with FixtureServer(routes) as srv:
+        port = srv.base.rsplit(":", 1)[1]
+        import_export(svc.inbox, _export(tmp_path, f"http://rebind.test:{port}/private.mp4"),
+                      fetch_urls=True)
+        runner.process(svc, _row(svc)["id"])
+        assert not srv.hits

@@ -175,18 +175,22 @@ def _ffmpeg(cfg, args: list[str]) -> None:
         raise RuntimeError(f"ffmpeg failed: {r.stderr.strip()[-300:]}")
 
 
-def _caption_from_page(url: str) -> str | None:
+def _caption_from_page(url: str, untrusted: bool = False) -> str | None:
     try:
-        res = web.fetch(url, max_bytes=2_000_000, timeout=10)
+        res = web.fetch(url, max_bytes=2_000_000, timeout=10, untrusted=untrusted)
         m = _OG.search(res.body.decode("utf-8", "replace"))
         return re.sub(r"\s+", " ", m.group(1)).strip() or None if m else None
     except Exception:  # pylint: disable=broad-exception-caught  # best effort only
         return None
 
 
-def _login_clarification(url: str, _err: str, info: dict | None) -> NeedsClarificationError:
+def _login_clarification(
+    url: str, _err: str, info: dict | None, untrusted: bool = False
+) -> NeedsClarificationError:
     caption = (
-        (info or {}).get("description") or (info or {}).get("title") or _caption_from_page(url)
+        (info or {}).get("description")
+        or (info or {}).get("title")
+        or (_caption_from_page(url, True) if untrusted else _caption_from_page(url))
     )
     where = url.split("/")[2] if "//" in url else url
     msg = f"login or rate limit from {where}; paste the transcript or text"
@@ -348,7 +352,7 @@ def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
                 ferr = f"{type(e).__name__}: {e}"
     except MediaToolError as e:
         if social or _LOGIN.search(str(e)):
-            raise _login_clarification(url, str(e), info) from e
+            raise _login_clarification(url, str(e), info, netguard.untrusted(ctx.row)) from e
         raise RuntimeError(f"yt-dlp: {e}") from e
     ctype = "audio" if info.get("vcodec") == "none" else "video"
     cited = info.get("webpage_url") or url  # what yt-dlp says served it, else as submitted
