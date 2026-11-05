@@ -43,6 +43,10 @@ def _build(name: str, spec: dict) -> Backend:
     t = spec.get("type")
     if t not in TYPES:
         raise ConfigError(f"backend {name!r}: unknown type {t!r} (known: {sorted(TYPES)})")
+    for key in ("timeout", "context_window"):  # a string would only fail later, inside a call
+        v = spec.get(key, 1)
+        if isinstance(v, bool) or not isinstance(v, int | float) or v <= 0:
+            raise ConfigError(f"backend {name!r}: {key} must be a positive number, got {v!r}")
     mod, cls = TYPES[t].split(":")
     try:
         klass = getattr(importlib.import_module(mod), cls)
