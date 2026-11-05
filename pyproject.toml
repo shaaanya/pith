@@ -28,3 +28,7 @@ markers = [
   "live_ollama: needs a running local Ollama (skipped by default)",
   "slow: slow tests",
 ]
+
+[tool.pylint.main]
+source-roots = ["src", "tests"]
+init-hook = "import sys; sys.path.insert(0, 'src')"
