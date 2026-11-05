@@ -95,7 +95,7 @@ def test_distill_map_reduce_when_over_context():
     part = {"summary": "part", "insights": [], "topics": ["t"]}
     f = Fake("f", [part, part, part, part, {"summary": "final"}], context_window=1500)
     cands, by = run(reg(f), segs)
-    assert len(f.calls) >= 3 and by == "f:fm"
+    assert len(f.calls) == 5 and by == "f:fm"
     assert cands[0].body == "final"
 
 
@@ -106,3 +106,19 @@ def test_profile_for_and_schemas():
     assert profile_for("pdf", "research paper") == "paper"
     assert profile_for("web", "") == "article"
     assert profile_for("text", "") == "generic"
+
+
+@pytest.mark.parametrize("profile", sorted(SCHEMAS))
+def test_distill_every_profile_falls_back_to_heuristic(profile):
+    for bad in (Fake("f", []), Fake("g", [ProviderError("down")])):
+        cands, by = run(reg(bad), profile=profile)
+        assert cands and by.startswith("heuristic")
+    assert (len(cands) == 1) == (profile == "collection")
+
+
+def test_distill_oversized_single_segment_is_split():
+    segs = [SegmentIn(0, "word " * 2000, "char=0")]
+    part = {"summary": "p", "insights": []}
+    f = Fake("f", [part] * 5 + [{"summary": "final"}], context_window=1500)
+    run(reg(f), segs)
+    assert len(f.calls) >= 3 and all(len(c[1]["content"]) <= 3000 for c in f.calls[:-1])

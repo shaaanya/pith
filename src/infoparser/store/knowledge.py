@@ -21,16 +21,31 @@ def save_source(conn, *, url, title, author, platform, content_type, blob_sha256
 
 
 def save_segments(conn, source_id, segs: list[SegmentIn]) -> list[int]:
+    """Upsert by (source_id, idx): existing segments keep their ids (so preserved items' segment_refs stay
+    valid on reprocess); segments no longer present are deleted and their ids dropped from item refs."""
     with transaction(conn):
-        for (old,) in conn.execute("SELECT id FROM segments WHERE source_id=?", (source_id,)).fetchall():
-            conn.execute("DELETE FROM segments_fts WHERE rowid=?", (old,))
-        conn.execute("DELETE FROM segments WHERE source_id=?", (source_id,))
+        have = {r["idx"]: r["id"] for r in conn.execute("SELECT id, idx FROM segments WHERE source_id=?", (source_id,))}
         ids = []
         for s in segs:
-            cur = conn.execute("INSERT INTO segments(source_id,idx,text,locator) VALUES (?,?,?,?)",
-                               (source_id, s.idx, s.text, s.locator))
-            conn.execute("INSERT INTO segments_fts(rowid,text) VALUES (?,?)", (cur.lastrowid, s.text))
-            ids.append(cur.lastrowid)
+            if s.idx in have:
+                sid = have[s.idx]
+                conn.execute("UPDATE segments SET text=?, locator=? WHERE id=?", (s.text, s.locator, sid))
+                conn.execute("DELETE FROM segments_fts WHERE rowid=?", (sid,))
+            else:
+                sid = conn.execute("INSERT INTO segments(source_id,idx,text,locator) VALUES (?,?,?,?)",
+                                   (source_id, s.idx, s.text, s.locator)).lastrowid
+            conn.execute("INSERT INTO segments_fts(rowid,text) VALUES (?,?)", (sid, s.text))
+            ids.append(sid)
+        gone = {i for idx, i in have.items() if idx not in {s.idx for s in segs}}
+        for g in gone:
+            conn.execute("DELETE FROM segments_fts WHERE rowid=?", (g,))
+            conn.execute("DELETE FROM segments WHERE id=?", (g,))
+        if gone:
+            for r in conn.execute("SELECT id, segment_refs FROM knowledge_items WHERE source_id=?", (source_id,)).fetchall():
+                refs = json.loads(r["segment_refs"] or "[]")
+                if gone & set(refs):
+                    conn.execute("UPDATE knowledge_items SET segment_refs=? WHERE id=?",
+                                 (json.dumps([x for x in refs if x not in gone]), r["id"]))
     return ids
 
 
@@ -47,6 +62,10 @@ def _fts_set(conn, rowid, title, body):
 def save_items(conn, source_id, candidates: list[Candidate], extracted_by, segment_ids: list[int]) -> list[str]:
     now, ids = utcnow(), []
     with transaction(conn):
+        by_idx = {}  # segment idx -> id, looked up from the idx column (not list position)
+        if segment_ids:
+            q = ",".join("?" * len(segment_ids))
+            by_idx = {r["idx"]: r["id"] for r in conn.execute(f"SELECT id, idx FROM segments WHERE id IN ({q})", segment_ids)}
         old = conn.execute("SELECT rowid AS rid, * FROM knowledge_items WHERE source_id=? AND user_edited=0"
                            " AND deleted_at IS NULL", (source_id,)).fetchall()
         for r in old:
@@ -57,7 +76,7 @@ def save_items(conn, source_id, candidates: list[Candidate], extracted_by, segme
             iid = new_id()
             data = {**c.data, **({"evidence": c.evidence} if c.evidence else {}),
                     **({"entities": c.entities} if c.entities else {}), **({"topics": c.topics} if c.topics else {})}
-            ref = [segment_ids[c.segment_idx]] if c.segment_idx is not None and 0 <= c.segment_idx < len(segment_ids) else []
+            ref = [by_idx[c.segment_idx]] if c.segment_idx in by_idx else []
             cur = conn.execute(
                 "INSERT INTO knowledge_items(id,kind,title,body,data_json,provenance,confidence,source_id,segment_refs,"
                 "extracted_by,flagged,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -78,7 +97,12 @@ def get_item(conn, item_id) -> dict | None:
     return d
 
 
+_KEEP = ("evidence", "entities", "topics")
+
+
 def update_item(conn, item_id, **fields) -> None:
+    """Edit title/body/data. `data` is MERGED over the stored data: evidence/entities/topics are kept
+    unless the new data names them explicitly; other stored keys are replaced by the new dict."""
     if bad := set(fields) - _EDITABLE:
         raise ValueError(f"cannot edit {sorted(bad)}")
     now = utcnow()
@@ -88,7 +112,10 @@ def update_item(conn, item_id, **fields) -> None:
             raise KeyError(item_id)
         _snapshot(conn, r, "user_edit", now)
         title, body = fields.get("title", r["title"]), fields.get("body", r["body"])
-        data_json = json.dumps(fields["data"]) if "data" in fields else r["data_json"]
+        data_json = r["data_json"]
+        if "data" in fields:
+            old = json.loads(r["data_json"] or "{}")
+            data_json = json.dumps({**{k: old[k] for k in _KEEP if k in old}, **fields["data"]})
         conn.execute("UPDATE knowledge_items SET title=?, body=?, data_json=?, user_edited=1, version=version+1,"
                      " updated_at=? WHERE id=?", (title, body, data_json, now, item_id))
         if r["deleted_at"] is None:
@@ -101,5 +128,6 @@ def delete_item(conn, item_id) -> None:
         r = conn.execute("SELECT rowid AS rid FROM knowledge_items WHERE id=?", (item_id,)).fetchone()
         if r is None:
             raise KeyError(item_id)
-        conn.execute("UPDATE knowledge_items SET deleted_at=?, updated_at=? WHERE id=?", (now, now, item_id))
+        conn.execute("UPDATE knowledge_items SET deleted_at=?, updated_at=? WHERE id=? AND deleted_at IS NULL",
+                     (now, now, item_id))
         conn.execute("DELETE FROM items_fts WHERE rowid=?", (r["rid"],))

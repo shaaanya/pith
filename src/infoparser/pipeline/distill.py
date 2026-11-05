@@ -47,6 +47,9 @@ def _ask(backend, system, user, schema):
         res = backend.generate(msgs, json_schema=schema)
         obj = _parse(res.text)
         err = "not valid JSON" if obj is None else validate(obj, schema)
+        # any backend (the heuristic one included) may answer in the generic shape; normalize() adapts it
+        if obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:
+            err = None
         if err is None:
             return obj, res
         msgs = [*msgs, {"role": "assistant", "content": res.text},
@@ -55,9 +58,16 @@ def _ask(backend, system, user, schema):
 
 
 def _batches(segments, budget):
-    batch, size = [], 0
+    """Group segments so each batch's text (joined by 2-char separators) fits budget; split oversized segments."""
+    pieces = []
     for s in segments:
-        if batch and size + len(s.text) > budget:
+        if len(s.text) <= budget:
+            pieces.append(s)
+        else:
+            pieces += [SegmentIn(s.idx, s.text[a:a + budget], s.locator) for a in range(0, len(s.text), budget)]
+    batch, size = [], 0
+    for s in pieces:
+        if batch and size + len(s.text) + 2 > budget:
             yield batch
             batch, size = [], 0
         batch.append(s)
@@ -97,7 +107,7 @@ def _locate(quote, segments):
     return next((s.idx for s in segments if evidence_in(quote, s.text)), None)
 
 
-def normalize(obj: dict, profile: str, segments: list[SegmentIn]) -> list[Candidate]:
+def normalize(obj: dict, profile: str, segments: list[SegmentIn], title: str = "") -> list[Candidate]:
     topics, entities = list(obj.get("topics", [])), list(obj.get("entities", []))
     common = dict(topics=topics, entities=entities)
 
@@ -109,7 +119,7 @@ def normalize(obj: dict, profile: str, segments: list[SegmentIn]) -> list[Candid
 
     if profile == "collection":
         entries = obj.get("entries") or [{"name": i["text"], "quote": i.get("quote")} for i in obj.get("insights", [])]
-        title = obj.get("title") or ""
+        title = obj.get("title") or title
         return [Candidate(kind="collection", title=title, body=obj.get("summary") or title,
                           data={"entries": entries}, **common)]
     out = [Candidate(kind="summary", title="Summary", body=obj["summary"], **common)]
@@ -128,5 +138,5 @@ def distill(registry, segments, *, profile, title, user_context):
             continue
         if obj is None:
             continue
-        return check(normalize(obj, profile, segments), segments), f"{res.backend}:{res.model}"
+        return check(normalize(obj, profile, segments, title), segments), f"{res.backend}:{res.model}"
     raise ProviderError("no backend produced valid distillation output")

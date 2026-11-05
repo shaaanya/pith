@@ -67,3 +67,56 @@ def test_update_item_writes_version(conn):
         K.update_item(conn, "nope", title="x")
     with pytest.raises(ValueError):
         K.update_item(conn, iid, bogus=1)
+
+
+def _src(conn):
+    return K.save_source(conn, url=None, title="T", author=None, platform="web", content_type="text",
+                         blob_sha256="x", text_sha256="y", extractor="text")
+
+
+@pytest.mark.parametrize("new_texts", [["a", "b"], ["changed", "second"]])
+def test_reprocess_remaps_preserved_item_segment_refs(conn, new_texts):
+    sid = _src(conn)
+    segs = K.save_segments(conn, sid, [SegmentIn(0, "a", "l0"), SegmentIn(1, "b", "l1")])
+    [iid] = K.save_items(conn, sid, [cand("mine", segment_idx=1)], "m", segs)
+    K.update_item(conn, iid, title="mine!")
+    segs2 = K.save_segments(conn, sid, [SegmentIn(i, t, f"l{i}") for i, t in enumerate(new_texts)])
+    K.save_items(conn, sid, [cand("new", segment_idx=0)], "m", segs2)
+    [ref] = K.get_item(conn, iid)["segment_refs"]
+    assert tuple(conn.execute("SELECT idx, text FROM segments WHERE id=?", (ref,)).fetchone()) == (1, new_texts[1])
+    assert conn.execute("SELECT count(*) FROM segments WHERE source_id=?", (sid,)).fetchone()[0] == 2
+
+
+def test_reprocess_dropping_a_segment_drops_dangling_ref(conn):
+    sid = _src(conn)
+    segs = K.save_segments(conn, sid, [SegmentIn(0, "a", "l0"), SegmentIn(1, "b", "l1")])
+    [iid] = K.save_items(conn, sid, [cand("mine", segment_idx=1)], "m", segs)
+    K.update_item(conn, iid, title="mine!")
+    K.save_segments(conn, sid, [SegmentIn(0, "a", "l0")])
+    assert K.get_item(conn, iid)["segment_refs"] == []
+
+
+def test_segment_refs_use_idx_not_list_position(conn):
+    sid = _src(conn)
+    segs = K.save_segments(conn, sid, [SegmentIn(5, "five", "l"), SegmentIn(7, "seven", "l")])
+    [iid] = K.save_items(conn, sid, [cand("x", segment_idx=7)], "m", segs)
+    [ref] = K.get_item(conn, iid)["segment_refs"]
+    assert conn.execute("SELECT text FROM segments WHERE id=?", (ref,)).fetchone()[0] == "seven"
+
+
+def test_update_item_data_merge_preserves_evidence_entities_topics(conn):
+    sid, segs = setup(conn)
+    [iid] = K.save_items(conn, sid, [cand("x", evidence="ev", entities=["E"], topics=["T"])], "m", segs)
+    K.update_item(conn, iid, data={"note": "n", "topics": ["T2"]})
+    assert K.get_item(conn, iid)["data"] == {"evidence": "ev", "entities": ["E"], "topics": ["T2"], "note": "n"}
+
+
+def test_edit_and_delete_on_deleted_item(conn):
+    sid, segs = setup(conn)
+    [iid] = K.save_items(conn, sid, [cand("gone")], "m", segs)
+    K.delete_item(conn, iid)
+    conn.execute("UPDATE knowledge_items SET deleted_at='2000-01-01T00:00:00Z' WHERE id=?", (iid,))
+    K.delete_item(conn, iid)
+    assert K.get_item(conn, iid)["deleted_at"] == "2000-01-01T00:00:00Z"
+    K.update_item(conn, iid, title="body edited")
+    assert fts_titles(conn) == set()

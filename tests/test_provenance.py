@@ -24,3 +24,9 @@ def test_provenance_fabricated_quote_downgraded():
 def test_provenance_external_requires_url():
     a, b = check([C(provenance="external"), C(provenance="external", data={"url": "https://x.y"})], SEGS)
     assert a.provenance == "inferred" and b.provenance == "external"
+
+
+def test_check_does_not_mutate_inputs():
+    orig = C(evidence="nope", data={"k": 1})
+    out = check([orig], SEGS)
+    assert orig.provenance == "stated" and orig.data == {"k": 1} and out[0] is not orig
