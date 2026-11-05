@@ -5,7 +5,7 @@ not a commitment. Verification gaps are in [limitations.md](limitations.md).
 
 - Verify the unverified paths first: a real Telegram export, a real whisper.cpp run, cloud backends with real
   credentials, a larger local model, and tuning the near-duplicate thresholds against a real embedding model.
-- A CLI command for clarification (today only the dashboard does it) and for filtering search.
+- A CLI option for filtering search (`clarify` exists; filters are dashboard/API only).
 - Move the restore guard (`locks.restore_guard`) into `backup.restore` itself and make `run` hold the shared
   `in-use.lock` too, instead of relying on the CLI wrapper and `run.lock`.
 - OCR for scanned PDFs; non-English captions in the media extractor; recursion into subfolders in the drop
@@ -17,5 +17,5 @@ not a commitment. Verification gaps are in [limitations.md](limitations.md).
 - Native `trafilatura` extraction (optional extra) for harder pages, and a browser extension that talks to the
   local endpoint.
 - An email adapter and a shipped Telegram bot adapter (a recipe exists).
-- A redirect guard in the `openai_compat` client, and an SSRF allow/deny policy for submitted URLs.
+- An SSRF allow/deny policy for submitted URLs and a guard on public-to-private redirects.
 - Multi-user, sync and hosting are non-goals.

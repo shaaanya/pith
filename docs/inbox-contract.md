@@ -51,7 +51,7 @@ events.
   source is a note with extractor `user_clarification` and no URL, with a `user_text` event naming the
   original URL. For problems that pasted text cannot solve (file over the size cap, no PDF reader) the
   original reason is kept. The submit-time `--context` is never treated as pasted content.
-- There is no CLI command for clarification; use the dashboard.
+- CLI: `infoparser clarify <inbox id> <text...>` does the same as the dashboard box.
 
 ## Duplicates
 

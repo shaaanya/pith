@@ -26,7 +26,7 @@ migration splitter is simple: no triggers in migration SQL. Ids are 26-character
 ## Not in the database
 
 - Original files: `<home>/blobs/<ab>/<cd>/<sha256>`, referenced by `blob_sha256`.
-- The vault: `<home>/vault/<yyyy>/<slug>-<id>.md`, derived. Each file has a frontmatter block (`id`,
+- The vault: `<home>/vault/<yyyy>/<slug>-<id>.md`, derived (hand edits are overwritten on re-export). Each file has a frontmatter block (`id`,
   `kind`, `title`, `provenance`, `source_url`, `source_title`, `created`, `updated`, `topics`, `entities`,
   `locators`) written as JSON scalars, then the body and a quoted source section.
 - The ingest token: `<home>/http_token` (excluded from backups).

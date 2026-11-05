@@ -103,6 +103,18 @@ def _worker(a):
             pass
 
 
+def _clarify(a):
+    """Attach the user clarification to an item and re-queue it (CLI twin of the dashboard)."""
+    text = " ".join(a.text).strip()
+    if not text:
+        sys.exit("error: clarification text is empty")
+    try:
+        _services(a).inbox.clarify(a.id, text)
+    except KeyError:
+        sys.exit(f"error: unknown id {a.id}")
+    print(f"requeued {a.id} with your clarification")
+
+
 def _cite_line(n, title, url, locator):
     return f"[{n}] {title} \u2014 {url or '-'} \u2014 {locator or '-'}"
 
@@ -349,6 +361,7 @@ COMMANDS = {
     "submit": (_submit, [_arg("text", nargs="?"), _arg("--context"), _arg("--file")]),
     "inbox": (_inbox, [_arg("--status")]),
     "retry": (_retry, [_arg("id")]),
+    "clarify": (_clarify, [_arg("id"), _arg("text", nargs="+")]),
     "worker": (_worker, [_ONCE]),
     "search": (_search, [_arg("query", nargs="+"), _arg("--limit", type=int, default=10),
                          _arg("--mode", choices=["fts", "hybrid"], default="hybrid")]),
