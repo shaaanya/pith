@@ -42,3 +42,10 @@ def test_cli_reports_bad_config_cleanly(tmp_path):
                          env=env, check=False, capture_output=True, text=True, timeout=60)
     assert res.returncode != 0 and "Traceback" not in res.stderr
     assert "limits.max_attempts" in res.stderr
+
+
+@pytest.mark.parametrize("exotic", ["²", "٣", "①"])
+def test_exotic_unicode_digits_raise_configerror_not_valueerror(tmp_path, exotic):
+    """str.isdigit() accepts superscripts and non-ASCII digits that int() rejects."""
+    with pytest.raises(ConfigError, match="http.port"):
+        _load(tmp_path, f'[http]\nport = "{exotic}"\n')

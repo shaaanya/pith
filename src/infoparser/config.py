@@ -13,7 +13,7 @@ class ConfigError(ValueError):
 def _int(data: dict, section: str, key: str, default: int, minimum: int = 0) -> int:
     """data[section][key] as an int >= minimum (a quoted integer is coerced), else ConfigError."""
     v = data.get(section, {}).get(key, default)
-    if isinstance(v, str) and v.strip().isdigit():
+    if isinstance(v, str) and v.strip().isascii() and v.strip().isdigit():
         v = int(v)
     if isinstance(v, bool) or not isinstance(v, int) or v < minimum:
         raise ConfigError(f"{section}.{key} must be an integer >= {minimum}, got {v!r}")
