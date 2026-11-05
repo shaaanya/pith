@@ -8,6 +8,7 @@ import secrets
 import time
 from email.parser import BytesParser
 from email.policy import HTTP
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 from infoparser.inbox.service import Inbox
@@ -15,6 +16,26 @@ from infoparser.inbox.service import Inbox
 NAME = "http"
 _HTTP_URL = re.compile(r"https?://\S+")
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+
+
+class QuietHandler(BaseHTTPRequestHandler):
+    """Base of the local HTTP servers: keep-alive, a per-connection timeout, no access log."""
+
+    server_version = "InfoParser"
+    protocol_version = "HTTP/1.1"
+    timeout = 30  # a slow-drip client cannot hold a thread forever
+
+    def log_message(self, *_args):
+        """Silence the default per-request stderr log."""
+
+    def upload_body(self, ctype: str, raw: bytes) -> dict:
+        """Submission dict from a multipart or raw upload body (ValueError if empty)."""
+        if ctype.split(";")[0].strip().lower() == "multipart/form-data":
+            return parse_multipart(ctype, raw)
+        if not raw:
+            raise ValueError("empty body")
+        return {"file": raw, "filename": self.headers.get("X-Filename"),
+                "context": self.headers.get("X-Context")}
 
 
 def safe_filename(name: str | None) -> str | None:
