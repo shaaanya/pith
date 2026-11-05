@@ -71,6 +71,7 @@ class FsAdapter:
         if st and st.st_size > self.inbox.cfg.max_fetch_bytes:
             self._skip(p, "larger than max_fetch_bytes")
             return None
+        self.skipped.pop(p, None)  # fixed since: warn again if it goes bad again
         return st
 
     def _eligible(self, d: Path, p: Path) -> bool:
@@ -89,6 +90,7 @@ class FsAdapter:
     def poll(self) -> int:
         """One scan of every folder; returns how many files were submitted and moved."""
         done = 0
+        self.skipped = {p: r for p, r in self.skipped.items() if p.exists() or p.is_symlink()}
         for d in self.dirs:
             if not d.is_dir():
                 continue
