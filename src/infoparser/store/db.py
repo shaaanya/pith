@@ -1,5 +1,6 @@
 import re
 import sqlite3
+from contextlib import contextmanager
 from importlib import resources
 from pathlib import Path
 
@@ -25,21 +26,29 @@ def _migrations() -> list[tuple[int, str]]:
     return sorted(out)
 
 
+@contextmanager
+def transaction(conn: sqlite3.Connection):
+    # connection is autocommit (isolation_level=None), so `with conn:` would not open a txn
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        yield
+        conn.execute("COMMIT")
+    except BaseException:
+        conn.execute("ROLLBACK")
+        raise
+
+
 def migrate(conn: sqlite3.Connection) -> int:
-    current = conn.execute("PRAGMA user_version").fetchone()[0]
-    for version, sql in _migrations():
-        if version <= current:
-            continue
-        conn.execute("BEGIN IMMEDIATE")
-        try:
+    # take the write lock first, then read user_version: concurrent migrators serialize and the loser no-ops
+    with transaction(conn):
+        current = conn.execute("PRAGMA user_version").fetchone()[0]
+        for version, sql in _migrations():
+            if version <= current:
+                continue
             for stmt in _split(sql):
                 conn.execute(stmt)
             conn.execute(f"PRAGMA user_version={version}")
-            conn.execute("COMMIT")
-        except BaseException:
-            conn.execute("ROLLBACK")
-            raise
-        current = version
+            current = version
     return current
 
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from contextlib import contextmanager
 from pathlib import Path
 
 from infoparser.config import Config
@@ -11,6 +10,7 @@ from infoparser.domain.models import Status, SubmitResult
 from infoparser.domain.urls import canonicalize_url, detect_platform
 from infoparser.ids import new_id, utcnow
 from infoparser.store.blobs import BlobStore
+from infoparser.store.db import transaction
 
 _BARE_URL = re.compile(r"https?://\S+")
 _DEAD = (Status.FAILED, Status.NEEDS_CLARIFICATION)
@@ -20,16 +20,8 @@ class Inbox:
     def __init__(self, conn: sqlite3.Connection, blobs: BlobStore, cfg: Config):
         self.conn, self.blobs, self.cfg = conn, blobs, cfg
 
-    @contextmanager
     def _tx(self):
-        # connection is autocommit (isolation_level=None), so `with conn:` would not open a txn
-        self.conn.execute("BEGIN IMMEDIATE")
-        try:
-            yield
-            self.conn.execute("COMMIT")
-        except BaseException:
-            self.conn.execute("ROLLBACK")
-            raise
+        return transaction(self.conn)
 
     def submit(
         self,
@@ -122,6 +114,7 @@ class Inbox:
 
     def retry(self, id: str) -> None:
         with self._tx():
+            self.get(id)  # KeyError on unknown id
             self._requeue(id, utcnow())
 
     def set_status(self, id: str, status: str, error: str | None = None) -> None:
@@ -140,6 +133,7 @@ class Inbox:
 
     def clarify(self, id: str, text: str) -> None:
         with self._tx():
+            self.get(id)  # KeyError on unknown id
             now = utcnow()
             self._append_context(id, text, now)
             self._requeue(id, now)

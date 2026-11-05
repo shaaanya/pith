@@ -44,3 +44,23 @@ def test_canonical_url_unique_among_non_duplicates(tmp_path):
     conn.execute(ins, ("2", "1"))  # duplicates allowed
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(ins, ("3", None))
+
+
+def test_migrate_concurrent_fresh_db(tmp_path):
+    import threading
+
+    path = tmp_path / "race.db"
+    conns = [connect(path) for _ in range(2)]
+    barrier, out, errs = threading.Barrier(2), [], []
+
+    def go(c):
+        barrier.wait()
+        try:
+            out.append(migrate(c))
+        except Exception as e:  # noqa: BLE001
+            errs.append(e)
+
+    ts = [threading.Thread(target=go, args=(c,)) for c in conns]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert not errs and out == [1, 1]

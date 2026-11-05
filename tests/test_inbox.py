@@ -108,3 +108,11 @@ def test_retry_clarify_list_events(inbox):
     ev = inbox.conn.execute("SELECT * FROM processing_events").fetchone()
     assert ev["stage"] == "detect" and ev["status"] == "info" and ev["model"] == "m"
     assert '"k": 1' in ev["detail"]
+
+
+def test_retry_and_clarify_unknown_id_raise_keyerror(inbox):
+    with pytest.raises(KeyError):
+        inbox.retry("nope")
+    with pytest.raises(KeyError):
+        inbox.clarify("nope", "x")
+    assert count(inbox, "jobs") == 0
