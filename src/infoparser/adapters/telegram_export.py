@@ -99,11 +99,11 @@ def _content(m: dict, root: Path, since: str | None):
 
 
 def import_export(inbox, export_json: Path, *, since: str | None = None,
-                  fetch_urls: bool = True) -> ImportReport:
+                  fetch_urls: bool = False) -> ImportReport:
     """Submit every message of a Telegram Desktop export; re-importing is a no-op.
 
-    fetch_urls=False keeps URL-only messages as notes (URL verbatim, never fetched). Fetched ones
-    are untrusted (adapter telegram_export): public addresses only, see netguard.
+    By default URL-only messages stay notes (URL verbatim, never fetched). fetch_urls=True
+    fetches them as untrusted (adapter telegram_export): public addresses only, see netguard.
     """
     export_json = Path(export_json)
     data = _load(export_json)

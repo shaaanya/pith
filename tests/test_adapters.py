@@ -2,6 +2,7 @@
 import ast
 import functools
 import http.client
+import inspect
 import json
 import os
 import shutil
@@ -15,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from infoparser.adapters.fs import FsAdapter
+from infoparser import netguard
 from infoparser.adapters import http_ingest
 from infoparser.adapters.http_ingest import IngestServer, handle, load_token
 from infoparser.adapters.telegram_export import flatten_text, import_export
@@ -146,7 +148,9 @@ def test_telegram_import_dedupes_on_rerun(svc):
     assert by["777:2"]["payload_text"] == "plain note about sourdough"
     assert "2024-01-02" in by["777:2"]["user_context"]
     assert "Some Channel" in by["777:5"]["user_context"]
-    assert by["777:4"]["canonical_url"] == "https://example.net/only"       # URL-only message
+    assert by["777:4"]["canonical_url"] is None       # URL-only message: note by default
+    assert by["777:4"]["payload_text"] == "https://example.net/only"
+    assert by["777:4"]["kind_hint"] == "text"
     assert "https://example.org/b" in by["777:3"]["payload_text"]  # text_link href extracted
     assert by["777:3"]["kind_hint"] == "text"
     assert "777:1" not in by
@@ -394,11 +398,11 @@ def test_telegram_reimport_is_pure_noop_for_deduped_messages(svc, tmp_path):
     ]
     p = exp / "result.json"
     p.write_text(json.dumps({"id": 9, "messages": msgs}))
-    import_export(svc.inbox, p)
+    import_export(svc.inbox, p, fetch_urls=True)
     # make the deduped URL item dead: a re-run must not revive it
     svc.conn.execute("UPDATE inbox_items SET status='failed' WHERE canonical_url IS NOT NULL")
     before = _counts(svc)
-    r2 = import_export(svc.inbox, p)
+    r2 = import_export(svc.inbox, p, fetch_urls=True)
     assert _counts(svc) == before and r2.submitted == 0
     failed = svc.conn.execute("SELECT count(*) FROM inbox_items WHERE status='failed'")
     assert failed.fetchone()[0] == 1
@@ -513,3 +517,12 @@ def test_context_dedupe_with_blank_lines_inside_context(svc):
     svc.inbox.submit(adapter="t", text=url, user_context="line one\n\nline two")
     svc.inbox.submit(adapter="t", text=url, user_context="line two")
     assert svc.inbox.get(a.id)["user_context"] == "line one\n\nline two"
+
+
+def test_telegram_fetch_urls_is_opt_in_and_stays_untrusted(svc):
+    """The library default keeps URLs as notes; fetch_urls=True fetches them as untrusted rows."""
+    assert inspect.signature(import_export).parameters["fetch_urls"].default is False
+    import_export(svc.inbox, FIX / "result.json", fetch_urls=True)
+    only = {r["external_id"]: r for r in rows(svc)}["777:4"]
+    assert only["canonical_url"] == "https://example.net/only" and only["kind_hint"] == "url"
+    assert netguard.untrusted(only)
