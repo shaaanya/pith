@@ -77,8 +77,8 @@ is honoured (a LAN server you trust), and `infoparser doctor` warns about it.
 | `type` | Keys |
 |---|---|
 | `heuristic` | none |
-| `openai_compat` | `base_url`*, `model`*, `api_key_env`, `embed_model`, `capabilities` (list from `json_mode`, `vision`, `rerank`, `transcribe`, `embeddings`, `ocr`; `text` is always on), `transcribe_model`, `context_window`, `locality`, `timeout` (120) |
-| `cli` | `command`* (list of strings), `prompt_via` (`stdin` default, or `arg`: prompt appended as the last argument), `capabilities` (default `["text"]`), `context_window`, `locality`, `timeout` (300) |
+| `openai_compat` | `base_url`*, `model`*, `api_key_env`, `embed_model`, `capabilities` (list from `json_mode`, `vision`, `rerank`, `transcribe`, `embeddings`; `text` is always on; `embeddings` needs `embed_model`; `ocr` is rejected because no OpenAI-wire OCR call exists), `transcribe_model`, `vision_model`, `rerank_model` (each defaults to `model`), `context_window`, `locality`, `timeout` (120) |
+| `cli` | `command`* (list of strings), `prompt_via` (`stdin` default, or `arg`: prompt appended as the last argument), `capabilities` (only `text` and `json_mode` are accepted), `context_window`, `locality`, `timeout` (300) |
 | `anthropic` | `model`*, `api_key_env`*, `base_url`, `anthropic_version`, `max_tokens` (4096), `context_window`, `timeout` (120); always remote |
 | `tesseract` | `binary` (`tesseract`), `lang` (`eng`), `timeout` (120) |
 | `whisper_cpp` | `binary`*, `model_path`*, `language`, `threads`, `timeout` (3600) |

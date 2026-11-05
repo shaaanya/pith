@@ -29,6 +29,13 @@ TYPES = {
 # task -> required Capabilities field; unknown tasks need "text"
 TASK_CAPABILITY = {"embed": "embeddings", "rerank": "rerank", "transcribe": "transcribe",
                    "ocr": "ocr", "describe": "vision"}
+# task -> the port method that serves it (everything else is served by generate)
+TASK_METHOD = {"embed": "embed", "rerank": "rerank", "transcribe": "transcribe", "ocr": "read",
+               "describe": "describe"}
+# declared capability -> the method a backend must really have to claim it
+CAPABILITY_METHOD = {"text": "generate", "json_mode": "generate", "embeddings": "embed",
+                     "rerank": "rerank", "transcribe": "transcribe", "ocr": "read",
+                     "vision": "describe"}
 IMPLICIT_LAST = {"text"}  # capabilities whose chains always end with the heuristic backend
 
 
@@ -46,6 +53,10 @@ def _build(name: str, spec: dict) -> Backend:
     except (KeyError, TypeError, ValueError) as e:
         raise ValueError(f"backend {name!r}: bad spec ({type(e).__name__}: {e})") from e
     b.type = t
+    for cap, method in CAPABILITY_METHOD.items():
+        if getattr(b.capabilities, cap) and not callable(getattr(b, method, None)):
+            raise ValueError(f"backend {name!r}: capability {cap!r} is not implemented by "
+                             f"type {t!r} (it has no {method}())")
     if b.locality == "remote":
         egress.wrap_remote(b)
     return b
@@ -110,7 +121,9 @@ class Registry:
         cap = TASK_CAPABILITY.get(task, "text")
         # unrouted task: all configured, in config order
         refs = self.tasks.get(task) or list(self.specs)
-        out = [b for b in map(self._lookup, refs) if getattr(b.capabilities, cap)]
+        method = TASK_METHOD.get(task, "generate")
+        out = [b for b in map(self._lookup, refs)
+               if getattr(b.capabilities, cap) and callable(getattr(b, method, None))]
         if cap in IMPLICIT_LAST:  # heuristic always last, even if configured earlier
             h = next(b for b in self.backends.values() if b.type == "heuristic")
             out = [b for b in out if b.type != "heuristic"] + [h]

@@ -4,12 +4,19 @@ Spec keys: type = "openai_compat"; base_url (required, e.g. http://localhost:114
 model (required); api_key_env (env var NAME holding the key, optional); locality
 ("local"|"remote"; default: local for a loopback host, remote for any other host);
 embed_model (enables embeddings); timeout (seconds, default 120); capabilities (list of extra
-Capabilities field names, e.g. ["json_mode", "transcribe"]; "text" is always on);
-transcribe_model (default: model); context_window.
+Capabilities field names: json_mode, transcribe, vision, rerank, embeddings; "text" is always on;
+"ocr" is rejected, there is no OpenAI-wire OCR call); transcribe_model, vision_model,
+rerank_model (each defaults to model); context_window.
 json_mode declared -> response_format json_schema; otherwise the schema is put in the prompt.
-/audio/transcriptions is UNVERIFIED against a real server (only the in-process stub).
+vision -> describe() sends the images as base64 `image_url` parts of a chat message;
+rerank -> rerank() POSTs {model, query, documents} to /rerank (Jina/Cohere-style, served by
+llama.cpp and vLLM) and reads results[].relevance_score.
+/audio/transcriptions, vision describe and /rerank are UNVERIFIED against a real server (only the
+in-process stubs).
 """
+import base64
 import json
+import mimetypes
 import os
 import urllib.error
 import urllib.request
@@ -49,6 +56,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         self.name, self.base_url, self.model = name, base_url.rstrip("/"), model
         self.api_key_env, self.locality, self.embed_model = api_key_env, locality, embed_model
         self.timeout, self.transcribe_model = timeout, transcribe_model or model
+        self.vision_model = self.rerank_model = model
         base = capabilities or Capabilities()
         self.capabilities = Capabilities(**{**base.__dict__, "text": True,
                                             "embeddings": base.embeddings or bool(embed_model)})
@@ -59,9 +67,17 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         caps = {c: True for c in spec.get("capabilities", [])}
         if "context_window" in spec:
             caps["context_window"] = spec["context_window"]
-        return cls(name, spec["base_url"], spec["model"], spec.get("api_key_env"),
-                   resolve(spec, spec["base_url"]), spec.get("embed_model"),
-                   spec.get("timeout", 120), Capabilities(**caps), spec.get("transcribe_model"))
+        if caps.get("ocr"):
+            raise ValueError("capability 'ocr' is not implemented by openai_compat "
+                             "(use a tesseract backend, or declare 'vision' to describe images)")
+        if caps.get("embeddings") and not spec.get("embed_model"):
+            raise ValueError("capability 'embeddings' needs embed_model")
+        b = cls(name, spec["base_url"], spec["model"], spec.get("api_key_env"),
+                resolve(spec, spec["base_url"]), spec.get("embed_model"),
+                spec.get("timeout", 120), Capabilities(**caps), spec.get("transcribe_model"))
+        b.vision_model = spec.get("vision_model") or b.model
+        b.rerank_model = spec.get("rerank_model") or b.model
+        return b
 
     def _headers(self):
         h = {}
@@ -132,3 +148,33 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         data = self._call("/audio/transcriptions", parts, f"multipart/form-data; boundary={b}")
         segs = data.get("segments") or [{"start": 0.0, "end": 0.0, "text": data.get("text", "")}]
         return [TimedText(float(s["start"]), float(s["end"]), s["text"].strip()) for s in segs]
+
+    def describe(self, images: list[Path], prompt: str) -> str:
+        """Describe images through a chat message with `image_url` parts (UNVERIFIED live)."""
+        if not self.capabilities.vision:
+            raise CapabilityError(f"{self.name}: vision not declared")
+        parts = [{"type": "text", "text": prompt}]
+        for img in images:
+            mime = mimetypes.guess_type(str(img))[0] or "image/png"
+            b64 = base64.b64encode(Path(img).read_bytes()).decode()
+            parts.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}})
+        body = {"model": self.vision_model, "messages": [{"role": "user", "content": parts}]}
+        data = self._call("/chat/completions", json.dumps(body).encode())
+        try:
+            return data["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as e:
+            raise ProviderError(f"{self.name}: malformed response") from e
+
+    def rerank(self, query: str, docs: list[str]) -> list[float]:
+        """Relevance scores in `docs` order from a Jina-style /rerank endpoint (UNVERIFIED live)."""
+        if not self.capabilities.rerank:
+            raise CapabilityError(f"{self.name}: rerank not declared")
+        body = {"model": self.rerank_model, "query": query, "documents": docs}
+        data = self._call("/rerank", json.dumps(body).encode())
+        try:
+            scores = [0.0] * len(docs)
+            for res in data["results"]:
+                scores[int(res["index"])] = float(res["relevance_score"])
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            raise ProviderError(f"{self.name}: malformed response") from e
+        return scores

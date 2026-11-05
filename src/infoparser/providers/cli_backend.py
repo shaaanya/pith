@@ -83,6 +83,8 @@ class CliBackend:
     def from_spec(cls, name, spec):
         """Build from a config spec (see module docstring)."""
         caps = {c: True for c in spec.get("capabilities", ["text"])}
+        if extra := set(caps) - {"text", "json_mode"}:
+            raise ValueError(f"a cli backend can only serve text/json_mode, not {sorted(extra)}")
         if "context_window" in spec:
             caps["context_window"] = spec["context_window"]
         return cls(name, spec["command"], spec.get("prompt_via", "stdin"),
