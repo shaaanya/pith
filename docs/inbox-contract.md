@@ -94,7 +94,9 @@ are skipped, so run it again if a file was just written.
 
 ### Telegram Desktop export
 
-`infoparser import-telegram <result.json> [--since DATE]`. One message becomes one submission
+`infoparser import-telegram <result.json> [--since DATE] [--fetch-urls]`. URL-only messages are kept as
+notes (URL verbatim, not fetched) unless `--fetch-urls`, which fetches them as untrusted: public addresses only.
+One message becomes one submission
 (`adapter = telegram_export`, external id `<chat id>:<message id>`), so re-importing is a no-op. Prints
 `submitted N, duplicates N, skipped N`. UNVERIFIED against a real export: it follows the documented
 `result.json` shape and was tested on a hand-built fixture. The whole JSON is read into memory.
