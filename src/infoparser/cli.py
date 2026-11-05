@@ -61,11 +61,14 @@ def _submit(a):
     s = _services(a)
     if a.file:
         p = Path(a.file)
-        r = s.inbox.submit(adapter="cli", file=p, filename=p.name, user_context=a.context)
+        try:
+            r = s.inbox.submit(adapter="cli", file=p, filename=p.name, user_context=a.context)
+        except OSError as e:  # missing path, a directory, no permission
+            sys.exit(f"error: cannot read {p}: {e.strerror or e}")
     elif a.text:
         r = s.inbox.submit(adapter="cli", text=a.text, user_context=a.context)
     else:
-        sys.exit("submit needs TEXT_OR_URL or --file")
+        sys.exit("error: submit needs TEXT_OR_URL or --file")
     print(f"submitted {r.id}")
 
 
