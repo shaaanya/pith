@@ -7,6 +7,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from infoparser import locks
 from infoparser.domain.models import Status
 from infoparser.inbox.service import Inbox
 from infoparser.jobs import JobQueue, log_event
@@ -39,9 +40,9 @@ Processor = Callable[[str], Outcome]
 class Worker:
     """Runs one job at a time from the queue, keeping its lease alive meanwhile."""
     def __init__(self, conn: sqlite3.Connection, inbox: Inbox, queue: JobQueue,
-                 processor: Processor, worker_id: str = "w1"):
+                 processor: Processor, worker_id: str | None = None):
         self.conn, self.inbox, self.queue = conn, inbox, queue
-        self.processor, self.worker_id = processor, worker_id
+        self.processor, self.worker_id = processor, worker_id or locks.new_worker_id()
         self.heartbeat_seconds = queue.cfg.lease_seconds / 3
 
     def _heartbeat_loop(self, job_id: str, done: threading.Event) -> None:
