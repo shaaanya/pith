@@ -1,3 +1,4 @@
+"""Layering: domain/pipeline/inbox/retrieval never import concrete backends."""
 import ast
 from pathlib import Path
 
@@ -22,11 +23,13 @@ def _bad_imports(path, root=SRC):
                 mods += [f"infoparser.providers.{a.name}" for a in n.names]
         else:
             continue
-        bad += [m for m in mods if m.startswith("infoparser.providers.") and m.split(".")[2] in BACKENDS]
+        bad += [m for m in mods
+                if m.startswith("infoparser.providers.") and m.split(".")[2] in BACKENDS]
     return bad
 
 
 def test_domain_layers_do_not_import_backends():
+    """No layer module imports a concrete backend."""
     offenders = {
         str(p): b for layer in LAYERS if (SRC / layer).is_dir()
         for p in (SRC / layer).rglob("*.py") if (b := _bad_imports(p))
@@ -35,6 +38,7 @@ def test_domain_layers_do_not_import_backends():
 
 
 def test_scanner_flags_bad_imports(tmp_path):
+    """The scanner itself flags absolute, from-import and relative backend imports."""
     pkg = tmp_path / "domain"
     pkg.mkdir()
     cases = {

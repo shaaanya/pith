@@ -1,24 +1,31 @@
+"""Retrieval quality thresholds on the fixture corpus (FTS vs hybrid)."""
 import json
 from pathlib import Path
 
+from stubs.concept_embedder import ConceptEmbedder
+
 from infoparser.pipeline import runner
 from infoparser.retrieval.search import search
-from stubs.concept_embedder import ConceptEmbedder
 
 FIX = Path(__file__).parent / "fixtures"
 
 
 def build(svc, use_embedder):
+    """Load the fixture corpus with the concept embedder routed in."""
     use_embedder(svc, ConceptEmbedder())
     for f in sorted((FIX / "corpus").glob("*.md")):
         runner.process(svc, svc.inbox.submit(adapter="t", file=f.read_bytes(), filename=f.name).id)
 
 
 def doc_of(svc, hit):
-    return svc.conn.execute("SELECT original_filename FROM inbox_items WHERE source_id=?", (hit.source_id,)).fetchone()[0]
+    """Original filename of the hit's source."""
+    row = svc.conn.execute("SELECT original_filename FROM inbox_items WHERE source_id=?",
+                           (hit.source_id,)).fetchone()
+    return row[0]
 
 
 def evaluate(svc, mode):
+    """Recall@5 and MRR over the fixture queries."""
     qs = json.loads((FIX / "queries.json").read_text())
     hit5, rr = 0, 0.0
     for q in qs:
@@ -35,8 +42,11 @@ def evaluate(svc, mode):
 
 
 def test_retrieval_quality_thresholds(svc, use_embedder):
+    """Hybrid beats FTS and both clear the recall floors."""
     build(svc, use_embedder)
     fts_r, fts_mrr = evaluate(svc, "fts")
     hyb_r, hyb_mrr = evaluate(svc, "hybrid")
-    print(f"\nrecall@5 fts={fts_r:.2f} hybrid={hyb_r:.2f}  MRR fts={fts_mrr:.2f} hybrid={hyb_mrr:.2f}")
-    assert fts_r >= 0.6 and hyb_r >= 0.85 and hyb_r > fts_r
+    print(f"\nrecall@5 fts={fts_r:.2f} hybrid={hyb_r:.2f}  "
+          f"MRR fts={fts_mrr:.2f} hybrid={hyb_mrr:.2f}")
+    assert fts_r >= 0.6 and hyb_r >= 0.85
+    assert hyb_r > fts_r

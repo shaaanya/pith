@@ -1,26 +1,30 @@
+"""OpenAI-compatible backend against the loopback stub."""
 import json
 
 import pytest
+from stubs.openai_stub import OpenAIStub
 
 from infoparser.providers.openai_compat import OpenAICompatBackend
 from infoparser.providers.ports import Capabilities, CapabilityError, ProviderError
-from stubs.openai_stub import OpenAIStub
 
 MSG = [{"role": "user", "content": "hi"}]
 SCHEMA = {"type": "object"}
 
 
 def _body(stub):
+    """Parsed JSON body of the last request."""
     return json.loads(stub.requests[-1][2])
 
 
 def test_openai_http_error_maps_to_provider_error():
+    """An HTTP error status maps to ProviderError."""
     with OpenAIStub(fail_with=500) as s:
         with pytest.raises(ProviderError, match="HTTP 500"):
             OpenAICompatBackend("oa", s.base_url, "m").generate(MSG)
 
 
 def test_openai_connection_refused_maps_to_provider_error():
+    """A refused connection maps to ProviderError."""
     with OpenAIStub() as s:
         url = s.base_url
     with pytest.raises(ProviderError):
@@ -28,7 +32,10 @@ def test_openai_connection_refused_maps_to_provider_error():
 
 
 def test_openai_json_mode_uses_response_format_else_prompt(stub):
-    OpenAICompatBackend("oa", stub.base_url, "m", capabilities=Capabilities(json_mode=True)).generate(MSG, json_schema=SCHEMA)
+    """JSON mode uses response_format; otherwise the schema goes in the prompt."""
+    json_backend = OpenAICompatBackend("oa", stub.base_url, "m",
+                                       capabilities=Capabilities(json_mode=True))
+    json_backend.generate(MSG, json_schema=SCHEMA)
     assert "response_format" in _body(stub)
     OpenAICompatBackend("oa", stub.base_url, "m").generate(MSG, json_schema=SCHEMA)
     b = _body(stub)
@@ -36,6 +43,7 @@ def test_openai_json_mode_uses_response_format_else_prompt(stub):
 
 
 def test_openai_api_key_from_env(stub, monkeypatch):
+    """The key is read from the named env var and sent as a bearer token."""
     b = OpenAICompatBackend("oa", stub.base_url, "m", api_key_env="IP_TEST_KEY")
     with pytest.raises(ProviderError, match="IP_TEST_KEY"):
         b.generate(MSG)
@@ -45,14 +53,17 @@ def test_openai_api_key_from_env(stub, monkeypatch):
 
 
 def test_openai_embed_requires_embed_model(stub):
+    """Embedding without an embed_model is a CapabilityError."""
     with pytest.raises(CapabilityError):
         OpenAICompatBackend("oa", stub.base_url, "m").embed(["x"])
 
 
 def test_openai_transcribe(stub, tmp_path):
+    """Transcription parses segments; it needs the declared capability."""
     f = tmp_path / "a.wav"
     f.write_bytes(b"RIFF")
-    b = OpenAICompatBackend.from_spec("oa", {"base_url": stub.base_url, "model": "m", "capabilities": ["transcribe"]})
+    spec = {"base_url": stub.base_url, "model": "m", "capabilities": ["transcribe"]}
+    b = OpenAICompatBackend.from_spec("oa", spec)
     segs = b.transcribe(f, "en")
     assert (segs[0].start, segs[0].end, segs[0].text) == (0.0, 1.5, "hello world")
     with pytest.raises(CapabilityError):

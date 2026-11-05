@@ -1,20 +1,25 @@
+"""Dashboard api layer (called directly, no HTTP)."""
+import hashlib
+
 import pytest
 
 from infoparser.dashboard import api
 from infoparser.pipeline import runner
 from infoparser.store.blobs import BlobStore
+from infoparser.worker import Worker
 
 NOTE = "Quokkas are small marsupials from Australia.\n\nThey live on Rottnest Island and eat grass."
 
 
-def process(svc, iid):
-    from infoparser.worker import Worker
+def process(svc, _iid=None):
+    """Run the worker until the queue is empty."""
     w = Worker(svc.conn, svc.inbox, svc.queue, lambda i: runner.process(svc, i))
     while w.run_once():
         pass
 
 
 def test_blobstore_rejects_non_hex_sha(tmp_path):
+    """The blob store rejects non-hex shas."""
     b = BlobStore(tmp_path)
     for bad in ("../../etc/passwd", "abc", "g" * 64, "A" * 64, ""):
         with pytest.raises(ValueError):
@@ -23,6 +28,7 @@ def test_blobstore_rejects_non_hex_sha(tmp_path):
 
 
 def test_submit_list_detail_roundtrip(svc):
+    """Submit, list and fetch detail."""
     r = api.inbox_submit(svc, {"text": NOTE, "context": "animals"})
     rows = api.inbox_list(svc, None)
     assert rows[0]["id"] == r["id"] and rows[0]["status"] == "pending"
@@ -35,12 +41,14 @@ def test_submit_list_detail_roundtrip(svc):
 
 
 def test_inbox_submit_validation(svc):
+    """Bad submissions raise ValueError."""
     for bad in ({}, {"text": 5}, {"url": "ftp://x"}, {"text": "a", "url": "http://b.c"}):
         with pytest.raises(ValueError):
             api.inbox_submit(svc, bad)
 
 
 def test_retry_and_clarify_flow(svc):
+    """Retry and clarify transitions."""
     r = api.inbox_submit(svc, {"text": "   "})  # empty -> needs_clarification
     process(svc, r["id"])
     assert api.inbox_get(svc, r["id"])["status"] == "needs_clarification"
@@ -60,6 +68,7 @@ def test_retry_and_clarify_flow(svc):
 
 
 def test_item_edit_delete_reprocess(svc):
+    """Item edit, delete and reprocess."""
     r = api.inbox_submit(svc, {"text": NOTE})
     process(svc, r["id"])
     iid = api.inbox_get(svc, r["id"])["items"][0]["id"]
@@ -80,6 +89,7 @@ def test_item_edit_delete_reprocess(svc):
 
 
 def test_search_and_ask_shapes_and_url_sanitising(svc):
+    """Search/ask shapes; non-http urls are dropped."""
     r = api.inbox_submit(svc, {"text": NOTE})
     process(svc, r["id"])
     s = api.search(svc, "quokkas", {})
@@ -95,6 +105,7 @@ def test_search_and_ask_shapes_and_url_sanitising(svc):
 
 
 def test_topics_duplicates_digest_state_privacy(svc):
+    """Read-only summary endpoints."""
     r = api.inbox_submit(svc, {"text": NOTE})
     process(svc, r["id"])
     assert isinstance(api.topics(svc), list)
@@ -108,12 +119,12 @@ def test_topics_duplicates_digest_state_privacy(svc):
 
 
 def test_blob_lookup_only_by_known_sha(svc):
+    """Blobs are served only for shas the database knows."""
     r = api.inbox_submit(svc, {"file": b"\x89PNG\r\n\x1a\n" + b"x" * 20, "filename": "p.png"})
     sha = svc.inbox.get(r["id"])["blob_sha256"]
     path, ctype, inline = api.blob(svc, sha)
     assert path.is_file() and ctype == "image/png" and inline
     svc.blobs.put_bytes(b"unreferenced")  # exists on disk but not known to the DB
-    import hashlib
     with pytest.raises(KeyError):
         api.blob(svc, hashlib.sha256(b"unreferenced").hexdigest())
     for bad in ("../x", "zz", "a" * 63):
@@ -126,8 +137,10 @@ def test_blob_lookup_only_by_known_sha(svc):
 
 
 def test_hostile_strings_come_back_as_plain_data(svc):
+    """Hostile strings come back as plain data."""
     evil = "<img src=x onerror=alert(1)>"
-    r = api.inbox_submit(svc, {"text": evil + " quokkas marsupials live on Rottnest Island eat grass", "context": "javascript:alert(1)"})
+    text = evil + " quokkas marsupials live on Rottnest Island eat grass"
+    r = api.inbox_submit(svc, {"text": text, "context": "javascript:alert(1)"})
     rows = api.inbox_list(svc, None)
     assert rows[0]["what"].startswith(evil) and rows[0]["url"] is None  # data, never markup
     assert rows[0]["user_context"] == "javascript:alert(1)"
@@ -142,9 +155,11 @@ def test_hostile_strings_come_back_as_plain_data(svc):
 
 
 def test_api_digest_uses_digest_module_and_never_writes(svc):
+    """The digest endpoint is a dry run that writes nothing."""
     r = api.inbox_submit(svc, {"text": NOTE})
     process(svc, r["id"])
     d = api.digest(svc)
     assert d["total"] >= 1 and d["items"] and "## New" in d["markdown"]
-    assert not (svc.cfg.home / "digests").exists()  # dry-run: opening the dashboard must not use up the interval
+    # dry-run: opening the dashboard must not use up the interval
+    assert not (svc.cfg.home / "digests").exists()
     assert "egress" in api.privacy(svc)

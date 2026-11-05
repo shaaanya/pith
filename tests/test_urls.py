@@ -1,3 +1,4 @@
+"""URL canonicalisation and platform detection."""
 import pytest
 
 from infoparser.domain.urls import canonicalize_url, detect_platform
@@ -18,10 +19,12 @@ CANON = "https://example.com/a/b?x=1"
     ],
 )
 def test_canonicalize_variants_equal(url):
+    """Scheme, case, www/m, trailing slash, tracking params and fragment normalise away."""
     assert canonicalize_url(url) == CANON
 
 
 def test_youtube_variants_equal():
+    """All youtube URL shapes canonicalise to one form."""
     want = "https://youtube.com/watch?v=abc123"
     for u in [
         "https://youtu.be/abc123",
@@ -33,11 +36,13 @@ def test_youtube_variants_equal():
 
 
 def test_query_sorted_and_root_slash():
+    """Query params are sorted; a bare root loses its slash."""
     assert canonicalize_url("https://a.com/?b=2&a=1") == "https://a.com?a=1&b=2"
     assert canonicalize_url("https://a.com/") == "https://a.com"
 
 
 def test_detect_platform():
+    """Platform detection from the host."""
     assert detect_platform("https://www.instagram.com/p/x") == "instagram"
     assert detect_platform("https://youtu.be/x") == "youtube"
     assert detect_platform("https://vm.tiktok.com/x") == "tiktok"

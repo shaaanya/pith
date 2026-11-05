@@ -1,3 +1,5 @@
+"""Config loading and ids."""
+import time
 from pathlib import Path
 
 from infoparser.config import load_config
@@ -5,6 +7,7 @@ from infoparser.ids import new_id, utcnow
 
 
 def test_load_config_env_overrides_file(tmp_path):
+    """Env overrides the file; INFOPARSER_CONFIG selects the file."""
     cfg_file = tmp_path / "c.toml"
     cfg_file.write_text(
         f'home = "{tmp_path / "filehome"}"\n[privacy]\nallow_remote = true\n'
@@ -22,19 +25,20 @@ def test_load_config_env_overrides_file(tmp_path):
 
 
 def test_load_config_defaults_home_under_userhome(monkeypatch, tmp_path):
+    """Defaults: home under the user home, local-only, sane limits."""
     monkeypatch.setenv("HOME", str(tmp_path))
     cfg = load_config(env={})
     assert cfg.home == Path(tmp_path) / "InfoParser"
     assert cfg.allow_remote is False
     assert (cfg.max_attempts, cfg.lease_seconds, cfg.max_fetch_bytes) == (5, 300, 50_000_000)
     assert cfg.blobs_dir == cfg.home / "blobs" and cfg.vault_dir == cfg.home / "vault"
-    assert cfg.backends == {} and cfg.tasks == {}
+    assert not cfg.backends and not cfg.tasks
 
 
 def test_ids():
+    """Ids are 26 chars and time-ordered; timestamps are UTC Z."""
     a, b = new_id(), new_id()
     assert len(a) == 26 and a != b
-    import time
     time.sleep(0.003)
     assert new_id() > a
     assert len(utcnow()) == 20 and utcnow().endswith("Z")

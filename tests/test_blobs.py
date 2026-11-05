@@ -1,9 +1,11 @@
+"""Content-addressed blob store."""
 import hashlib
 
 from infoparser.store.blobs import BlobStore
 
 
 def test_blob_put_idempotent_and_sharded(tmp_path):
+    """put is idempotent and files are sharded by sha prefix."""
     bs = BlobStore(tmp_path / "blobs")
     sha = bs.put_bytes(b"hello")
     assert sha == hashlib.sha256(b"hello").hexdigest()
@@ -16,6 +18,7 @@ def test_blob_put_idempotent_and_sharded(tmp_path):
 
 
 def test_put_file(tmp_path):
+    """put_file hashes like put_bytes."""
     f = tmp_path / "a.txt"
     f.write_bytes(b"data")
     bs = BlobStore(tmp_path / "blobs")
