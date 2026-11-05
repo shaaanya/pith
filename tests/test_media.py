@@ -88,6 +88,7 @@ def test_media_uses_captions_without_downloading(env):
     assert env.dirs and not any(Path(d).exists() for d in env.dirs)
 
 
+@needs_ffmpeg
 def test_media_falls_back_to_transcriber(env, monkeypatch):
     monkeypatch.setenv("FAKE_YTDLP_MODE", "nocaptions")
     tr = Transcriber()
@@ -107,6 +108,7 @@ def test_media_no_captions_no_transcriber_needs_clarification(env, monkeypatch):
     assert not any(Path(d).exists() for d in env.dirs)
 
 
+@needs_ffmpeg
 @pytest.mark.parametrize("exc", [RuntimeError("boom"), KeyboardInterrupt()])
 def test_media_tempdir_removed_on_error(env, monkeypatch, exc):
     monkeypatch.setenv("FAKE_YTDLP_MODE", "nocaptions")
@@ -292,6 +294,7 @@ def test_visual_item_has_real_range_locator(env, tmp_path):
     assert chunk_timed(ex2.timed)[0][1] == "t=0-9"
 
 
+@needs_ffmpeg
 def test_subtitle_fetch_failure_falls_back_to_transcription(env, monkeypatch):
     monkeypatch.setenv("FAKE_YTDLP_MODE", "subfail")
     ex = media.extract(url_ctx(env, transcribe=Transcriber()))
@@ -313,6 +316,7 @@ def test_empty_dump_json_clean_error(env, monkeypatch):
         media.extract(url_ctx(env))
 
 
+@needs_ffmpeg
 def test_max_filesize_flag_and_local_size_cap(env, tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_YTDLP_MODE", "nocaptions")
     media.extract(url_ctx(env, transcribe=Transcriber()))
