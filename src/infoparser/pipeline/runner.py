@@ -40,7 +40,12 @@ def process(services, inbox_id: str):
         ex = EXTRACTORS[ct](ExtractCtx(row, s.blobs, s.registry, s.cfg))
         _stage(s.conn, inbox_id, "extract", t0, f"{len(ex.text)} chars")
         t0 = time.monotonic()
-        pieces = chunk_timed(ex.timed) if ex.timed else chunk_text(ex.text)
+        if ex.timed:
+            pieces = chunk_timed(ex.timed)
+        elif ex.sections:  # page/slide/post-level locators survive chunking
+            pieces = [(t, loc) for loc, body in ex.sections for t, _ in chunk_text(body)]
+        else:
+            pieces = chunk_text(ex.text)
         segs = [SegmentIn(i, t, loc) for i, (t, loc) in enumerate(pieces)]
         _stage(s.conn, inbox_id, "chunk", t0, f"{len(segs)} segments")
         t0 = time.monotonic()

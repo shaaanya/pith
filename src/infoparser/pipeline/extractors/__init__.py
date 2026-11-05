@@ -1,1 +1,1 @@
-from infoparser.pipeline.extractors import text  # noqa: F401  (self-registers)
+from infoparser.pipeline.extractors import document, image, pdf, text, web  # noqa: F401  (self-register)

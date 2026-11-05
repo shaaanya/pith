@@ -41,9 +41,9 @@ def test_runner_non_utf8_file_decoded_with_replacement(svc):
 
 
 def test_runner_unknown_type_needs_clarification(svc):
-    iid = svc.inbox.submit(adapter="t", file=b"%PDF-1.4 x", filename="a.pdf").id
+    iid = svc.inbox.submit(adapter="t", file=b"ID3 x", filename="a.mp3").id
     out = runner.process(svc, iid)
-    assert isinstance(out, NeedsClarification) and "pdf" in out.reason
+    assert isinstance(out, NeedsClarification) and "audio" in out.reason
     assert svc.blobs.exists(svc.inbox.get(iid)["blob_sha256"])
 
 

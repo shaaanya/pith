@@ -20,6 +20,7 @@ class Extracted:
     content_type: str
     text: str
     timed: list[TimedText] | None = None
+    sections: list[tuple[str, str]] | None = None  # (locator, text), chunked independently
     metadata: dict = field(default_factory=dict)
     original_sha: str | None = None
 
