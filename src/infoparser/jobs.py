@@ -16,7 +16,7 @@ def _at(offset: float) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + offset))
 
 
-def log_event(conn: sqlite3.Connection, inbox_id: str, job_id: str | None,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def log_event(conn: sqlite3.Connection, inbox_id: str, job_id: str | None,  # pylint: disable=too-many-arguments,too-many-positional-arguments  # table columns
               stage: str, level: str = "info", detail: str | None = None) -> None:
     """Append a row to processing_events (one column per argument; widely called)."""
     conn.execute(

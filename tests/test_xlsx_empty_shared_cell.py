@@ -21,3 +21,19 @@ def test_empty_shared_string_value_is_an_empty_cell(svc):
     assert isinstance(runner.process(svc, iid), Processed)
     row = svc.conn.execute("SELECT locator, text FROM segments").fetchone()
     assert row["locator"] == "sheet=1" and "Name" in row["text"]
+
+
+def test_bad_shared_string_index_is_an_empty_cell(svc):
+    """Negative, non-numeric, fractional or out-of-range indexes never read another cell."""
+    cells = "".join(f'<c r="{c}1" t="s"><v>{v}</v></c>' for c, v in
+                    zip("BCDE", ("-1", "abc", "1.0", "99")))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("xl/workbook.xml", f'<workbook xmlns="{NS}"/>')
+        z.writestr("xl/sharedStrings.xml", f'<sst xmlns="{NS}"><si><t>Name</t></si></sst>')
+        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{NS}"><sheetData>'
+                   f'<row><c r="A1" t="s"><v>0</v></c>{cells}</row></sheetData></worksheet>')
+    iid = svc.inbox.submit(adapter="t", file=buf.getvalue(), filename="t.xlsx").id
+    assert isinstance(runner.process(svc, iid), Processed)
+    text = svc.conn.execute("SELECT text FROM segments").fetchone()["text"]
+    assert text.count("Name") == 1

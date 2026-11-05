@@ -61,7 +61,7 @@ class _Handler(QuietHandler):
         else:
             self.send_header("Content-Security-Policy", "default-src 'none'; sandbox")
 
-    def _send(self, status: int, data: bytes, ctype: str, *,  # pylint: disable=too-many-arguments
+    def _send(self, status: int, data: bytes, ctype: str, *,  # pylint: disable=too-many-arguments  # status/body/type + header options
               nonce=None, extra=(), close=False) -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
@@ -71,7 +71,7 @@ class _Handler(QuietHandler):
             self.send_header(k, v)
         if close or status in (400, 401, 403, 411, 413):
             self.send_header("Connection", "close")
-            self.close_connection = True
+            self.close_connection = True  # pylint: disable=attribute-defined-outside-init  # stdlib handler flag
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(data)
@@ -209,7 +209,7 @@ class _Handler(QuietHandler):
                 continue
             if fn := handlers.get(method):
                 out = fn(self, svc, x, q)
-                if out is not None:  # None: the handler already sent its own response
+                if out is not RESPONDED:
                     self._json(200, out)
                 return
             if strict:  # a known resource with an unsupported method
@@ -278,12 +278,16 @@ def _reprocess(h, svc, x, _q):
     return api.item_reprocess(svc, x[1])
 
 
+RESPONDED = object()  # sentinel: the handler already sent its own response
+
+
 def _blob(h, svc, x, _q):
     h.send_blob(svc, unquote(x[1]))
+    return RESPONDED
 
 
 # (path regex, {method: handler(h, svc, match, query)}, 405 vs 404 for an unsupported method).
-# A handler returns the JSON body, or None when it has already written the response.
+# A handler returns the JSON body (None is JSON null), or RESPONDED once it wrote the response.
 _ROUTES = (
     ("/api/inbox", {"GET": lambda h, s, x, q: api.inbox_list(s, q.get("status")),
                     "POST": lambda h, s, x, q: api.inbox_submit(s, h.submission())}, True),

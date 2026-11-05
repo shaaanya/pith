@@ -40,7 +40,7 @@ class AnthropicBackend:  # pylint: disable=too-many-instance-attributes  # one a
     locality = "remote"
 
     # config record: each argument is one spec key
-    def __init__(self, name, model, api_key_env,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def __init__(self, name, model, api_key_env,  # pylint: disable=too-many-arguments,too-many-positional-arguments  # one arg per config key
                  base_url="https://api.anthropic.com", anthropic_version="2023-06-01",
                  max_tokens=4096, timeout=120, context_window=200_000):
         u = urllib.parse.urlsplit(base_url)

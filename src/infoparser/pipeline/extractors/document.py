@@ -72,6 +72,7 @@ def _xlsx(b: _Budget) -> list[tuple[str, str]]:
             for c in row.iter(S + "c"):
                 v = c.find(S + "v")
                 if c.get("t") == "s" and v is not None:
+                    # empty/negative/non-numeric index: empty cell, never shared[-1]
                     idx = int(v.text) if v.text and v.text.strip().isdecimal() else len(shared)
                     cells.append(shared[idx] if idx < len(shared) else "")
                 elif c.get("t") == "inlineStr":

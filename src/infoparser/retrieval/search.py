@@ -274,7 +274,7 @@ def _fused(services, match, filters, vec, per_source):
     return _cap_per_source(ranked, per_source)
 
 
-def search_ex(services, query: str, *, limit: int = 10,  # pylint: disable=too-many-arguments
+def search_ex(services, query: str, *, limit: int = 10,  # pylint: disable=too-many-arguments  # public keyword-only search options
               filters: dict | None = None, mode: str = "hybrid",
               per_source: int = PER_SOURCE_CAP) -> SearchResult:
     """Search saved knowledge; never raises for an unavailable optional stage."""

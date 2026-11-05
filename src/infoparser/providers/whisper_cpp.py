@@ -42,7 +42,7 @@ class WhisperCppBackend:
     capabilities = Capabilities(transcribe=True)
 
     # config record: each argument is one spec key
-    def __init__(self, name, binary, model_path,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def __init__(self, name, binary, model_path,  # pylint: disable=too-many-arguments,too-many-positional-arguments  # one arg per config key
                  language=None, threads=None, timeout=3600):
         self.name, self.binary, self.model_path = name, binary, str(model_path)
         self.language, self.threads, self.timeout = language, threads, timeout

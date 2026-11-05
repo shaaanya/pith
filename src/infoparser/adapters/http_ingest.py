@@ -34,7 +34,7 @@ class _Handler(QuietHandler):
         self.send_header("Content-Length", str(len(data)))
         if status in (400, 401, 411, 413):
             self.send_header("Connection", "close")
-            self.close_connection = True
+            self.close_connection = True  # pylint: disable=attribute-defined-outside-init  # stdlib handler flag
         self.end_headers()
         self.wfile.write(data)
 
@@ -59,8 +59,7 @@ class _Handler(QuietHandler):
             fn()
         except ValueError as e:
             self._send(400, {"error": str(e)})
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            # never leak a traceback to the client
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught  # never leak a traceback to the client
             self._send(500, {"error": "internal error"})
 
     def do_GET(self):  # pylint: disable=invalid-name  # http.server dispatch name
@@ -76,7 +75,7 @@ class _Handler(QuietHandler):
         if n and n.isdigit():
             # drain so the unread body is not parsed as the next request
             self.rfile.read(min(int(n), 1 << 20))
-        self.close_connection = True
+        self.close_connection = True  # pylint: disable=attribute-defined-outside-init  # stdlib handler flag
         data = b'{"error": "method not allowed"}'
         self.send_response(405)
         self.send_header("Allow", "GET, POST")
