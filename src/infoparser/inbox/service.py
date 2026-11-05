@@ -1,3 +1,4 @@
+"""Inbox: submit, de-duplicate, requeue and annotate inbox items."""
 from __future__ import annotations
 
 import json
@@ -17,13 +18,14 @@ _DEAD = (Status.FAILED, Status.NEEDS_CLARIFICATION)
 
 
 class Inbox:
+    """Everything submitted to infoparser, with its status, context and job."""
     def __init__(self, conn: sqlite3.Connection, blobs: BlobStore, cfg: Config):
         self.conn, self.blobs, self.cfg = conn, blobs, cfg
 
     def _tx(self):
         return transaction(self.conn)
 
-    def submit(
+    def submit(  # pylint: disable=too-many-arguments  # keyword-only adapter-facing API
         self,
         *,
         adapter: str,
@@ -35,51 +37,23 @@ class Inbox:
         platform: str | None = None,
         external_id: str | None = None,
     ) -> SubmitResult:
-        """external_id: adapter-scoped stable id (e.g. Telegram chat:message). A repeat with the same
-        (adapter, external_id) is a pure no-op duplicate: no new row, no context appended, no requeue."""
+        """external_id: adapter-scoped stable id (e.g. Telegram chat:message).
+
+        A repeat with the same (adapter, external_id) is a pure no-op duplicate: no new row, no
+        context appended, no requeue."""
         if (text is None) == (file is None):
             raise ValueError("exactly one of text or file is required")
-        sha = url = None
-        if file is not None:
-            kind = "file"
-            # blob first: content-addressed and idempotent, so an orphan after rollback is harmless
-            sha = self.blobs.put_bytes(file) if isinstance(file, bytes) else self.blobs.put_file(file)
-        elif _BARE_URL.fullmatch(text.strip()):
-            kind, url = "url", canonicalize_url(text)
-        else:
-            kind = "text"
+        kind, sha, url = self._classify(text, file)
         now = utcnow()
         with self._tx():
-            if external_id:
-                seen = self.conn.execute("SELECT inbox_id AS id FROM external_ids WHERE adapter=? AND external_id=?",
-                                         (adapter, external_id)).fetchone()
-                if seen:
-                    return SubmitResult(seen["id"], seen["id"], False)
-            if url:
-                q, key = "canonical_url=?", url
-            elif sha:
-                q, key = "blob_sha256=?", sha
-            else:
-                q = key = None
-            old = q and self.conn.execute(
-                f"SELECT * FROM inbox_items WHERE {q} AND duplicate_of IS NULL "
-                "ORDER BY submitted_at LIMIT 1", (key,)
-            ).fetchone()
-            if old:
-                requeue = old["status"] in _DEAD
-                self._append_context(old["id"], user_context, now)
-                self.conn.execute(
-                    "INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
-                    (old["source_id"], old["id"], url, now),
-                )
-                if requeue:
-                    self._requeue(old["id"], now)
-                self._record_external(adapter, external_id, old["id"])
-                return SubmitResult(old["id"], old["id"], requeue)
+            dup = self._existing((adapter, external_id), url, sha, user_context, now)
+            if dup:
+                return dup
             iid = new_id()
             self.conn.execute(
-                "INSERT INTO inbox_items(id, adapter, platform, submitted_at, kind_hint, payload_text,"
-                " blob_sha256, original_filename, mime, canonical_url, user_context, status, updated_at, external_id)"
+                "INSERT INTO inbox_items(id, adapter, platform, submitted_at, kind_hint,"
+                " payload_text, blob_sha256, original_filename, mime, canonical_url,"
+                " user_context, status, updated_at, external_id)"
                 " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (iid, adapter, platform or detect_platform(url), now, kind, text, sha, filename,
                  mime, url, user_context or None, Status.PENDING, now, external_id),
@@ -88,18 +62,76 @@ class Inbox:
             self._record_external(adapter, external_id, iid)
         return SubmitResult(iid)
 
+    def _classify(self, text: str | None, file: Path | bytes | None):
+        """-> (kind, blob sha256 or None, canonical url or None); stores the blob first."""
+        if file is not None:
+            # blob first: content-addressed and idempotent, so an orphan after rollback is harmless
+            put = self.blobs.put_bytes if isinstance(file, bytes) else self.blobs.put_file
+            return "file", put(file), None
+        if _BARE_URL.fullmatch(text.strip()):
+            return "url", None, canonicalize_url(text)
+        return "text", None, None
+
+    def _seen_external(self, adapter: str, external_id: str | None) -> str | None:
+        """The inbox id already recorded for (adapter, external_id), if any."""
+        if not external_id:
+            return None
+        seen = self.conn.execute(
+            "SELECT inbox_id AS id FROM external_ids WHERE adapter=? AND external_id=?",
+            (adapter, external_id)).fetchone()
+        return seen["id"] if seen else None
+
+    def _existing(self, ext: tuple, url, sha, user_context, now) -> SubmitResult | None:
+        """A repeat submission: no-op for a known external id, else folded into the original.
+
+        ext is (adapter, external_id)."""
+        adapter, external_id = ext
+        seen = self._seen_external(adapter, external_id)
+        if seen:
+            return SubmitResult(seen, seen, False)
+        old = self._find_original(url, sha)
+        if not old:
+            return None
+        requeue = old["status"] in _DEAD
+        self._append_context(old["id"], user_context, now)
+        self.conn.execute(
+            "INSERT INTO provenance_log(source_id, inbox_id, url, added_at) VALUES (?,?,?,?)",
+            (old["source_id"], old["id"], url, now),
+        )
+        if requeue:
+            self._requeue(old["id"], now)
+        self._record_external(adapter, external_id, old["id"])
+        return SubmitResult(old["id"], old["id"], requeue)
+
+    def _find_original(self, url: str | None, sha: str | None):
+        """The earliest non-duplicate row with this canonical url or blob, else None."""
+        if url:
+            q, key = "canonical_url=?", url
+        elif sha:
+            q, key = "blob_sha256=?", sha
+        else:
+            return None
+        return self.conn.execute(
+            f"SELECT * FROM inbox_items WHERE {q} AND duplicate_of IS NULL "
+            "ORDER BY submitted_at LIMIT 1", (key,)
+        ).fetchone()
+
     def _record_external(self, adapter, external_id, iid) -> None:
         if external_id:
-            self.conn.execute("INSERT OR IGNORE INTO external_ids(adapter, external_id, inbox_id) VALUES (?,?,?)",
-                              (adapter, external_id, iid))
+            self.conn.execute(
+                "INSERT OR IGNORE INTO external_ids(adapter, external_id, inbox_id)"
+                " VALUES (?,?,?)", (adapter, external_id, iid))
 
     def _append_context(self, iid: str, ctx: str | None, now: str) -> None:
-        cur = self.conn.execute("SELECT user_context FROM inbox_items WHERE id=?", (iid,)).fetchone()
-        have = "\n\n" + (cur["user_context"] or "") + "\n\n"  # block-wise match; ctx may itself hold blank lines
+        cur = self.conn.execute("SELECT user_context FROM inbox_items WHERE id=?",
+                                (iid,)).fetchone()
+        # block-wise match; ctx may itself hold blank lines
+        have = "\n\n" + (cur["user_context"] or "") + "\n\n"
         if ctx and "\n\n" + ctx + "\n\n" not in have:
             self.conn.execute(
-                "UPDATE inbox_items SET user_context = CASE WHEN user_context IS NULL OR user_context=''"
-                " THEN ? ELSE user_context || char(10,10) || ? END, updated_at=? WHERE id=?",
+                "UPDATE inbox_items SET user_context = CASE WHEN user_context IS NULL"
+                " OR user_context='' THEN ? ELSE user_context || char(10,10) || ? END,"
+                " updated_at=? WHERE id=?",
                 (ctx, ctx, now, iid),
             )
 
@@ -117,42 +149,51 @@ class Inbox:
         if not live:
             self._insert_job(iid)
 
-    def get(self, id: str) -> sqlite3.Row:
-        row = self.conn.execute("SELECT * FROM inbox_items WHERE id=?", (id,)).fetchone()
+    def get(self, item_id: str) -> sqlite3.Row:
+        """One inbox row; KeyError on an unknown id."""
+        row = self.conn.execute("SELECT * FROM inbox_items WHERE id=?", (item_id,)).fetchone()
         if row is None:
-            raise KeyError(id)
+            raise KeyError(item_id)
         return row
 
     def list(self, status: str | None = None, limit: int = 200) -> list[sqlite3.Row]:
+        """Newest-first inbox rows, optionally filtered by status."""
         where, args = ("WHERE status=?", [status]) if status else ("", [])
         return self.conn.execute(
             f"SELECT * FROM inbox_items {where} ORDER BY id DESC LIMIT ?", (*args, limit)
         ).fetchall()
 
-    def retry(self, id: str) -> None:
+    def retry(self, item_id: str) -> None:
+        """Requeue an item (resets attempts and error)."""
         with self._tx():
-            self.get(id)  # KeyError on unknown id
-            self._requeue(id, utcnow())
+            self.get(item_id)  # KeyError on unknown id
+            self._requeue(item_id, utcnow())
 
-    def set_status(self, id: str, status: str, error: str | None = None) -> None:
+    def set_status(self, item_id: str, status: str, error: str | None = None) -> None:
+        """Set an item's status (and error text)."""
         self.conn.execute(
             "UPDATE inbox_items SET status=?, error=?, updated_at=? WHERE id=?",
-            (str(status), error, utcnow(), id),
+            (str(status), error, utcnow(), item_id),
         )
 
-    def add_event(self, inbox_id: str, stage: str, level: str, message: str,
-                  data: dict | None = None, model: str | None = None) -> None:
+    def add_event(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+            self, inbox_id: str, stage: str, level: str, message: str,
+            data: dict | None = None, model: str | None = None) -> None:
+        """Append a processing event; `data` is serialised onto the message."""
         detail = message if data is None else f"{message} {json.dumps(data, default=str)}"
         self.conn.execute(
-            "INSERT INTO processing_events(inbox_id, at, stage, status, detail, model) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO processing_events(inbox_id, at, stage, status, detail, model)"
+            " VALUES (?,?,?,?,?,?)",
             (inbox_id, utcnow(), stage, level, detail, model),
         )
 
-    def clarify(self, id: str, text: str) -> None:
+    def clarify(self, item_id: str, text: str) -> None:
+        """Add the user's clarification and requeue the item."""
         with self._tx():
-            self.get(id)  # KeyError on unknown id
+            self.get(item_id)  # KeyError on unknown id
             now = utcnow()
-            self._append_context(id, text, now)
-            # explicit record: the runner uses ONLY the latest clarification as content (never submit-time context)
-            self.add_event(id, "clarified", "info", text)
-            self._requeue(id, now)
+            self._append_context(item_id, text, now)
+            # explicit record: the runner uses ONLY the latest clarification as content (never
+            # submit-time context)
+            self.add_event(item_id, "clarified", "info", text)
+            self._requeue(item_id, now)
