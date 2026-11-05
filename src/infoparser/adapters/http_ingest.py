@@ -33,7 +33,7 @@ def safe_filename(name: str | None) -> str | None:
     return name[:200] or None
 
 
-def handle(inbox: Inbox, body: dict) -> dict:
+def handle(inbox: Inbox, body: dict, adapter: str = NAME) -> dict:
     """Validate and submit. ValueError -> caller answers 400."""
     if not isinstance(body, dict):
         raise ValueError("body must be a JSON object")
@@ -45,7 +45,7 @@ def handle(inbox: Inbox, body: dict) -> dict:
         raise ValueError("exactly one of url, text or file is required")
     if url and not _HTTP_URL.fullmatch(url.strip()):
         raise ValueError("url must be http(s)")
-    kw = {"adapter": NAME, "user_context": ctx or None, "platform": plat or None}
+    kw = {"adapter": adapter, "user_context": ctx or None, "platform": plat or None}
     if file:
         r = inbox.submit(file=bytes(file), filename=safe_filename(body.get("filename")), **kw)
     else:

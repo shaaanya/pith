@@ -10,11 +10,14 @@ from infoparser.pipeline.detect import detect
 from infoparser.pipeline import dedupe, entities
 from infoparser.pipeline.distill import distill
 from infoparser.pipeline.schemas import profile_for
-from infoparser.pipeline.extractors.base import EXTRACTORS, ExtractCtx, NeedsClarificationError
+from infoparser.pipeline.extractors.base import EXTRACTORS, Extracted, ExtractCtx, NeedsClarificationError
 from infoparser.retrieval import index
 from infoparser.store import knowledge
 from infoparser.store.db import transaction
 from infoparser.worker import Failed, NeedsClarification, Processed
+
+MIN_PASTED_CHARS = 80  # shorter clarifications are hints (context), not content
+
 
 def _stage(conn, iid, stage, t0, detail="", model=None, level="info"):
     conn.execute(
@@ -39,7 +42,15 @@ def process(services, inbox_id: str):
         if ct not in EXTRACTORS:
             raise NeedsClarificationError(f"no extractor available for content type '{ct}'")
         t0 = time.monotonic()
-        ex = EXTRACTORS[ct](ExtractCtx(row, s.blobs, s.registry, s.cfg))
+        try:
+            ex = EXTRACTORS[ct](ExtractCtx(row, s.blobs, s.registry, s.cfg))
+        except NeedsClarificationError:
+            # the user answered "paste the text": a substantial clarification becomes the content itself
+            ctx = (row["user_context"] or "").strip()
+            if len(ctx) < MIN_PASTED_CHARS:
+                raise
+            ex = Extracted(None, None, row["canonical_url"], "note", ctx, original_sha=row["blob_sha256"])
+            ex.title = ctx.splitlines()[0][:80]
         _stage(s.conn, inbox_id, "extract", t0, f"{len(ex.text)} chars")
         text_sha = hashlib.sha256(ex.text.encode()).hexdigest()
         if not row["source_id"]:  # same text already ingested (e.g. via another URL): share the source

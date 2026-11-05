@@ -190,6 +190,43 @@ def _serve_http(a):
         srv.server_close()
 
 
+def _run(a):
+    import signal
+    import threading
+    from infoparser import run_all
+    cfg = _services(a).cfg
+    stop = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+
+    def ready(info):
+        if info["url"]:
+            print(f"dashboard: {info['url']}\n(open this URL once; Ctrl-C to stop)", flush=True)
+        else:
+            print("running (no dashboard); Ctrl-C to stop", flush=True)
+    try:
+        run_all.run(cfg, a.port, dashboard=not a.no_dashboard, watch=not a.no_watch, stop=stop, on_ready=ready)
+    except KeyboardInterrupt:
+        stop.set()
+    except run_all.RunError as e:
+        sys.exit(f"error: {e}")
+
+
+def _dashboard(a):
+    from infoparser.dashboard.server import make_server
+    s = _services(a)
+    try:
+        srv = make_server(s, port=a.port)
+    except OSError as e:
+        sys.exit(f"error: port {a.port} in use or unavailable: {e}")
+    print(f"dashboard: http://127.0.0.1:{srv.server_address[1]}/?token={srv.token}\n(no worker: use `infoparser run` to process)")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+
+
 def main(argv=None):
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--home", default=argparse.SUPPRESS)
@@ -244,6 +281,14 @@ def main(argv=None):
     c.add_argument("--since")
     c.set_defaults(f=_import_telegram)
     sub.add_parser("serve-http", parents=[common]).set_defaults(f=_serve_http)
+    c = sub.add_parser("run", parents=[common])
+    c.add_argument("--port", type=int, default=8777)
+    c.add_argument("--no-dashboard", action="store_true")
+    c.add_argument("--no-watch", action="store_true")
+    c.set_defaults(f=_run)
+    c = sub.add_parser("dashboard", parents=[common])
+    c.add_argument("--port", type=int, default=8777)
+    c.set_defaults(f=_dashboard)
     a = p.parse_args(argv)
     a.f(a)
     return 0

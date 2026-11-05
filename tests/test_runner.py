@@ -103,3 +103,15 @@ def test_runner_no_extractor_branch(svc, monkeypatch):
     iid = svc.inbox.submit(adapter="t", text="hello there").id
     out = runner.process(svc, iid)
     assert isinstance(out, NeedsClarification) and "no extractor available" in out.reason
+
+
+def test_runner_pasted_clarification_becomes_content(svc):
+    from infoparser.worker import Processed
+    paste = "Quokkas are small marsupials from Australia and they live on Rottnest Island eating grass."
+    iid = svc.inbox.submit(adapter="t", text="   ").id
+    assert isinstance(runner.process(svc, iid), NeedsClarification)
+    svc.inbox.clarify(iid, "short hint")
+    assert isinstance(runner.process(svc, iid), NeedsClarification)  # hints stay hints
+    svc.inbox.clarify(iid, paste)
+    assert isinstance(runner.process(svc, iid), Processed)
+    assert svc.conn.execute("SELECT count(*) FROM segments WHERE text LIKE '%Rottnest%'").fetchone()[0] == 1

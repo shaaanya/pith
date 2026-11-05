@@ -1,7 +1,10 @@
 import hashlib
 import os
+import re
 import tempfile
 from pathlib import Path
+
+_SHA = re.compile(r"[0-9a-f]{64}")
 
 
 class BlobStore:
@@ -11,10 +14,15 @@ class BlobStore:
         self.root = Path(root)
 
     def path(self, sha: str) -> Path:
+        if not isinstance(sha, str) or not _SHA.fullmatch(sha):  # never build a path from unvalidated text
+            raise ValueError("invalid blob id")
         return self.root / sha[:2] / sha[2:4] / sha
 
     def exists(self, sha: str) -> bool:
-        return self.path(sha).is_file()
+        try:
+            return self.path(sha).is_file()
+        except ValueError:
+            return False
 
     def put_bytes(self, data: bytes) -> str:
         sha = hashlib.sha256(data).hexdigest()

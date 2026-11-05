@@ -167,7 +167,7 @@ def test_core_does_not_import_adapters():
     src = Path(__file__).parent.parent / "src" / "infoparser"
     bad = []
     for p in src.rglob("*.py"):
-        if "adapters" in p.parts or p.name == "cli.py":
+        if {"adapters", "dashboard"} & set(p.parts) or p.name in ("cli.py", "run_all.py"):  # edge layers
             continue
         for n in ast.walk(ast.parse(p.read_text())):
             mods = [a.name for a in n.names] if isinstance(n, ast.Import) else [n.module or ""] if isinstance(n, ast.ImportFrom) else []
