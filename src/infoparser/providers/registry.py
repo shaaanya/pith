@@ -14,7 +14,7 @@ import importlib
 import threading
 from dataclasses import asdict
 
-from ..config import Config
+from ..config import Config, ConfigError
 from . import egress
 from .ports import Backend, RemoteBlocked
 
@@ -42,20 +42,20 @@ IMPLICIT_LAST = {"text"}  # capabilities whose chains always end with the heuris
 def _build(name: str, spec: dict) -> Backend:
     t = spec.get("type")
     if t not in TYPES:
-        raise ValueError(f"backend {name!r}: unknown type {t!r} (known: {sorted(TYPES)})")
+        raise ConfigError(f"backend {name!r}: unknown type {t!r} (known: {sorted(TYPES)})")
     mod, cls = TYPES[t].split(":")
     try:
         klass = getattr(importlib.import_module(mod), cls)
     except ImportError as e:
-        raise ValueError(f"backend {name!r}: type {t!r} unavailable: {e}") from e
+        raise ConfigError(f"backend {name!r}: type {t!r} unavailable: {e}") from e
     try:
         b = klass.from_spec(name, spec)
     except (KeyError, TypeError, ValueError) as e:
-        raise ValueError(f"backend {name!r}: bad spec ({type(e).__name__}: {e})") from e
+        raise ConfigError(f"backend {name!r}: bad spec ({type(e).__name__}: {e})") from e
     b.type = t
     for cap, method in CAPABILITY_METHOD.items():
         if getattr(b.capabilities, cap) and not callable(getattr(b, method, None)):
-            raise ValueError(f"backend {name!r}: capability {cap!r} is not implemented by "
+            raise ConfigError(f"backend {name!r}: capability {cap!r} is not implemented by "
                              f"type {t!r} (it has no {method}())")
     if b.locality == "remote":
         egress.wrap_remote(b)
@@ -93,7 +93,7 @@ class Registry:
         for task, refs in reg.tasks.items():  # fail at load, and build overrides eagerly
             for ref in refs:
                 if ref.split(":", 1)[0] not in backends:
-                    raise ValueError(f"task {task!r}: unknown backend {ref!r}")
+                    raise ConfigError(f"task {task!r}: unknown backend {ref!r}")
                 reg._lookup(ref)
         return reg
 
