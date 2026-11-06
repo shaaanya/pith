@@ -56,7 +56,8 @@ def _stage(conn, iid, stage, t0, detail="", model=None, level="info"):
          int((time.monotonic() - t0) * 1000), model))
 
 
-def _profile(ct, hints):
+def profile_of(ct, hints):
+    """Distillation profile for a content type (code/pdf default to their own profiles)."""
     p = profile_for(ct, hints)
     return {"code": "programming", "pdf": "paper"}.get(ct, p) if p == "generic" else p
 
@@ -150,7 +151,7 @@ def _save(s, row, ex, ct, distilled):
     return sid, item_ids
 
 
-def _enrich(s, inbox_id, item_ids, cands):
+def enrich(s, inbox_id, item_ids, cands):
     """Best-effort enrichment: a failure is logged, never fails the item."""
     steps = (("entities", lambda: entities.apply(s.conn, item_ids, cands) or len(item_ids)),
              ("embed", lambda: index.embed_pending(s)),
@@ -195,13 +196,13 @@ def _process(services, inbox_id: str):
         segs = [SegmentIn(i, t, loc) for i, (t, loc) in enumerate(_pieces(ex))]
         _stage(s.conn, inbox_id, "chunk", t0, f"{len(segs)} segments")
         t0 = time.monotonic()
-        cands, by = distill(s.registry, segs, profile=_profile(ct, row["user_context"]),
+        cands, by = distill(s.registry, segs, profile=profile_of(ct, row["user_context"]),
                             title=ex.title or "", user_context=row["user_context"])
         _stage(s.conn, inbox_id, "distill", t0, f"{len(cands)} items", model=by)
         t0 = time.monotonic()
         sid, item_ids = _save(s, row, ex, ct, (segs, cands, by))
         _stage(s.conn, inbox_id, "save", t0, sid)
-        _enrich(s, inbox_id, item_ids, cands)
+        enrich(s, inbox_id, item_ids, cands)
         return Processed()
     except NeedsClarificationError as e:
         return NeedsClarification(e.reason)

@@ -21,7 +21,8 @@ _SUMMARY_SCHEMA = {"type": "object", "required": ["summary"],
                    "properties": {"summary": {"type": "string", "minLength": 1}}}
 
 
-def _system(profile, title, user_context):
+def system_prompt(profile, title, user_context):
+    """System prompt telling a model how to distil one source."""
     return (f"You distill a source titled {title!r} into knowledge items (profile: {profile}). "
             f"User context: {user_context or 'none'}. Only state what the text says; quotes "
             "must be copied verbatim from the text. "
@@ -73,19 +74,27 @@ def _drop_null_quotes(o):
         _drop_null_quotes(v)
 
 
+def parse_reply(text, schema, lenient=False, profile=None):
+    """Parse + validate one model reply -> (obj, None) if acceptable else (obj_or_None, reason).
+
+    Shared by the backend loop and host mode so both apply the same acceptance rules."""
+    obj = _parse(text)
+    _drop_null_quotes(obj)
+    err = "not valid JSON" if obj is None else validate(obj, schema)
+    # only the final heuristic fallback may answer in the generic shape; normalize() adapts it
+    if lenient and obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:
+        err = None
+    if err is None and profile == "collection" and not lenient and not obj.get("entries"):
+        err = "'entries' must not be empty"
+    return obj, err
+
+
 def _ask(backend, msgs, schema, lenient=False, profile=None):
     """One generate + one repair retry. Returns (obj, GenResult) or (None, None).
     ProviderError propagates."""
     for _ in range(2):
         res = backend.generate(msgs, json_schema=schema)
-        obj = _parse(res.text)
-        _drop_null_quotes(obj)
-        err = "not valid JSON" if obj is None else validate(obj, schema)
-        # only the final heuristic fallback may answer in the generic shape; normalize() adapts it
-        if lenient and obj is not None and err and validate(obj, SCHEMAS["generic"]) is None:
-            err = None
-        if err is None and profile == "collection" and not lenient and not obj.get("entries"):
-            err = "'entries' must not be empty"
+        obj, err = parse_reply(res.text, schema, lenient, profile)
         if err is None:
             return obj, res
         msgs = [*msgs, {"role": "assistant", "content": res.text},
@@ -144,7 +153,7 @@ def _reduce(backend, system, parts, last):
 
 
 def _run_backend(backend, segments, profile, title, user_context):
-    schema, system = SCHEMAS[profile], _system(profile, title, user_context)
+    schema, system = SCHEMAS[profile], system_prompt(profile, title, user_context)
     lenient = backend.type == "heuristic"
     budget = max(500, backend.capabilities.context_window * _CHARS_PER_TOKEN - _OVERHEAD)
     if sum(len(s.text) + 2 for s in segments) <= budget:

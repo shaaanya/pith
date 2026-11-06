@@ -162,6 +162,24 @@ def _ask(a):
         print(f"egress: text sent to remote backend(s): {', '.join(ans.egress)}", file=sys.stderr)
 
 
+def _host(fn, a):
+    from infoparser import host
+    try:
+        return fn(host, _services(a), a)
+    except host.HostError as e:
+        sys.exit(f"error: {e}")
+
+
+def _host_prompt(a):
+    print(json.dumps(_host(lambda h, s, a: h.prompt(s, a.id, ack=a.ack_host), a), indent=2))
+
+
+def _host_apply(a):
+    reply = sys.stdin.read() if a.file in (None, "-") else Path(a.file).read_text(encoding="utf-8")
+    n = _host(lambda h, s, a: h.apply(s, a.id, a.sha, reply, a.agent), a)
+    print(f"saved {n} items")
+
+
 def _show(a):
     from infoparser.store.knowledge import get_item
     s = _services(a)
@@ -394,6 +412,11 @@ COMMANDS = {
     "search": (_search, [_arg("query", nargs="+"), _arg("--limit", type=int, default=10),
                          _arg("--mode", choices=["fts", "hybrid"], default="hybrid")]),
     "ask": (_ask, [_arg("question", nargs="+"), _JSON, _arg("--k", type=int, default=8)]),
+    "host-prompt": (_host_prompt, [_arg("id", help="source id"),
+                                   _arg("--ack-host", action="store_true",
+                                        help="the host agent's model may see this text")]),
+    "host-apply": (_host_apply, [_arg("id", help="source id"), _arg("file", nargs="?"),
+                                 _arg("--sha", required=True), _arg("--agent", default="agent")]),
     "show": (_show, [_arg("id")]),
     "reindex": (_reindex, [_arg("--prune-old", action="store_true")]),
     "doctor": (_doctor, [_JSON, _arg("--full", action="store_true",
