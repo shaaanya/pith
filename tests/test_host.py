@@ -63,3 +63,10 @@ def test_inbox_id_accepted(svc, src):
     iid = svc.conn.execute("SELECT id FROM inbox_items").fetchone()["id"]
     assert host.prompt(svc, iid, ack=True)["source_id"] == src["id"]
     assert host.apply(svc, iid, src["text_sha256"], json.dumps(GOOD)) == 3
+
+
+def test_ask_retrieval_only_never_calls_a_generator(svc, src, monkeypatch):
+    from infoparser.retrieval.ask import ask
+    monkeypatch.setattr(svc.registry, "generators", lambda task: pytest.fail("generator used"))
+    a = ask(svc, "zebras sleep", retrieval_only=True)
+    assert a.mode == "retrieval-only" and a.retrieved

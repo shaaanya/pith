@@ -144,7 +144,7 @@ def _search(a):
 
 def _ask(a):
     from infoparser.retrieval.ask import ask
-    ans = ask(_services(a), " ".join(a.question), limit=a.k)
+    ans = ask(_services(a), " ".join(a.question), limit=a.k, retrieval_only=a.retrieval_only)
     if a.json:
         print(json.dumps(ans.to_dict(), indent=2))
         return
@@ -411,7 +411,9 @@ COMMANDS = {
     "worker": (_worker, [_ONCE]),
     "search": (_search, [_arg("query", nargs="+"), _arg("--limit", type=int, default=10),
                          _arg("--mode", choices=["fts", "hybrid"], default="hybrid")]),
-    "ask": (_ask, [_arg("question", nargs="+"), _JSON, _arg("--k", type=int, default=8)]),
+    "ask": (_ask, [_arg("question", nargs="+"), _JSON, _arg("--k", type=int, default=8),
+                   _arg("--retrieval-only", action="store_true",
+                        help="numbered excerpts only; call no answer backend (host-agent mode)")]),
     "host-prompt": (_host_prompt, [_arg("id", help="source id"),
                                    _arg("--ack-host", action="store_true",
                                         help="the host agent's model may see this text")]),

@@ -174,8 +174,10 @@ def _try_backend(a: Answer, g, ex: list[Excerpt], question: str) -> bool:
     return True
 
 
-def ask(services, question: str, *, limit: int = 8) -> Answer:
-    """Answer `question` from saved excerpts; degrades to retrieval-only, never raises."""
+def ask(services, question: str, *, limit: int = 8, retrieval_only: bool = False) -> Answer:
+    """Answer `question` from saved excerpts; degrades to retrieval-only, never raises.
+
+    `retrieval_only` never calls a generator (host-agent mode: the caller writes the answer)."""
     try:
         res = search_ex(services, question, limit=limit)
     except Exception as e:  # pylint: disable=broad-exception-caught  # retrieval must not crash the CLI
@@ -188,6 +190,8 @@ def ask(services, question: str, *, limit: int = 8) -> Answer:
                warnings=list(res.warnings), egress=list(res.egress))
     if not ex:
         a.message = "no matching excerpts found"
+        return a
+    if retrieval_only:
         return a
     try:
         gens = services.registry.generators("answer")
