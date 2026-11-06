@@ -35,6 +35,8 @@ textarea{width:100%;min-height:70px}
 mark{background:none;color:var(--acc);font-weight:600}
 pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit}
 .q{border-left:3px solid var(--line);padding-left:10px;margin:6px 0}
+.lbl{min-width:210px;color:var(--mut)}
+details summary{cursor:pointer;color:var(--mut)}
 #msg{position:fixed;bottom:14px;right:14px;max-width:360px}
 </style>
 </head>
@@ -96,8 +98,8 @@ async function api(method, path, body) {
 }
 const act = (fn) => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message, true); } };
 
-const views = { inbox, search: library, ask, topics, duplicates, digest, status };
-const labels = { inbox: "Inbox", search: "Library", ask: "Ask", topics: "Topics", duplicates: "Duplicates", digest: "Digest", status: "Status" };
+const views = { inbox, search: library, ask, topics, duplicates, digest, status, settings };
+const labels = { inbox: "Inbox", search: "Library", ask: "Ask", topics: "Topics", duplicates: "Duplicates", digest: "Digest", status: "Status", settings: "Settings" };
 let current = "inbox";
 function show(name, arg) {
   current = name;
@@ -242,6 +244,102 @@ async function status() {
         h("div", {}, `${t}: ${x.remote.join(", ")} ${x.blocked ? "(blocked)" : "(active)"}; would send ${x.data}`)),
       ...p.egress.logged.map((e) => h("div", {}, `${e.backend}: ${e.calls} call(s), ${e.bytes_sent} bytes sent`)),
       h("p", { class: "mut" }, p.egress.note)));
+}
+// Settings: models, task routing, privacy. Edits a draft in memory; Save writes the config file and applies it live.
+async function settings() {
+  const c = await api("GET", "/api/config");
+  const found = (await api("GET", "/api/providers/detect")).providers;
+  const draft = {
+    backends: Object.fromEntries(Object.entries(c.backends).map(([n, b]) => [n, b.spec])),
+    editable: Object.fromEntries(Object.entries(c.backends).map(([n, b]) => [n, b.editable])),
+    tasks: c.tasks, allow_remote: c.allow_remote,
+  };
+  const NUM = new Set(["context_window", "timeout", "max_tokens"]);
+  const box = h("div", {});
+  const field = (spec, key, label, list) => {
+    const i = h("input", { class: "grow", value: spec[key] ?? "", "aria-label": label, list: list || null });
+    i.addEventListener("input", () => {
+      const v = i.value.trim();
+      if (!v) delete spec[key]; else spec[key] = NUM.has(key) && !isNaN(Number(v)) ? Number(v) : v;
+    });
+    return h("label", { class: "row" }, h("span", { class: "lbl" }, label), i);
+  };
+  const where = (spec) => {
+    const s = h("select", { "aria-label": "Where it runs" }, [["", "auto (local if the URL is localhost)"], ["local", "local"], ["remote", "remote"]].map(([v, t]) => h("option", { value: v }, t)));
+    s.value = spec.locality || "";
+    s.addEventListener("change", () => { if (s.value) spec.locality = s.value; else delete spec.locality; });
+    return h("label", { class: "row" }, h("span", { class: "lbl" }, "Where it runs"), s);
+  };
+  const backendCard = (name) => {
+    const spec = draft.backends[name];
+    const head = h("div", { class: "row" }, h("b", {}, name), badge(spec.type, ""), h("span", { class: "grow" }),
+      h("button", { class: "btn sec", onclick: () => { delete draft.backends[name]; render(); } }, "Remove"));
+    if (spec.subscription) return h("div", { class: "card" }, head, field(spec, "model", spec.subscription === "codex" ? "Model (required)" : "Model (optional)"),
+      h("p", { class: "warn" }, "Remote: text is sent to " + spec.subscription + "'s vendor through your logged-in " + spec.subscription + " CLI (no API key). Blocked until you allow remote backends below."));
+    if (!draft.editable[name]) return h("div", { class: "card" }, head, h("p", { class: "mut" }, "This type can only be changed in the config file."));
+    const list = "models-" + name, dl = h("datalist", { id: list });
+    const rows = [];
+    if (spec.type === "openai_compat") {
+      rows.push(field(spec, "base_url", "Server URL"), field(spec, "model", "Model", list), field(spec, "embed_model", "Embedding model (optional)", list),
+        field(spec, "context_window", "Context size (tokens)"), where(spec), field(spec, "api_key_env", "API key env var (optional)"),
+        h("div", { class: "row" }, h("button", { class: "btn sec", onclick: act(async () => {
+          const r = await api("GET", "/api/models?base_url=" + encodeURIComponent(spec.base_url || ""));
+          clear(dl); put(dl, r.models.map((m) => h("option", { value: m })));
+          toast(r.models.length + " model(s) found; click the Model field to pick one");
+        }) }, "Detect models"), dl));
+    } else if (spec.type === "anthropic") {
+      rows.push(field(spec, "model", "Model"), field(spec, "api_key_env", "API key env var"), field(spec, "max_tokens", "Max output tokens (optional)"),
+        h("p", { class: "warn" }, "Remote: text is sent to the provider. Blocked until you allow remote backends below. The key is read from that environment variable of the shell that launched InfoParser; it is never stored here."));
+    }
+    return h("div", { class: "card" }, head, ...rows);
+  };
+  const uniq = (base) => { let n = base, i = 2; while (n in draft.backends) n = base + i++; return n; };
+  const add = (key) => () => { const n = uniq(key); draft.backends[n] = { ...c.presets[key] }; draft.editable[n] = true; render(); };
+  const addSub = (kind) => () => { const n = uniq(kind + "_sub"); draft.backends[n] = { type: "cli", subscription: kind }; draft.editable[n] = true; render(); };
+  const subRow = (p) => {
+    const ready = p.installed && p.logged_in;
+    const state = !p.installed ? "not installed" : p.logged_in === false ? "not logged in: run `" + p.id + (p.id === "codex" ? " login" : " auth login") + "` in a terminal, then reload" : p.logged_in ? "logged in" : "login unknown";
+    return h("div", { class: "row" }, h("b", {}, p.id), h("span", { class: "mut grow" }, state + (p.note ? " · " + p.note : "")),
+      p.id in c.subscriptions ? h("button", { class: "btn sec", disabled: !ready, onclick: addSub(p.id) }, "+ Use my " + p.id + " subscription") : null);
+  };
+  const taskRow = (t) => {
+    const i = h("input", { class: "grow", value: (draft.tasks[t] || []).join(", "), "aria-label": t });
+    i.addEventListener("input", () => {
+      const v = i.value.split(",").map((x) => x.trim()).filter(Boolean);
+      if (v.length) draft.tasks[t] = v; else delete draft.tasks[t];
+    });
+    return h("label", { class: "row" }, h("span", { class: "lbl" }, t), i);
+  };
+  const remote = h("input", { type: "checkbox", checked: draft.allow_remote });
+  remote.addEventListener("change", () => {
+    if (remote.checked && !confirm("Allow text from your library to be sent to remote (hosted) backends?")) { remote.checked = false; return; }
+    draft.allow_remote = remote.checked;
+  });
+  const save = act(async () => {
+    for (const [n, s] of Object.entries(draft.backends)) if (draft.editable[n] && s.type !== "heuristic" && s.subscription !== "claude" && !s.model) throw new Error(n + ": choose a model first");
+    await api("POST", "/api/config", { backends: draft.backends, tasks: draft.tasks, allow_remote: draft.allow_remote });
+    toast("saved and applied"); show("settings");
+  });
+  function render() {
+    clear(box);
+    put(box, h("div", { class: "card" }, h("b", {}, "Models"),
+        h("p", { class: "mut" }, "Without a model InfoParser still works (simple extractive mode). Add a model server, pick a model, save."),
+        h("div", { class: "row" }, h("button", { class: "btn sec", onclick: add("local") }, "+ Local server (Ollama, LM Studio…)"),
+          h("button", { class: "btn sec", onclick: add("cloud") }, "+ Anthropic (hosted)"))),
+      h("div", { class: "card" }, h("b", {}, "Use my subscription (no API key)"),
+        h("p", { class: "mut" }, "Runs your own logged-in CLI as a text model. Text only: embeddings, OCR and transcription still need a local model."),
+        ...found.filter((p) => p.kind === "subscription").map(subRow)),
+      ...Object.keys(draft.backends).map(backendCard),
+      h("details", { class: "card" }, h("summary", {}, "Task routing (optional)"),
+        h("p", { class: "mut" }, "Comma-separated backend names tried in order, e.g. local, cloud. Empty = every backend above, in order."),
+        ...c.task_names.map(taskRow)),
+      h("div", { class: "card" }, h("label", { class: "row" }, remote, h("span", {}, "Allow remote (hosted) backends to receive my text")),
+        h("p", { class: "mut" }, "Off by default: nothing leaves this machine.")),
+      h("div", { class: "row" }, h("button", { class: "btn", onclick: save }, "Save"),
+        h("span", { class: "mut" }, "Applies immediately. Stored in " + c.path + " (hand-written comments are not preserved; a .bak copy is kept).")));
+  }
+  render();
+  put(main, box);
 }
 addEventListener("keydown", (e) => {
   if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); show("search"); }

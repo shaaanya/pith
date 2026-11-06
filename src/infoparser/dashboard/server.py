@@ -26,10 +26,12 @@ from http.server import ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
+from infoparser import settings
 from infoparser.dashboard import api
 from infoparser.inbox.ingest import LOOPBACK, QuietHandler, load_token
 from infoparser.inbox.service import Inbox
 from infoparser.jobs import JobQueue
+from infoparser.providers.registry import Registry
 from infoparser.store.db import connect
 
 MAX_JSON = 1_000_000
@@ -278,6 +280,12 @@ def _reprocess(h, svc, x, _q):
     return api.item_reprocess(svc, x[1])
 
 
+def _config_save(h, svc, _x, _q):
+    new = settings.save(svc.cfg, h.json_body())
+    h.server.apply_config(new)
+    return settings.view(new)
+
+
 RESPONDED = object()  # sentinel: the handler already sent its own response
 
 
@@ -304,6 +312,10 @@ _ROUTES = (
     ("/api/(topics|duplicates|digest|privacy|state)",
      {"GET": lambda h, s, x, q: getattr(api, x[1])(s)}, False),
     ("/api/blob/([^/]+)", {"GET": _blob}, True),
+    ("/api/config", {"GET": lambda h, s, x, q: settings.view(s.cfg), "POST": _config_save}, True),
+    ("/api/providers/detect", {"GET": lambda h, s, x, q: {"providers": settings.detect()}}, True),
+    ("/api/models", {"GET": lambda h, s, x, q: {"models": settings.list_models(q.get("base_url"))}},
+     True),
 )
 
 
@@ -314,7 +326,19 @@ class DashboardServer(ThreadingHTTPServer):
 
     def __init__(self, services, host: str, port: int, token: str):
         self.services, self.token, self.bind_host, self.index = services, token, host, _index_html()
+        self.listeners = []  # called with the new Registry after a settings save
         super().__init__((host, port), _Handler)
+
+    def apply_config(self, new) -> None:
+        """Make a saved (already validated) config live: backends, task routing, allow_remote.
+        In-flight calls finish on the old registry; the next call uses the new one."""
+        reg = Registry.from_config(new)
+        cfg = self.services.cfg
+        cfg.backends, cfg.tasks, cfg.allow_remote, cfg.source = (
+            new.backends, new.tasks, new.allow_remote, new.source)
+        self.services.registry = reg
+        for fn in self.listeners:
+            fn(reg)
 
 
 def make_server(services, host: str = "127.0.0.1", port: int = 8777,

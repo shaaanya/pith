@@ -93,9 +93,11 @@ class _Threads:
                 c.close()
 
 
-def _worker(cfg, stop, conns) -> None:
-    """Thread body: process jobs with its own connection until `stop`."""
+def _worker(cfg, stop, conns, live) -> None:
+    """Thread body: process jobs with its own connection until `stop`. Its Services is added to
+    `live` so a settings save can swap the registry."""
     s = build(cfg)
+    live.append(s)
     conns.append(s.conn)
     Worker(s.conn, s.inbox, s.queue, lambda i: runner.process(s, i),
            worker_id="run").run_forever(0.5, stop)
@@ -133,7 +135,10 @@ def run(cfg, port: int = 8777, *,  # pylint: disable=too-many-arguments  # publi
             server = _make_dashboard(main_svc, port)
             info["port"], info["token"] = server.server_address[1], server.token
             info["url"] = f"http://127.0.0.1:{info['port']}/?token={server.token}"
-        starts = [threads.add("worker", lambda conns: _worker(cfg, stop, conns))]
+        live: list = []
+        if server:  # a settings save swaps the model registry of the worker too, no restart
+            server.listeners.append(lambda reg: [setattr(x, "registry", reg) for x in list(live)])
+        starts = [threads.add("worker", lambda conns: _worker(cfg, stop, conns, live))]
         if watch:
             starts.append(threads.add("watcher", lambda conns: _watcher(cfg, stop, conns)))
         if server:

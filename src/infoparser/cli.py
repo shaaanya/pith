@@ -48,11 +48,16 @@ def _in_use(fn):
     return guarded
 
 
+def _make_dirs(cfg):
+    """Create the home layout (idempotent); `init` and `run` both use it."""
+    for d in (cfg.home, cfg.blobs_dir, cfg.vault_dir, *cfg.watch_dirs[:1]):
+        Path(d).mkdir(parents=True, exist_ok=True)
+    Path(cfg.home).chmod(0o700)
+
+
 def _init(a):
     s = _services(a)
-    for d in (s.cfg.blobs_dir, s.cfg.vault_dir, *s.cfg.watch_dirs[:1]):
-        Path(d).mkdir(parents=True, exist_ok=True)
-    Path(s.cfg.home).chmod(0o700)
+    _make_dirs(s.cfg)
     print(f"initialized {s.cfg.home}")
 
 
@@ -329,13 +334,19 @@ def _run(a):
     import signal
     import threading
     from infoparser import run_all
+    import webbrowser
     cfg = _cfg(a)
+    _make_dirs(cfg)
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    # a terminal launch opens the browser; launchd/cron (no TTY) does not
+    opening = sys.stdout.isatty() if a.open is None else a.open
 
     def ready(info):
         if info["url"]:
-            print(f"dashboard: {info['url']}\n(open this URL once; Ctrl-C to stop)", flush=True)
+            print(f"dashboard: {info['url']}\n(Ctrl-C to stop)", flush=True)
+            if opening:
+                webbrowser.open(info["url"])
         else:
             print("running (no dashboard); Ctrl-C to stop", flush=True)
     try:
@@ -405,7 +416,9 @@ COMMANDS = {
                   "never fetched)")]),
     "serve-http": (_serve_http, []),
     "run": (_run, [_PORT, _arg("--no-dashboard", action="store_true"),
-                   _arg("--no-watch", action="store_true")]),
+                   _arg("--no-watch", action="store_true"),
+                   _arg("--open", action=argparse.BooleanOptionalAction, default=None,
+                        help="open the browser (default: only when run in a terminal)")]),
     "dashboard": (_dashboard, [_PORT]),
 }
 
@@ -422,7 +435,7 @@ def build_parser():
     _location_flags(common, "sub")
     parser = argparse.ArgumentParser(prog="infoparser")
     _location_flags(parser, "top")
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub = parser.add_subparsers(dest="cmd")  # no subcommand: main() runs `run`
     for name, (handler, arguments) in COMMANDS.items():
         cmd = sub.add_parser(name, parents=[common])
         for flags, kw in arguments:
@@ -440,7 +453,11 @@ def build_parser():
 
 def main(argv=None):
     """Entry point."""
-    args = build_parser().parse_args(argv)
+    argv = sys.argv[1:] if argv is None else list(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.cmd is None:  # bare `infoparser` (maybe with --home/--config): launch everything
+        args = parser.parse_args([*argv, "run"])
     try:
         args.f(args)
     except ConfigError as e:

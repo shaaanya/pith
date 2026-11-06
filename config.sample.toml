@@ -1,5 +1,6 @@
 # Copy anywhere and pass it with `infoparser --config PATH ...` or INFOPARSER_CONFIG=PATH.
-# No config file is searched for automatically; without one the defaults apply (heuristic only).
+# Without --config/INFOPARSER_CONFIG, <home>/config.toml is used if it exists (the dashboard's Settings
+# tab writes it; its `home` key is ignored there). Without any file the defaults apply (heuristic only).
 # Env overrides: INFOPARSER_HOME, INFOPARSER_CONFIG, INFOPARSER_HTTP_TOKEN,
 # INFOPARSER_YT_DLP, INFOPARSER_FFMPEG. See docs/configuration.md for every key.
 home = "~/InfoParser"
@@ -60,6 +61,32 @@ type = "heuristic"
 # prompt_via = "stdin"
 # timeout = 300
 # locality = "local"            # "remote" if the command sends text off this machine
+
+# Use your SUBSCRIPTION instead of an API key: run the vendor's own, already logged-in CLI as a text
+# backend (log in once in a terminal: `claude auth login` / `codex login` / `gemini`). These send your
+# text to the vendor, so they are "remote" and need [privacy] allow_remote = true. Tools are disabled
+# so the agent only answers. Do NOT add --bare to claude: it ignores the subscription login.
+# [backends.claude_sub]          # verified live
+# type = "cli"
+# command = ["claude", "-p", "--tools", "", "--no-session-persistence"]
+# locality = "remote"
+# timeout = 300
+#
+# [backends.codex_sub]           # verified live; pick a model your plan supports (a cheap one is fine)
+# type = "cli"
+# command = ["codex", "exec", "-m", "REPLACE_WITH_CODEX_MODEL", "-c", "model_reasoning_effort=low",
+#            "--sandbox", "read-only", "--ephemeral", "--skip-git-repo-check", "--color", "never"]
+# locality = "remote"
+# timeout = 300
+#
+# [backends.gemini_sub]          # NOT WORKING for personal Google accounts (gemini 0.67.0 answers
+#                                # "IneligibleTierError ... migrate to Antigravity"). May work with a
+#                                # Workspace/Code Assist licence or a newer CLI: UNVERIFIED. Headless
+#                                # runs also need GEMINI_CLI_TRUST_WORKSPACE=true in the environment.
+# type = "cli"
+# command = ["gemini", "-p", "", "--approval-mode", "plan"]
+# locality = "remote"
+# timeout = 300
 
 # Task routing: ordered fallback lists, "name" or "name:model".
 [tasks]

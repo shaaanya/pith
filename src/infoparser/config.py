@@ -66,16 +66,30 @@ class Config:  # pylint: disable=too-many-instance-attributes  # flat settings r
     http_token: str | None = None  # explicit token required for a non-loopback bind
     digest_interval_days: int = 7
     digest_max_items: int = 20
+    source: Path | None = None  # the config file this was loaded from (None: defaults only)
+
+
+def _find_config(env: Mapping) -> Path | None:
+    """INFOPARSER_CONFIG, else <home>/config.toml when it exists (the file the dashboard edits)."""
+    if env.get("INFOPARSER_CONFIG"):
+        return Path(env["INFOPARSER_CONFIG"])
+    found = Path(env.get("INFOPARSER_HOME") or "~/InfoParser").expanduser() / "config.toml"
+    return found if found.is_file() else None
 
 
 def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
-    """Load the config file (path, else INFOPARSER_CONFIG, else none) with env overrides."""
+    """Load the config file (path, else INFOPARSER_CONFIG, else <home>/config.toml, else none)
+    with env overrides. A <home>/config.toml found that way always lives in its own home: its
+    `home` key is ignored."""
     env = os.environ if env is None else env
-    path = path or (Path(env["INFOPARSER_CONFIG"]) if env.get("INFOPARSER_CONFIG") else None)
+    discovered = path is None and not env.get("INFOPARSER_CONFIG")
+    path = path or _find_config(env)
     try:
         data = tomllib.loads(Path(path).expanduser().read_text(encoding="utf-8")) if path else {}
     except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as e:
         raise ConfigError(f"cannot read config {path}: {e}") from e
+    if discovered:
+        data.pop("home", None)
     if not isinstance(data.get("home", ""), str):
         raise ConfigError(f"home must be a path string, got {data['home']!r}")
     home = Path(env.get("INFOPARSER_HOME") or data.get("home") or "~/InfoParser").expanduser()
@@ -111,4 +125,5 @@ def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
         max_fetch_bytes=_int(data, "limits", "max_fetch_bytes", 50_000_000, 1),
         yt_dlp_binary=env.get("INFOPARSER_YT_DLP") or _str(data, "media", "yt_dlp", "yt-dlp"),
         ffmpeg_binary=env.get("INFOPARSER_FFMPEG") or _str(data, "media", "ffmpeg", "ffmpeg"),
+        source=Path(path).expanduser() if path else None,
     )

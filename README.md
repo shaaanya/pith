@@ -15,6 +15,16 @@ Status: Python 3.13, standard library plus `numpy`. The test suite and a clean-h
 ## Install and first run
 
     uv sync
+    uv run infoparser          # creates ~/InfoParser, starts worker + folder watcher + dashboard, opens the browser
+
+That one command is `infoparser run` (Ctrl-C stops it). Choose models in the dashboard's **Settings** tab
+(add a local server such as Ollama, click "Detect models", pick one, Save; it applies immediately and is
+stored in `~/InfoParser/config.toml`). Hosted backends read their API key from an environment variable of
+the launching shell; keys are never typed into the UI. Backends that run a program (`cli`, `tesseract`,
+`whisper_cpp`) are edited in the config file only.
+
+The same things from the command line:
+
     uv run infoparser init                       # creates ~/InfoParser (or $INFOPARSER_HOME)
     uv run infoparser submit "https://example.com/some-article"
     uv run infoparser submit "a note to remember" --context "why I saved it"

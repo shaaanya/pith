@@ -1,7 +1,12 @@
 # Configuration
 
-Configuration is one optional TOML file. There is no automatic search for it: pass `--config PATH` (before
-or after the subcommand) or set `INFOPARSER_CONFIG=PATH`. Without a file every default below applies, which
+Configuration is one optional TOML file. Order: `--config PATH` (before or after the subcommand), then
+`INFOPARSER_CONFIG=PATH`, then `<home>/config.toml` if it exists (a `home` key inside that file is ignored).
+The dashboard's Settings tab edits `[backends]`, `[tasks]` and `[privacy] allow_remote` in whichever file was
+loaded (creating `<home>/config.toml` if none), keeps all other keys, drops comments, keeps a `.bak`, and
+applies the change to the running process. It only adds/changes `openai_compat`, `anthropic` and `heuristic`
+backends; program-running types stay file-only. "Detect models" queries `<base_url>/models` on localhost only.
+A save is validated before the file is replaced. UNVERIFIED: detection against a real Ollama/LM Studio. Without a file every default below applies, which
 means: home `~/InfoParser`, no model backends (the `heuristic` fallback only), nothing remote. Start from
 [config.sample.toml](../config.sample.toml); it loads as-is, and its model names are placeholders
 (`REPLACE_WITH_...`) that you must replace. `tests/test_config_sample.py` checks that the sample loads and builds a registry.
