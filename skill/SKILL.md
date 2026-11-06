@@ -12,8 +12,8 @@ All commands are `infoparser <cmd>` (add `--home DIR` for a non-default home). D
 1. `infoparser submit "<text or URL>"` (or `--file PATH`, optional `--context "why I saved this"`), then `infoparser worker --once` until the inbox is processed. Items now exist (extractive heuristic) and are searchable.
 2. Upgrade them with your own model (optional, recommended):
    - `infoparser host-prompt SOURCE_ID --ack-host` prints JSON: `system`, `schema`, `text`, `text_sha256`.
-   - `host-prompt` prints the whole text: redirect it to a file and read it in parts if long. Write ONLY JSON matching `schema` to a file; quotes must be copied verbatim from `text`.
-   - `infoparser host-apply SOURCE_ID --sha <text_sha256> --agent <your name> FILE`. On `error: reply rejected: ...`, fix the JSON and retry; nothing is changed on error.
+   - `host-prompt` prints the whole text; if your tool truncates it, skip the upgrade and tell the user. Produce ONLY JSON matching `schema`; quotes must be copied verbatim from `text`.
+   - Apply by piping the JSON in (no file needed): `infoparser host-apply SOURCE_ID --sha <text_sha256> --agent <your name> <<'EOF'` followed by the JSON and `EOF` (a FILE argument also works). On `error: reply rejected: ...`, fix the JSON and retry; nothing is changed on error.
 
 `SOURCE_ID` may be the inbox id that `submit`/`inbox` print. `--ack-host` is required unless `[privacy] allow_remote = true`: it states that the document text goes to your model. Ask the user before using it on private material.
 
