@@ -19,3 +19,12 @@ not a commitment. Verification gaps are in [limitations.md](limitations.md).
 - An email adapter and a shipped Telegram bot adapter (a recipe exists).
 - An SSRF allow/deny policy for submitted URLs and a guard on public-to-private redirects.
 - Multi-user, sync and hosting are non-goals.
+
+## Deferred to V2: subscriptions and host-agent mode
+
+Decision (2026-11-07): the MVP targets API keys and local models only. Already built, kept, but not part of
+the MVP promise and not to be extended until V2: the `claude_sub` / `codex_sub` cli presets and the dashboard
+"Use my subscription" panel (`settings.SUBSCRIPTIONS`), and host-agent mode (`host.py`, `host-prompt`,
+`host-apply`, `ask --retrieval-only`, `skill/SKILL.md`). They sit behind the provider ports and the CLI, so the
+rest of the system does not depend on them. V2 plan: an unattended daemon spawns the subscription CLI per item
+(option 1), with an MCP server for the interactive side.
