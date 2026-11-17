@@ -1,7 +1,7 @@
 # Roadmap
 
 Nothing here is built. These are the gaps that were consciously left out, roughly in order of usefulness,
-not a commitment. Verification gaps are in [limitations.md](limitations.md).
+not a commitment. Verification gaps are in limitations.md.
 
 - Verify the unverified paths first: a real Telegram export, a real whisper.cpp run, cloud backends with real
   credentials, a larger local model, and tuning the near-duplicate thresholds against a real embedding model.

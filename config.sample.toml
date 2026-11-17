@@ -53,8 +53,7 @@ type = "heuristic"
 # api_key_env = "ANTHROPIC_API_KEY"   # env var NAME, never the key itself
 # max_tokens = 4096
 
-# A command-line text generator (e.g. an agentic CLI used ONLY as a text backend; see
-# docs/providers.md). The prompt arrives on stdin (or as the last argument with prompt_via = "arg").
+# A command-line text generator (e.g. an agentic CLI used ONLY as a text backend). The prompt arrives on stdin (or as the last argument with prompt_via = "arg").
 # [backends.cli_text]
 # type = "cli"
 # command = ["REPLACE_WITH_COMMAND", "REPLACE_WITH_ARG"]

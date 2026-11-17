@@ -73,7 +73,7 @@ events.
 - Near-duplicate knowledge items (similar but not identical text) are linked in `relations` with type
   `duplicate` or `related`; nothing is merged or deleted. Thresholds: cosine 0.92 / 0.75 with embeddings,
   shingle Jaccard 0.8 without (the cosine thresholds are UNVERIFIED against real models, see
-  [limitations](limitations.md)).
+  limitations).
 - Plain notes are never deduplicated.
 
 ## Adapters
@@ -121,8 +121,8 @@ required and bodies over `max_fetch_bytes` get 413. Other methods get 405.
 Authentication is always required: `Authorization: Bearer <token>` or `X-Token: <token>`. The token is
 `[http] token` / `PITH_HTTP_TOKEN` if set, otherwise it is generated into `<home>/http_token`
 (mode 0600) the first time the server (or dashboard) starts. A non-loopback `bind` is refused unless a token
-is set explicitly. There is no TLS. See [deployment.md](deployment.md) for the security model and
-[recipes](recipes/) for clients.
+is set explicitly. There is no TLS. See deployment.md for the security model and
+recipes for clients.
 
 ### Dashboard
 

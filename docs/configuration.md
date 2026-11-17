@@ -113,7 +113,7 @@ Cookies are used only for `cookie_domains`, fetches to those hosts are spaced `c
 requests inside one fetch are slowed (`--sleep-requests 1`). If the session expires or the account gets a
 checkpoint, the item falls back to the clarification and says so ("your browser session ... may have expired");
 log in again in that profile and `pith retry <id>`. Reels have no caption track, so a transcription backend is
-still required. Not verified against the real sites (see `docs/limitations.md`); Instagram can change this at any time.
+still required. Not verified against the real sites; Instagram can change this at any time.
 
 ## `[backends.NAME]`
 
@@ -151,7 +151,7 @@ is honoured (a LAN server you trust), and `pith doctor` warns about it.
 | `PITH_HTTP_TOKEN` | Overrides `[http] token` |
 | `PITH_YT_DLP`, `PITH_FFMPEG` | Override `[media]` executables |
 | the variable named by a backend's `api_key_env` | API key for that backend |
-| `PITH_LIVE_CHAT_MODEL`, `PITH_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only, see [testing.md](testing.md) |
+| `PITH_LIVE_CHAT_MODEL`, `PITH_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only, see testing.md |
 
 ## Command-line flags that are not in the file
 

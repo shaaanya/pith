@@ -1,6 +1,6 @@
 """Knowledge notes: the model EXTRACTS typed units, ordinary code verifies, repairs and COMPOSES.
 
-Why this shape (measured, see docs/note-pipeline.md): a small local model asked for "a summary and
+Why this shape (measured on gemma4:e4b, see eval/notes): a small local model asked for "a summary and
 3-7 insights" writes commentary about the source. Asked only to list concrete units it keeps names,
 numbers and steps, and everything that must not be wrong (numbers, term spelling, support, layout,
 length) is then decided by code, with no extra model call.

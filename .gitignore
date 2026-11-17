@@ -8,3 +8,12 @@ __pycache__/
 build/
 dist/
 .impeccable/
+# docs/: only these are tracked; everything else (plans, specs, evaluations, notes) stays local
+docs/*
+!docs/architecture.md
+!docs/capabilities.md
+!docs/pipeline.md
+!docs/data-model.md
+!docs/inbox-contract.md
+!docs/roadmap.md
+!docs/configuration.md

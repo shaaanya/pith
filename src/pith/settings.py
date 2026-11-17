@@ -225,8 +225,7 @@ def _write(cfg: Config, target: Path, text: str) -> Config:
 CLI_PROVIDERS = {
     "claude": {"status": ["claude", "auth", "status"], "note": ""},
     "codex": {"status": ["codex", "login", "status"], "note": "pass an explicit -m model"},
-    "gemini": {"status": None, "note": "personal Google accounts are rejected by gemini-cli "
-                                       "(see docs/providers.md)"},
+    "gemini": {"status": None, "note": "personal Google accounts are rejected by gemini-cli"},
 }
 
 

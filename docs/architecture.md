@@ -82,12 +82,12 @@ embeddings, digests) can be regenerated or is a report.
 
 The pipeline never names a model. `Registry` resolves a task (`distill`, `embed`, ...) to an ordered chain
 of configured backends; the extractive `heuristic` backend is always the last text backend, so processing
-completes with no model at all. See [providers.md](providers.md) and [capabilities.md](capabilities.md).
-The decision about command-line agents is in [providers.md](providers.md#agentic-cli-assessment).
+completes with no model at all. See providers.md and [capabilities.md](capabilities.md).
+The decision about command-line agents is in providers.md.
 
 ## Dashboard and ingest servers
 
 Both are stdlib `ThreadingHTTPServer`s bound to 127.0.0.1, with a bearer token, a Host-header allow-list
 (DNS rebinding), no CORS headers, and a strict content security policy for the dashboard. They share one
 token file, `<home>/http_token`. `pith run` starts the worker, the dashboard and the folder watcher;
-the HTTP ingest endpoint is a separate command (`pith serve-http`). See [deployment.md](deployment.md).
+the HTTP ingest endpoint is a separate command (`pith serve-http`). See deployment.md.

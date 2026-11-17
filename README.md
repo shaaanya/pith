@@ -76,11 +76,13 @@ flowchart LR
 - Your reason for saving is used only if you wrote it. It is never guessed.
 - A fact the source does not support is dropped. Incomplete beats wrong.
 - On 14 synthetic cases with `gemma4:e4b`: recall 0.99, no blocking failures
-  ([results](docs/note-pipeline.md)).
+  (benchmark: `eval/notes`).
 
 ## Docs
 
-[architecture](docs/architecture.md) · [pipeline](docs/pipeline.md) · [note pipeline](docs/note-pipeline.md) ·
-[configuration](docs/configuration.md) · [limitations](docs/limitations.md)
+[architecture](docs/architecture.md) · [capabilities](docs/capabilities.md) · [pipeline](docs/pipeline.md) ·
+[inbox contract](docs/inbox-contract.md) · [data model](docs/data-model.md) ·
+[configuration](docs/configuration.md) · [roadmap](docs/roadmap.md)
 
-Python 3.13. Some paths are unverified; read the limitations first.
+Python 3.13. Some paths are not verified against the real services (for example Instagram/TikTok
+fetching and whisper transcription).

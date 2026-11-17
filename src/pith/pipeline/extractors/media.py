@@ -355,7 +355,7 @@ def _result(title, author, url, ctype, timed, sha=None, frames_error=None,
 
 def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
     if netguard.untrusted(ctx.row):
-        # yt-dlp follows its own redirects outside the guard (see docs/limitations.md): only hand
+        # yt-dlp follows its own redirects outside the guard (a documented limitation): only hand
         # it a URL whose host resolves to public addresses.
         netguard.check_url(url, allow_private=False)
     host = (urlparse(url).hostname or "").removeprefix("www.")

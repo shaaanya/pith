@@ -25,7 +25,7 @@ with no registered extractor ends in `needs_clarification`.
 | Type | How | Limits |
 |---|---|---|
 | `web` | `urllib` fetch with a User-Agent, 20 s timeout, byte cap `max_fetch_bytes`; main-content extraction with the stdlib `html.parser` (no `trafilatura`); headings, title and author kept. Reddit thread URLs use the public `.json` endpoint. | Canonical URLs are `https`; if the TLS connection fails the URL is retried exactly as submitted (this is how a local `http://` server works). Paywall/login pages, HTTP errors that look like walls, PDFs and other non-page content types go to `needs_clarification`. No JavaScript rendering. Robots rules are not consulted. |
-| `pdf` | `pypdf` if installed, else `pdftotext`; one section per page, locator `page=N`. | Scanned PDFs (no text layer) go to `needs_clarification`; there is no PDF OCR. The `pypdf` path is not exercised by the verification here (only `pdftotext`); see [limitations](limitations.md). |
+| `pdf` | `pypdf` if installed, else `pdftotext`; one section per page, locator `page=N`. | Scanned PDFs (no text layer) go to `needs_clarification`; there is no PDF OCR. The `pypdf` path is not exercised by the verification here (only `pdftotext`); see limitations. |
 | `document` | docx, pptx, xlsx via `zipfile` + `ElementTree`. | Text only. docx sections share one locator, xlsx ignores cell references. |
 | `image` | Text from the first `ocr` backend (a `tesseract` backend), else from a `describe` (vision) backend that transcribes and describes the image. | Neither backend configured, or no text found, goes to `needs_clarification`. |
 | `video` / `audio` | `yt-dlp` metadata and existing captions first (VTT to timed text, nothing downloaded). Only when there are no captions AND a `transcribe` backend exists is audio downloaded and transcribed. Local audio/video files go to the transcriber after `ffmpeg` converts to 16 kHz mono wav. Frames (`ffmpeg`, 1 per 3 s) go to a `describe` backend only if one is configured and the transcript is under 200 characters. Segments carry `t=start-end` locators. Temporary media is deleted. | Captions are English only (`en`, `en.*` tracks). Instagram and TikTok usually need cookies and fail into `needs_clarification` carrying the page caption when reachable. Real transcription and real Instagram/TikTok behaviour are UNVERIFIED. |
@@ -106,4 +106,4 @@ only from numbered excerpts. Retrieved text is delimited and labelled as untrust
 marker is validated: markers naming a nonexistent excerpt are removed and reported; if no valid marker
 remains the generated text is discarded and the result is `retrieval-only` with the excerpts. With no
 answer backend the result is also `retrieval-only` with a message. The prompt-injection defence is
-delimiting plus validation, not proof (see [limitations](limitations.md)).
+delimiting plus validation, not proof (see limitations).
