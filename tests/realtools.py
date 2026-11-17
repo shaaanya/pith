@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.providers.ports import TimedText
+from pith.providers.ports import TimedText
 
 
 def have(*binaries) -> bool:

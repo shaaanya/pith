@@ -1,7 +1,7 @@
 from stubs.hash_embedder import HashEmbedder
-from infoparser.pipeline import runner
-from infoparser.retrieval import index, vectors
-from infoparser.retrieval.search import search
+from pith.pipeline import runner
+from pith.retrieval import index, vectors
+from pith.retrieval.search import search
 
 TEXT = "Retrieval augmented generation combines search with generation.\n\nChunking strategy matters a lot."
 
@@ -40,7 +40,7 @@ def test_embed_failure_never_fails_item(svc, use_embedder):
         def embed(self, texts):
             raise RuntimeError("embedder down")
     use_embedder(svc, Boom())
-    from infoparser.worker import Processed
+    from pith.worker import Processed
     iid = svc.inbox.submit(adapter="t", text=TEXT).id
     assert isinstance(runner.process(svc, iid), Processed)
     ev = svc.conn.execute("SELECT status, detail FROM processing_events WHERE inbox_id=? AND stage='embed'",
@@ -50,7 +50,7 @@ def test_embed_failure_never_fails_item(svc, use_embedder):
 
 def test_openai_compat_embeddings(svc, tmp_path):
     from stubs.openai_stub import OpenAIStub
-    from infoparser.providers.openai_compat import OpenAICompatBackend
+    from pith.providers.openai_compat import OpenAICompatBackend
     with OpenAIStub() as stub:
         svc.registry.first = lambda t, b=OpenAICompatBackend("oa", stub.base_url, "m", embed_model="e"): \
             b if t == "embed" else None
@@ -98,7 +98,7 @@ def test_model_id_probe_cached_and_empty_texts_skipped(svc, use_embedder):
 
 
 def test_cli_reindex(svc, use_embedder, monkeypatch, capsys):
-    from infoparser import cli
+    from pith import cli
     use_embedder(svc, HashEmbedder("m1"))
     runner.process(svc, svc.inbox.submit(adapter="t", text=TEXT).id)
     use_embedder(svc, HashEmbedder("m2"))

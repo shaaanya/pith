@@ -1,5 +1,5 @@
 """Milestone 1 end to end: submit, drain, search."""
-from infoparser.retrieval.search import search
+from pith.retrieval.search import search
 
 
 def test_e2e_m1(svc, drain):

@@ -10,13 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from infoparser import backup
-from infoparser.config import load_config
-from infoparser.pipeline import runner
-from infoparser.retrieval.ask import ask
-from infoparser.retrieval.search import search
-from infoparser.services import build
-from infoparser.store.knowledge import get_item
+from pith import backup
+from pith.config import load_config
+from pith.pipeline import runner
+from pith.retrieval.ask import ask
+from pith.retrieval.search import search
+from pith.services import build
+from pith.store.knowledge import get_item
 
 NOTES = ["Quokkas are small marsupials from Australia. They live on Rottnest Island.",
          "Sourdough needs a long fermentation and a hot oven for good crust.",
@@ -30,7 +30,7 @@ def load(svc, notes=NOTES):
 
 
 def other(tmp_path, name="restored"):
-    return load_config(env={"INFOPARSER_HOME": str(tmp_path / name)})
+    return load_config(env={"PITH_HOME": str(tmp_path / name)})
 
 
 def rewrite(archive: Path, fn) -> Path:
@@ -101,7 +101,7 @@ def test_restore_refuses_nonempty_home_and_force_replaces(svc, tmp_path):
 def test_backup_consistent_while_a_writer_is_writing(svc, tmp_path):
     load(svc)
     stop, errs = threading.Event(), []
-    from infoparser.services import build as b
+    from pith.services import build as b
     w = b(svc.cfg)
 
     done = []
@@ -224,7 +224,7 @@ def test_newer_schema_refused_older_migrated(svc, tmp_path):
     with pytest.raises(backup.RestoreError, match="newer"):
         backup.restore(mod, other(tmp_path).home)
     # an older archive: strip the v2/v3 additions by building a v1 database
-    from infoparser.store.db import _migrations, _split
+    from pith.store.db import _migrations, _split
     v1 = tmp_path / "v1.db"
     c = sqlite3.connect(v1)
     for s in _split(_migrations()[0][1]):

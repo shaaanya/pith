@@ -5,11 +5,11 @@ import threading
 
 import pytest
 
-from infoparser.adapters.http_ingest import load_token
-from infoparser.dashboard import api
-from infoparser.dashboard.server import make_server
-from infoparser.worker import Worker
-from infoparser.pipeline import runner
+from pith.adapters.http_ingest import load_token
+from pith.dashboard import api
+from pith.dashboard.server import make_server
+from pith.worker import Worker
+from pith.pipeline import runner
 
 NOTE = "Quokkas are small marsupials from Australia.\n\nThey live on Rottnest Island and eat grass."
 

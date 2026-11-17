@@ -1,7 +1,7 @@
 """URL canonicalisation and platform detection."""
 import pytest
 
-from infoparser.domain.urls import canonicalize_url, detect_platform
+from pith.domain.urls import canonicalize_url, detect_platform
 
 CANON = "https://example.com/a/b?x=1"
 

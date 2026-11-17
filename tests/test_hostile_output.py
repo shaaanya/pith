@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from infoparser.pipeline.distill import _parse
-from infoparser.providers.cli_backend import clean_terminal_output
+from pith.pipeline.distill import _parse
+from pith.providers.cli_backend import clean_terminal_output
 
 LIMIT = 1.0  # seconds; generous (measured cost before the fix: 3 s to 37 s)
 

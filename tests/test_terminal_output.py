@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.pipeline.distill import _parse
-from infoparser.pipeline.schemas import SCHEMAS, validate
-from infoparser.providers.cli_backend import CliBackend, clean_terminal_output
+from pith.pipeline.distill import _parse
+from pith.pipeline.schemas import SCHEMAS, validate
+from pith.providers.cli_backend import CliBackend, clean_terminal_output
 
 FIX = Path(__file__).parent / "fixtures"
 CAPTURES = sorted(FIX.glob("ollama_run_*.txt"))

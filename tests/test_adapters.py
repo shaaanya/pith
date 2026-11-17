@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.adapters.fs import FsAdapter
-from infoparser import netguard
-from infoparser.adapters import http_ingest
-from infoparser.adapters.http_ingest import IngestServer, handle, load_token
-from infoparser.adapters.telegram_export import flatten_text, import_export
-from infoparser.store import db
+from pith.adapters.fs import FsAdapter
+from pith import netguard
+from pith.adapters import http_ingest
+from pith.adapters.http_ingest import IngestServer, handle, load_token
+from pith.adapters.telegram_export import flatten_text, import_export
+from pith.store import db
 
 FIX = Path(__file__).parent / "fixtures" / "telegram_export"
 PNG = b"\x89PNG\r\n\x1a\n" + b"x" * 20
@@ -197,7 +197,7 @@ def test_adapters_produce_equivalent_rows(svc, tmp_path):
 
 def test_core_does_not_import_adapters():
     """Test core does not import adapters."""
-    src = Path(__file__).parent.parent / "src" / "infoparser"
+    src = Path(__file__).parent.parent / "src" / "pith"
     bad = []
     for p in src.rglob("*.py"):
         if "adapters" in p.parts or p.name in ("cli.py", "run_all.py"):  # edge layers
@@ -209,7 +209,7 @@ def test_core_does_not_import_adapters():
                 mods = [n.module or ""]
             else:
                 mods = []
-            if any(m.startswith("infoparser.adapters") for m in mods):
+            if any(m.startswith("pith.adapters") for m in mods):
                 bad.append(str(p))
     assert not bad
 
@@ -322,14 +322,14 @@ def test_http_refuses_nonloopback_without_explicit_token(svc):
 
 
 def _run_cli(env, *a):
-    """Run the infoparser CLI in a subprocess."""
-    return subprocess.run([sys.executable, "-m", "infoparser.cli", *a], env=env, check=False,
+    """Run the pith CLI in a subprocess."""
+    return subprocess.run([sys.executable, "-m", "pith.cli", *a], env=env, check=False,
                           capture_output=True, text=True, timeout=60)
 
 
 def test_cli_import_telegram_and_adapters_list(tmp_path):
     """Test cli import telegram and adapters list."""
-    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
+    env = {**os.environ, "PITH_HOME": str(tmp_path / "h")}
     run = functools.partial(_run_cli, env)
     assert "telegram_export" in run("adapters", "list").stdout
     r1 = run("import-telegram", str(FIX / "result.json"))
@@ -364,7 +364,7 @@ def test_telegram_non_dict_messages_skipped(svc, tmp_path):
 
 def test_cli_import_telegram_bad_file_clean_error(tmp_path):
     """Test cli import telegram bad file clean error."""
-    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
+    env = {**os.environ, "PITH_HOME": str(tmp_path / "h")}
     for target in (tmp_path / "missing.json", _bad(tmp_path, "{")):
         r = _run_cli(env, "import-telegram", str(target))
         assert r.returncode != 0 and "Traceback" not in r.stderr and r.stderr.startswith("error:")

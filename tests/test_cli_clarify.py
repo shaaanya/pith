@@ -1,11 +1,11 @@
-"""`infoparser clarify ID TEXT...` is the CLI twin of the dashboard clarification box."""
+"""`pith clarify ID TEXT...` is the CLI twin of the dashboard clarification box."""
 
 import pytest
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
-from infoparser import cli
-from infoparser.pipeline import runner
-from infoparser.worker import NeedsClarification, Processed
+from pith import cli
+from pith.pipeline import runner
+from pith.worker import NeedsClarification, Processed
 
 
 def test_clarify_requeues_and_the_text_becomes_the_content(svc, capsys):

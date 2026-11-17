@@ -8,11 +8,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from infoparser.config import Config
-from infoparser.providers.openai_compat import OpenAICompatBackend
-from infoparser.providers.ports import Capabilities, CapabilityError
-from infoparser.providers import registry
-from infoparser.providers.registry import Registry
+from pith.config import Config
+from pith.providers.openai_compat import OpenAICompatBackend
+from pith.providers.ports import Capabilities, CapabilityError
+from pith.providers import registry
+from pith.providers.registry import Registry
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"fakeimage"
 

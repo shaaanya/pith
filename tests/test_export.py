@@ -3,9 +3,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from infoparser import export
-from infoparser.pipeline import runner
-from infoparser.store import knowledge
+from pith import export
+from pith.pipeline import runner
+from pith.store import knowledge
 
 NOTES = ["Quokkas are small marsupials from Australia. They live on Rottnest Island.",
          "Sourdough needs a long fermentation and a hot oven for good crust."]

@@ -5,11 +5,11 @@ import tomllib
 import pytest
 from test_dashboard import Client
 
-from infoparser import cli, settings
-from infoparser.adapters.http_ingest import load_token
-from infoparser.config import load_config
-from infoparser.dashboard.server import make_server
-from infoparser.services import build
+from pith import cli, settings
+from pith.adapters.http_ingest import load_token
+from pith.config import load_config
+from pith.dashboard.server import make_server
+from pith.services import build
 
 LOCAL = {"type": "openai_compat", "base_url": "http://localhost:11434/v1", "model": "m1",
          "locality": "local"}
@@ -18,9 +18,9 @@ BODY = {"backends": {"local": LOCAL}, "tasks": {"distill": ["local"]}, "allow_re
 
 @pytest.fixture(name="home")
 def home_fixture(tmp_path, monkeypatch):
-    """A fresh home reached only through INFOPARSER_HOME (no explicit config file)."""
-    monkeypatch.delenv("INFOPARSER_CONFIG", raising=False)
-    monkeypatch.setenv("INFOPARSER_HOME", str(tmp_path / "home"))
+    """A fresh home reached only through PITH_HOME (no explicit config file)."""
+    monkeypatch.delenv("PITH_CONFIG", raising=False)
+    monkeypatch.setenv("PITH_HOME", str(tmp_path / "home"))
     return tmp_path / "home"
 
 
@@ -128,7 +128,7 @@ def test_api_save_applies_live_and_keeps_the_csrf_rule(home):
 
 
 def test_bare_command_means_run(monkeypatch):
-    """`infoparser --home X` launches `run`; --open is terminal-only unless forced."""
+    """`pith --home X` launches `run`; --open is terminal-only unless forced."""
     called = {}
     handler = lambda a: called.update(cmd=a.cmd, open=a.open)  # noqa: E731
     monkeypatch.setitem(cli.COMMANDS, "run", (handler, cli.COMMANDS["run"][1]))

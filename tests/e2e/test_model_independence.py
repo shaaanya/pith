@@ -1,10 +1,10 @@
 """Same pipeline, interchangeable backends. Asserts the structural contract, not wording."""
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
-from infoparser.providers.registry import Registry
-from infoparser.retrieval import index
-from infoparser.retrieval.search import search
-from infoparser.services import build
+from pith.providers.registry import Registry
+from pith.retrieval import index
+from pith.retrieval.search import search
+from pith.services import build
 
 from .conftest import (check_contract, cfg_for, db, drain, run_workflow, submit_notes,
                        submit_scenario)

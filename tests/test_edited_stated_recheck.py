@@ -1,7 +1,7 @@
 """A user-edited `stated` item must not keep a quote the cited segment no longer contains."""
-from infoparser.domain.models import Candidate, SegmentIn
-from infoparser.pipeline import provenance, runner
-from infoparser.store import knowledge
+from pith.domain.models import Candidate, SegmentIn
+from pith.pipeline import provenance, runner
+from pith.store import knowledge
 
 OLD = "The bridge opened in 1901 after four years of construction by local masons."
 NEW = "The museum holds pottery and textiles gathered from many regional excavations."

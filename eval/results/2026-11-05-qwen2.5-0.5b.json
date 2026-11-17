@@ -20,7 +20,7 @@
   "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
   "git_head": "d6026a8",
   "ollama_url": "http://127.0.0.1:11434",
-  "chat_temperature": "not set by InfoParser (Ollama/model default); not configurable"
+  "chat_temperature": "not set by Pith (Ollama/model default); not configurable"
  },
  "dataset": {
   "docs": 64,

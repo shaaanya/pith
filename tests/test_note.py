@@ -1,12 +1,12 @@
 """Knowledge-note pipeline: deterministic parts (repair, verify, compose, mentions) and build()."""
 import json
 
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline import note
-from infoparser.pipeline.runner import intent_of
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.ports import Capabilities, GenResult
-from infoparser.providers.registry import Registry
+from pith.domain.models import SegmentIn
+from pith.pipeline import note
+from pith.pipeline.runner import intent_of
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.ports import Capabilities, GenResult
+from pith.providers.registry import Registry
 
 DESC = ("Prep plan: learn idempotency and DynamoDB. Read Marc Brooker. Practice on Devmaxx. "
         "Chapter 7 of Designing Data-Intensive Applications.")

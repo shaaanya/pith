@@ -2,13 +2,13 @@
 import pytest
 from stubs.json_server import JsonHandler, JsonStub
 
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline.distill import distill
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.anthropic import AnthropicBackend
-from infoparser.providers.openai_compat import OpenAICompatBackend
-from infoparser.providers.ports import Capabilities, ProviderError
-from infoparser.providers.registry import Registry
+from pith.domain.models import SegmentIn
+from pith.pipeline.distill import distill
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.anthropic import AnthropicBackend
+from pith.providers.openai_compat import OpenAICompatBackend
+from pith.providers.ports import Capabilities, ProviderError
+from pith.providers.registry import Registry
 
 MSG = [{"role": "user", "content": "hi"}]
 

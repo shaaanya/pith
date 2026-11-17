@@ -7,11 +7,11 @@ import pytest
 from stubs.concept_embedder import ConceptEmbedder
 from stubs.openai_stub import OpenAIStub
 
-from infoparser.pipeline import runner
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.ports import Capabilities, GenResult, ProviderError
-from infoparser.providers.registry import Registry
-from infoparser.retrieval.ask import ask, deep_link, strip_citations, SYSTEM
+from pith.pipeline import runner
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.ports import Capabilities, GenResult, ProviderError
+from pith.providers.registry import Registry
+from pith.retrieval.ask import ask, deep_link, strip_citations, SYSTEM
 
 FAKE_LLM = str(Path(__file__).parent / "stubs" / "fake_llm.py")
 TEXT = ("Firms in an oligopoly reach a Nash equilibrium "

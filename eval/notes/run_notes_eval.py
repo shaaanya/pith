@@ -24,12 +24,12 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parents[1] / "src"))
 
 # pylint: disable=wrong-import-position
-from infoparser.domain.models import SegmentIn  # noqa: E402
-from infoparser.pipeline import note as note_mod  # noqa: E402
-from infoparser.pipeline import distill as distill_mod  # noqa: E402
-from infoparser.pipeline.distill import distill  # noqa: E402
-from infoparser.pipeline.runner import profile_of  # noqa: E402
-from infoparser.providers.registry import Registry, _build  # noqa: E402
+from pith.domain.models import SegmentIn  # noqa: E402
+from pith.pipeline import note as note_mod  # noqa: E402
+from pith.pipeline import distill as distill_mod  # noqa: E402
+from pith.pipeline.distill import distill  # noqa: E402
+from pith.pipeline.runner import profile_of  # noqa: E402
+from pith.providers.registry import Registry, _build  # noqa: E402
 
 COMMENTARY = re.compile(
     r"\b(the )?(video|creator|author|speaker|article|podcast|presenter|source|text|tutorial)\b"

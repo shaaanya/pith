@@ -12,13 +12,13 @@ from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 from stubs import openai_stub, stated_llm
 from stubs.openai_stub import OpenAIStub
 
-from infoparser.config import load_config
-from infoparser.export import export_vault
-from infoparser.pipeline import runner
-from infoparser.retrieval.ask import ask
-from infoparser.retrieval.search import search_ex
-from infoparser.services import build
-from infoparser.worker import Worker
+from pith.config import load_config
+from pith.export import export_vault
+from pith.pipeline import runner
+from pith.retrieval.ask import ask
+from pith.retrieval.search import search_ex
+from pith.services import build
+from pith.worker import Worker
 
 STATED_LLM = str(Path(__file__).parent.parent / "stubs" / "stated_llm.py")
 LIVE_TIMEOUT = 120
@@ -50,7 +50,7 @@ def db(svc) -> sqlite3.Connection:
 
 def cfg_for(variant, home, stub_url=None):
     """Config for one backend variant: heuristic | openai_compat | cli."""
-    cfg = load_config(env={"INFOPARSER_HOME": str(home)})
+    cfg = load_config(env={"PITH_HOME": str(home)})
     if variant == "heuristic":
         cfg.backends, cfg.tasks = {"h": {"type": "heuristic"}}, {}
     elif variant == "openai_compat":
@@ -65,7 +65,7 @@ def cfg_for(variant, home, stub_url=None):
 
 def cfg_live(home, chat, embed):
     """Config pointing at a local Ollama; model names are supplied by the caller (env)."""
-    cfg = load_config(env={"INFOPARSER_HOME": str(home)})
+    cfg = load_config(env={"PITH_HOME": str(home)})
     cfg.backends = {"ollama": {"type": "openai_compat", "base_url": ollama_base() + "/v1",
                                "model": chat, "embed_model": embed, "timeout": LIVE_TIMEOUT}}
     cfg.tasks = {"distill": ["ollama"], "answer": ["ollama"], "embed": ["ollama"]}
@@ -74,7 +74,7 @@ def cfg_live(home, chat, embed):
 
 def cfg_live_cli(home, chat):
     """Config running `ollama run <chat>` through the cli backend (prompt on stdin)."""
-    cfg = load_config(env={"INFOPARSER_HOME": str(home)})
+    cfg = load_config(env={"PITH_HOME": str(home)})
     cfg.backends = {"ollama_cli": {"type": "cli", "command": ["ollama", "run", chat],
                                    "timeout": LIVE_TIMEOUT}}
     cfg.tasks = {"distill": ["ollama_cli"], "answer": ["ollama_cli"]}

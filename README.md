@@ -1,4 +1,4 @@
-# InfoParser
+# Pith
 
 Local-first knowledge capture. Save a link, file, video or note; get one searchable note that holds
 the actual information (steps, numbers, names), not a description of it. Runs on your machine; models
@@ -6,10 +6,10 @@ are optional.
 
 ```
 uv sync
-uv run infoparser                                    # worker + dashboard on 127.0.0.1
-uv run infoparser submit "<url or text>" --why "what I want from it"
-uv run infoparser search "keywords"
-uv run infoparser ask "question about what I saved"
+uv run pith                                    # worker + dashboard on 127.0.0.1
+uv run pith submit "<url or text>" --why "what I want from it"
+uv run pith search "keywords"
+uv run pith ask "question about what I saved"
 ```
 
 Models, transcription and OCR are set in the dashboard's Settings tab or `config.toml`

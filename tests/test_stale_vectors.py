@@ -3,12 +3,12 @@
 import numpy as np
 from stubs.http_fixture_server import FixtureServer, Route
 
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline import runner
-from infoparser.retrieval import index, vectors
-from infoparser.retrieval.search import search
-from infoparser.store import knowledge
-from infoparser.worker import Processed
+from pith.domain.models import SegmentIn
+from pith.pipeline import runner
+from pith.retrieval import index, vectors
+from pith.retrieval.search import search
+from pith.store import knowledge
+from pith.worker import Processed
 
 PAGE = (
     "<html><head><title>{t}</title></head><body><article><h1>{t}</h1><p>{p}</p></article>"

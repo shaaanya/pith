@@ -1,5 +1,5 @@
 """Reciprocal rank fusion."""
-from infoparser.retrieval.fusion import RRF_K, rrf
+from pith.retrieval.fusion import RRF_K, rrf
 
 
 def test_rrf_ordering():

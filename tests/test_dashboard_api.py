@@ -3,10 +3,10 @@ import hashlib
 
 import pytest
 
-from infoparser.dashboard import api
-from infoparser.pipeline import runner
-from infoparser.store.blobs import BlobStore
-from infoparser.worker import Worker
+from pith.dashboard import api
+from pith.pipeline import runner
+from pith.store.blobs import BlobStore
+from pith.worker import Worker
 
 NOTE = "Quokkas are small marsupials from Australia.\n\nThey live on Rottnest Island and eat grass."
 

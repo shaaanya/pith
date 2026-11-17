@@ -2,8 +2,8 @@
 import pytest
 from test_distill import SEGS, Fake, reg
 
-from infoparser.pipeline.distill import distill
-from infoparser.pipeline.schemas import SCHEMAS, validate
+from pith.pipeline.distill import distill
+from pith.pipeline.schemas import SCHEMAS, validate
 
 GOOD = {"summary": "Rust ownership prevents data races.", "insights": []}
 BAD = [

@@ -1,7 +1,7 @@
 """Content-addressed blob store."""
 import hashlib
 
-from infoparser.store.blobs import BlobStore
+from pith.store.blobs import BlobStore
 
 
 def test_blob_put_idempotent_and_sharded(tmp_path):

@@ -2,7 +2,7 @@
 import hashlib
 import re
 
-from infoparser.providers.ports import Capabilities, EmbedResult
+from pith.providers.ports import Capabilities, EmbedResult
 
 
 class HashEmbedder:  # pylint: disable=too-few-public-methods  # the Embedder port has one method

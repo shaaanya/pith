@@ -3,10 +3,10 @@ import os
 import subprocess
 import sys
 
-from infoparser import doctor
-from infoparser.config import Config
-from infoparser.pipeline import runner
-from infoparser.services import build
+from pith import doctor
+from pith.config import Config
+from pith.pipeline import runner
+from pith.services import build
 from stubs.openai_stub import OpenAIStub
 
 MARK = "ZXQ-SECRET-MARKER-98127"
@@ -23,8 +23,8 @@ def by(checks, name):
 
 
 def cli(home, *args):
-    env = {**os.environ, "INFOPARSER_HOME": str(home)}
-    return subprocess.run([sys.executable, "-m", "infoparser.cli", *args], env=env, capture_output=True, text=True, timeout=60)
+    env = {**os.environ, "PITH_HOME": str(home)}
+    return subprocess.run([sys.executable, "-m", "pith.cli", *args], env=env, capture_output=True, text=True, timeout=60)
 
 
 def test_doctor_on_empty_home_reports_and_creates_nothing(tmp_path):
@@ -224,7 +224,7 @@ def test_probe_sends_configured_key_and_401_is_not_called_unreachable(tmp_path, 
 
 
 def test_egress_sink_failure_is_fail_open_and_wrap_is_single(tmp_path, capsys):
-    from infoparser.providers import egress
+    from pith.providers import egress
     with OpenAIStub() as stub:
         cfg = cfg_for(tmp_path, allow_remote=True,
                       backends={"cloud": {"type": "openai_compat", "base_url": stub.base_url, "model": "m", "locality": "remote"}},
@@ -244,7 +244,7 @@ def test_egress_sink_failure_is_fail_open_and_wrap_is_single(tmp_path, capsys):
 
 def test_every_port_method_is_wrapped():
     import inspect
-    from infoparser.providers import egress, ports
+    from pith.providers import egress, ports
     names = {n for _, c in inspect.getmembers(ports, inspect.isclass) if getattr(c, "_is_protocol", False) and c is not ports.Backend
              for n, f in vars(c).items() if callable(f) and not n.startswith("_")}
     assert names and names <= set(egress.METHODS)

@@ -1,25 +1,25 @@
 # Configuration
 
 Configuration is one optional TOML file. Order: `--config PATH` (before or after the subcommand), then
-`INFOPARSER_CONFIG=PATH`, then `<home>/config.toml` if it exists (a `home` key inside that file is ignored).
+`PITH_CONFIG=PATH`, then `<home>/config.toml` if it exists (a `home` key inside that file is ignored).
 The dashboard's Settings tab edits `[backends]`, `[tasks]` and `[privacy] allow_remote` in whichever file was
 loaded (creating `<home>/config.toml` if none), keeps all other keys, drops comments, keeps a `.bak`, and
 applies the change to the running process. It only adds/changes `openai_compat`, `anthropic` and `heuristic`
 backends; program-running types stay file-only. "Detect models" queries `<base_url>/models` on localhost only.
 A save is validated before the file is replaced. UNVERIFIED: detection against a real Ollama/LM Studio. Without a file every default below applies, which
-means: home `~/InfoParser`, no model backends (the `heuristic` fallback only), nothing remote. Start from
+means: home `~/Pith`, no model backends (the `heuristic` fallback only), nothing remote. Start from
 [config.sample.toml](../config.sample.toml); it loads as-is, and its model names are placeholders
 (`REPLACE_WITH_...`) that you must replace. `tests/test_config_sample.py` checks that the sample loads and builds a registry.
 
-Order of precedence for the home directory: `--home` flag, then `INFOPARSER_HOME`, then `home` in the file,
-then `~/InfoParser`. (The flag works by overriding the environment value for that command.) A relative `home`
+Order of precedence for the home directory: `--home` flag, then `PITH_HOME`, then `home` in the file,
+then `~/Pith`. (The flag works by overriding the environment value for that command.) A relative `home`
 is resolved against your user home.
 
 ## Top level
 
 | Key | Default | Meaning |
 |---|---|---|
-| `home` | `~/InfoParser` | Data directory: `infoparser.db`, `blobs/`, `vault/`, `inbox/`, `backups/`, `digests/`, `http_token`, `run.lock` |
+| `home` | `~/Pith` | Data directory: `infoparser.db`, `blobs/`, `vault/`, `inbox/`, `backups/`, `digests/`, `http_token`, `run.lock` |
 
 ## `[privacy]`
 
@@ -43,15 +43,15 @@ is resolved against your user home.
 
 ## `[http]`
 
-Used by `infoparser serve-http` (and its token by the dashboard).
+Used by `pith serve-http` (and its token by the dashboard).
 
 | Key | Default | Meaning |
 |---|---|---|
 | `bind` | `127.0.0.1` | Listen address. A non-loopback value requires `token` |
 | `port` | `8787` | Listen port |
-| `token` | generated | Bearer token. If unset, one is generated into `<home>/http_token` (0600). Also `INFOPARSER_HTTP_TOKEN` |
+| `token` | generated | Bearer token. If unset, one is generated into `<home>/http_token` (0600). Also `PITH_HTTP_TOKEN` |
 
-The dashboard port is not a config key: `infoparser run --port N` / `infoparser dashboard --port N`
+The dashboard port is not a config key: `pith run --port N` / `pith dashboard --port N`
 (default 8777).
 
 ## `[digest]`
@@ -65,8 +65,8 @@ The dashboard port is not a config key: `infoparser run --port N` / `infoparser 
 
 | Key | Default | Meaning |
 |---|---|---|
-| `yt_dlp` | `yt-dlp` | Executable for video metadata and captions. Also `INFOPARSER_YT_DLP` |
-| `ffmpeg` | `ffmpeg` | Executable for audio conversion and frames. Also `INFOPARSER_FFMPEG` |
+| `yt_dlp` | `yt-dlp` | Executable for video metadata and captions. Also `PITH_YT_DLP` |
+| `ffmpeg` | `ffmpeg` | Executable for audio conversion and frames. Also `PITH_FFMPEG` |
 
 ## `[backends.NAME]`
 
@@ -77,7 +77,7 @@ Common: `type`, `locality` (`local` or `remote`; anything else is a config error
 When `locality` is absent: an `openai_compat` backend is `local` only if its `base_url` host is loopback
 (`localhost`, `127.0.0.0/8`, `::1`) and `remote` for every other host; a `cli` backend is `local`
 (a command cannot be inspected). An explicit `locality = "local"` on a non-loopback `openai_compat` host
-is honoured (a LAN server you trust), and `infoparser doctor` warns about it.
+is honoured (a LAN server you trust), and `pith doctor` warns about it.
 
 | `type` | Keys |
 |---|---|
@@ -99,18 +99,18 @@ is honoured (a LAN server you trust), and `infoparser doctor` warns about it.
 
 | Variable | Effect |
 |---|---|
-| `INFOPARSER_HOME` | Home directory (see precedence above) |
-| `INFOPARSER_CONFIG` | Config file path, used when `--config` is not given |
-| `INFOPARSER_HTTP_TOKEN` | Overrides `[http] token` |
-| `INFOPARSER_YT_DLP`, `INFOPARSER_FFMPEG` | Override `[media]` executables |
+| `PITH_HOME` | Home directory (see precedence above) |
+| `PITH_CONFIG` | Config file path, used when `--config` is not given |
+| `PITH_HTTP_TOKEN` | Overrides `[http] token` |
+| `PITH_YT_DLP`, `PITH_FFMPEG` | Override `[media]` executables |
 | the variable named by a backend's `api_key_env` | API key for that backend |
-| `INFOPARSER_LIVE_CHAT_MODEL`, `INFOPARSER_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only, see [testing.md](testing.md) |
+| `PITH_LIVE_CHAT_MODEL`, `PITH_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only, see [testing.md](testing.md) |
 
 ## Command-line flags that are not in the file
 
 `--home` and `--config` (global); `search --mode {fts,hybrid} --limit N`; `ask --k N --json`;
 `doctor --full --json`; `egress --json`; `digest --since --dry-run --force`; `export --keep`;
-`reindex --prune-old`; `run --port --no-dashboard --no-watch`. Use `infoparser <command> --help`.
+`reindex --prune-old`; `run --port --no-dashboard --no-watch`. Use `pith <command> --help`.
 
 A configuration problem (missing `--config` file, TOML syntax error, a value of the wrong type such as a string for
 `[watch] dirs` or a number for a task route, an unknown backend `type`, a bad spec or a task naming an unknown

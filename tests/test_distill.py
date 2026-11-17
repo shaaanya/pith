@@ -2,13 +2,13 @@ import json
 
 import pytest
 
-from infoparser.config import Config
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline.distill import distill
-from infoparser.pipeline.schemas import SCHEMAS, profile_for
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.ports import Capabilities, GenResult, ProviderError
-from infoparser.providers.registry import Registry
+from pith.config import Config
+from pith.domain.models import SegmentIn
+from pith.pipeline.distill import distill
+from pith.pipeline.schemas import SCHEMAS, profile_for
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.ports import Capabilities, GenResult, ProviderError
+from pith.providers.registry import Registry
 
 TEXT = ("Rust ownership prevents data races at compile time. Borrowing lets code read without owning. "
         "Lifetimes describe how long references stay valid in a program.")
@@ -139,7 +139,7 @@ def test_distill_real_backend_profile_violation_repairs_then_heuristic(profile, 
 
 
 def test_distill_normalize_never_raises_on_malformed_element(monkeypatch):
-    from infoparser.pipeline import distill as D
+    from pith.pipeline import distill as D
     f = Fake("f", [{"summary": "s", "insights": [{"text": "ok"}]}])
     monkeypatch.setattr(D, "validate", lambda obj, schema, path="$": None)  # force past validation
     obj = {"summary": "s", "insights": [{"quote": "no text"}, {"text": "ok"}], "snippets": [{"title": "t"}]}

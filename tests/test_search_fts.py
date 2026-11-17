@@ -2,8 +2,8 @@ import sqlite3
 
 import pytest
 
-from infoparser.pipeline import runner
-from infoparser.retrieval.search import fts_query, search
+from pith.pipeline import runner
+from pith.retrieval.search import fts_query, search
 
 # more than 5 sentences so heuristic distill (top 5) leaves "zebrafish" only in the raw segment
 RAW = ("Embeddings power semantic retrieval systems. " + "Filler sentence number one is here. " * 0 +

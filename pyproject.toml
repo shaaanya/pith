@@ -1,12 +1,12 @@
 [project]
-name = "infoparser"
+name = "pith"
 version = "0.1.0"
 description = "Local-first, model-agnostic personal knowledge system"
 requires-python = ">=3.13"
 dependencies = ["numpy"]
 
 [project.scripts]
-infoparser = "infoparser.cli:main"
+pith = "pith.cli:main"
 
 [dependency-groups]
 dev = ["pytest"]
@@ -19,8 +19,8 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"infoparser.store" = ["migrations/*.sql"]
-"infoparser.dashboard" = ["static/*.html"]
+"pith.store" = ["migrations/*.sql"]
+"pith.dashboard" = ["static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

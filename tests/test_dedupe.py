@@ -1,9 +1,9 @@
 from stubs.hash_embedder import HashEmbedder
-from infoparser.domain.models import Candidate
-from infoparser.pipeline import dedupe, runner
-from infoparser.retrieval import index
-from infoparser.store import knowledge
-from infoparser.worker import Processed
+from pith.domain.models import Candidate
+from pith.pipeline import dedupe, runner
+from pith.retrieval import index
+from pith.store import knowledge
+from pith.worker import Processed
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
 LONG = ("Vector databases store embeddings and support approximate nearest neighbour search over large "

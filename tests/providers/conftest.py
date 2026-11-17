@@ -6,12 +6,12 @@ import pytest
 from stubs.anthropic_stub import AnthropicStub
 from stubs.openai_stub import OpenAIStub
 
-from infoparser.config import Config
-from infoparser.providers.anthropic import AnthropicBackend
-from infoparser.providers.cli_backend import CliBackend
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.openai_compat import OpenAICompatBackend
-from infoparser.providers.ports import Capabilities
+from pith.config import Config
+from pith.providers.anthropic import AnthropicBackend
+from pith.providers.cli_backend import CliBackend
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.openai_compat import OpenAICompatBackend
+from pith.providers.ports import Capabilities
 
 FAKE_LLM = str(Path(__file__).parent.parent / "stubs" / "fake_llm.py")
 

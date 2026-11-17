@@ -4,8 +4,8 @@ from pathlib import Path
 
 from stubs.concept_embedder import ConceptEmbedder
 
-from infoparser.pipeline import runner
-from infoparser.retrieval.search import search
+from pith.pipeline import runner
+from pith.retrieval.search import search
 
 FIX = Path(__file__).parent / "fixtures"
 

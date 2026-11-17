@@ -7,7 +7,7 @@ import json
 import re
 from pathlib import Path
 
-from infoparser.providers.ports import Capabilities, EmbedResult
+from pith.providers.ports import Capabilities, EmbedResult
 
 GROUPS = json.loads((Path(__file__).parent.parent / "fixtures" / "concepts.json").read_text())
 WORD2G = {w: i for i, ws in enumerate(GROUPS.values()) for w in ws}

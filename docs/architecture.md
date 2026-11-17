@@ -1,6 +1,6 @@
 # Architecture
 
-InfoParser is one Python process (or a few short ones) over one SQLite database. The structure is
+Pith is one Python process (or a few short ones) over one SQLite database. The structure is
 hexagonal: a domain/pipeline core talks to the outside world only through ports, and adapters and backends
 plug in at the edges.
 
@@ -52,9 +52,9 @@ config.
   file or an uploaded body is hashed and written before the database row; blob names are validated as
   64 hex characters before any path is built.
 - Search indexes (FTS5 tables) and embeddings live in the same database and can be rebuilt from the
-  segments and items. `infoparser reindex` rebuilds embeddings for the active embedding model.
+  segments and items. `pith reindex` rebuilds embeddings for the active embedding model.
 - The Markdown vault (`<home>/vault/<yyyy>/<slug>-<id>.md`) is a derived export written by
-  `infoparser export`. It is regenerated from the database and is never read back. Edit items through the
+  `pith export`. It is regenerated from the database and is never read back. Edit items through the
   dashboard, not the vault files.
 
 What is the source of truth: the database plus the blobs. Everything else (vault, FTS indexes,
@@ -72,7 +72,7 @@ embeddings, digests) can be regenerated or is a report.
   "lost the lease" and writes nothing). Heartbeats only extend a lease still owned by the sender.
   Direct library calls outside a Worker are not fenced. Failures retry with exponential backoff (5 s base, 1 h cap) up to `max_attempts` (default 5),
   then the item is `failed` and the original is untouched.
-- `infoparser run` holds an `flock` on `<home>/run.lock` so only one `run` exists per home. The
+- `pith run` holds an `flock` on `<home>/run.lock` so only one `run` exists per home. The
   standalone `worker`, `dashboard`, `watch` and `serve-http` commands hold a shared `flock` on
   `<home>/in-use.lock` (they can run side by side and next to `run`); `restore` takes it exclusively and
   also refuses while a job lease is live. Standalone workers get ids like `host-pid-random`, so the
@@ -89,5 +89,5 @@ The decision about command-line agents is in [providers.md](providers.md#agentic
 
 Both are stdlib `ThreadingHTTPServer`s bound to 127.0.0.1, with a bearer token, a Host-header allow-list
 (DNS rebinding), no CORS headers, and a strict content security policy for the dashboard. They share one
-token file, `<home>/http_token`. `infoparser run` starts the worker, the dashboard and the folder watcher;
-the HTTP ingest endpoint is a separate command (`infoparser serve-http`). See [deployment.md](deployment.md).
+token file, `<home>/http_token`. `pith run` starts the worker, the dashboard and the folder watcher;
+the HTTP ingest endpoint is a separate command (`pith serve-http`). See [deployment.md](deployment.md).

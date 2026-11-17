@@ -3,8 +3,8 @@ import tomllib
 
 import pytest
 
-from infoparser.config import Config, ConfigError
-from infoparser.providers.registry import Registry
+from pith.config import Config, ConfigError
+from pith.providers.registry import Registry
 
 
 @pytest.mark.parametrize("key,bad", [("timeout", '"30"'), ("timeout", "0"), ("timeout", "true"),

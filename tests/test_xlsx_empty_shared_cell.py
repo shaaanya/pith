@@ -2,8 +2,8 @@
 import io
 import zipfile
 
-from infoparser.pipeline import runner
-from infoparser.worker import Processed
+from pith.pipeline import runner
+from pith.worker import Processed
 
 NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 

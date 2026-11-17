@@ -2,10 +2,10 @@ import json
 
 import pytest
 
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import web
-from infoparser.pipeline.htmltext import extract_main
-from infoparser.worker import Failed, NeedsClarification, Processed
+from pith.pipeline import runner
+from pith.pipeline.extractors import web
+from pith.pipeline.htmltext import extract_main
+from pith.worker import Failed, NeedsClarification, Processed
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.retrieval.search import STOPWORDS
+from pith.retrieval.search import STOPWORDS
 
 EVAL = Path(__file__).parent.parent / "eval"
 

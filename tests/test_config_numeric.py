@@ -5,13 +5,13 @@ import sys
 
 import pytest
 
-from infoparser.config import ConfigError, load_config
+from pith.config import ConfigError, load_config
 
 
 def _load(tmp_path, toml):
     path = tmp_path / "c.toml"
     path.write_text(toml, encoding="utf-8")
-    return load_config(path, env={"INFOPARSER_HOME": str(tmp_path / "h")})
+    return load_config(path, env={"PITH_HOME": str(tmp_path / "h")})
 
 
 @pytest.mark.parametrize("section,key", [
@@ -37,8 +37,8 @@ def test_cli_reports_bad_config_cleanly(tmp_path):
     """The CLI prints one error line instead of a traceback."""
     path = tmp_path / "c.toml"
     path.write_text('[limits]\nmax_attempts = "x"\n', encoding="utf-8")
-    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
-    res = subprocess.run([sys.executable, "-m", "infoparser.cli", "--config", str(path), "inbox"],
+    env = {**os.environ, "PITH_HOME": str(tmp_path / "h")}
+    res = subprocess.run([sys.executable, "-m", "pith.cli", "--config", str(path), "inbox"],
                          env=env, check=False, capture_output=True, text=True, timeout=60)
     assert res.returncode != 0 and "Traceback" not in res.stderr
     assert "limits.max_attempts" in res.stderr

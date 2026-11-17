@@ -4,9 +4,9 @@ import zipfile
 
 import pytest
 
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import pdf
-from infoparser.worker import Failed, NeedsClarification, Processed
+from pith.pipeline import runner
+from pith.pipeline.extractors import pdf
+from pith.worker import Failed, NeedsClarification, Processed
 from stubs.http_fixture_server import FIXTURES
 
 

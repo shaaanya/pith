@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from infoparser.providers.ports import CapabilityError
+from pith.providers.ports import CapabilityError
 
 KINDS = ["heuristic", "openai_compat", "cli", "anthropic"]
 MSGS = [{"role": "user",

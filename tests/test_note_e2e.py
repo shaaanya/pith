@@ -1,13 +1,13 @@
 """Source -> extraction -> note -> storage -> retrieval, with a fake model backend."""
 import json
 
-from infoparser.dashboard import api
-from infoparser import digest
-from infoparser.pipeline import runner
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.ports import Capabilities, GenResult
-from infoparser.providers.registry import Registry
-from infoparser.retrieval.search import search
+from pith.dashboard import api
+from pith import digest
+from pith.pipeline import runner
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.ports import Capabilities, GenResult
+from pith.providers.registry import Registry
+from pith.retrieval.search import search
 
 TEXT = ("Weekly infra sync. We reviewed connection limits on the primary database. "
         "Dana noted that the tool called pgbouncer pools connections and cut idle sessions from "

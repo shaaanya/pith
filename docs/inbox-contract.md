@@ -1,6 +1,6 @@
 # Inbox contract
 
-Everything that enters the system goes through `Inbox.submit()` (`src/infoparser/inbox/service.py`).
+Everything that enters the system goes through `Inbox.submit()` (`src/pith/inbox/service.py`).
 Adapters never touch the database or the blob store themselves.
 
 ## Submission
@@ -38,12 +38,12 @@ attempts left goes back to `pending` with a backoff `run_after`. `retry` and `cl
 `failed`/`needs_clarification` item back to `pending`.
 
 Every stage writes a row to `processing_events` (stage, status, detail, duration, backend/model, whether
-text left the machine). `infoparser show <inbox id>` prints the status, error, context, stored items and
+text left the machine). `pith show <inbox id>` prints the status, error, context, stored items and
 events.
 
 ## Retry and clarification
 
-- `infoparser retry <inbox id>` re-queues an item (attempts reset to 0, error cleared). A job is only
+- `pith retry <inbox id>` re-queues an item (attempts reset to 0, error cleared). A job is only
   inserted if none is pending or running for that item. Unknown ids are an error.
 - Clarification (`Inbox.clarify`, dashboard "clarify" box) appends your text to the item's context, records
   a `clarified` event and re-queues. If the extractor failed on something pasted text can solve (a login
@@ -51,7 +51,7 @@ events.
   source is a note with extractor `user_clarification` and no URL, with a `user_text` event naming the
   original URL. For problems that pasted text cannot solve (file over the size cap, no PDF reader) the
   original reason is kept. The submit-time `--context` is never treated as pasted content.
-- CLI: `infoparser clarify <inbox id> <text...>` does the same as the dashboard box.
+- CLI: `pith clarify <inbox id> <text...>` does the same as the dashboard box.
 
 ## Duplicates
 
@@ -79,12 +79,12 @@ All adapters report the same shape of result and differ only in how they obtain 
 
 ### CLI
 
-`infoparser submit "<url or text>" [--context TEXT]` or `infoparser submit --file PATH [--context TEXT]`.
+`pith submit "<url or text>" [--context TEXT]` or `pith submit --file PATH [--context TEXT]`.
 Prints `submitted <id>`.
 
 ### Drop folder (`fs`)
 
-`infoparser watch [--once]` or the watcher inside `infoparser run`. Watches `[watch] dirs` (default
+`pith watch [--once]` or the watcher inside `pith run`. Watches `[watch] dirs` (default
 `<home>/inbox`). A file is submitted only if it is not hidden, not an `.icloud` stub, not `.part`/`.tmp`/
 `.crdownload`, not a symlink pointing outside the folder, within `max_fetch_bytes`, older than 2 seconds,
 and unchanged in size across two polls. After `submit()` returns the file is moved to `<dir>/.processed/`.
@@ -94,7 +94,7 @@ are skipped, so run it again if a file was just written.
 
 ### Telegram Desktop export
 
-`infoparser import-telegram <result.json> [--since DATE] [--fetch-urls]`. URL-only messages are kept as
+`pith import-telegram <result.json> [--since DATE] [--fetch-urls]`. URL-only messages are kept as
 notes (URL verbatim, not fetched) unless `--fetch-urls`, which fetches them as untrusted: public addresses only.
 One message becomes one submission
 (`adapter = telegram_export`, external id `<chat id>:<message id>`), so re-importing is a no-op. Prints
@@ -103,7 +103,7 @@ One message becomes one submission
 
 ### HTTP ingest
 
-`infoparser serve-http` listens on `[http] bind:port` (default `127.0.0.1:8787`).
+`pith serve-http` listens on `[http] bind:port` (default `127.0.0.1:8787`).
 
 | Request | Notes |
 |---|---|
@@ -116,7 +116,7 @@ The response to a POST is `{"id": ..., "status": ..., "duplicate": true|false}`.
 required and bodies over `max_fetch_bytes` get 413. Other methods get 405.
 
 Authentication is always required: `Authorization: Bearer <token>` or `X-Token: <token>`. The token is
-`[http] token` / `INFOPARSER_HTTP_TOKEN` if set, otherwise it is generated into `<home>/http_token`
+`[http] token` / `PITH_HTTP_TOKEN` if set, otherwise it is generated into `<home>/http_token`
 (mode 0600) the first time the server (or dashboard) starts. A non-loopback `bind` is refused unless a token
 is set explicitly. There is no TLS. See [deployment.md](deployment.md) for the security model and
 [recipes](recipes/) for clients.

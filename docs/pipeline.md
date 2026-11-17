@@ -94,14 +94,14 @@ It does not guarantee the item's wording is a faithful reading of the quote.
 
 ## Retrieval
 
-`infoparser search` runs SQLite FTS5 (BM25) over items and segments, and, if an embedding backend is
+`pith search` runs SQLite FTS5 (BM25) over items and segments, and, if an embedding backend is
 configured and vectors exist for the active model, cosine similarity over items and segments (brute force,
 numpy). The lists are fused with reciprocal rank fusion (k = 60), capped at two hits per source, and
 optionally reranked by a `rerank` backend. The result states its mode, `hybrid` or `fts`; a failing optional
 stage degrades to `fts` with a warning, it does not raise. Soft-deleted items are never returned. The CLI
 has no filter flags; the dashboard API supports filters `kind`, `provenance`, `platform`, `topic`.
 
-`infoparser ask` retrieves, then asks the `answer` chain (heuristic excluded, it cannot answer) to answer
+`pith ask` retrieves, then asks the `answer` chain (heuristic excluded, it cannot answer) to answer
 only from numbered excerpts. Retrieved text is delimited and labelled as untrusted data. Every `[n]`
 marker is validated: markers naming a nonexistent excerpt are removed and reported; if no valid marker
 remains the generated text is discarded and the result is `retrieval-only` with the excerpts. With no

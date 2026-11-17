@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fake yt-dlp CLI for tests (no network). Mimics only the flags InfoParser uses:
+"""Fake yt-dlp CLI for tests (no network). Mimics only the flags Pith uses:
   --dump-json ... -- URL            -> prints tests/fixtures/info.json
   --skip-download --write-subs -o TPL ... -- URL
                                     -> writes <TPL minus .%(ext)s>.en.vtt (mode "captions")

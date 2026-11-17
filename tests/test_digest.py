@@ -2,8 +2,8 @@ import datetime as dt
 
 import pytest
 
-from infoparser import digest
-from infoparser.pipeline import runner
+from pith import digest
+from pith.pipeline import runner
 
 TODAY = dt.date(2026, 11, 5)
 NOW = dt.datetime(2026, 11, 5, 9, 0, tzinfo=dt.UTC)
@@ -106,8 +106,8 @@ def test_cli_bad_since_clean_exit(tmp_path):
     import os
     import subprocess
     import sys
-    env = {**os.environ, "INFOPARSER_HOME": str(tmp_path / "h")}
-    r = subprocess.run([sys.executable, "-m", "infoparser.cli", "digest", "--since", "2026-13-45"], env=env, capture_output=True, text=True)
+    env = {**os.environ, "PITH_HOME": str(tmp_path / "h")}
+    r = subprocess.run([sys.executable, "-m", "pith.cli", "digest", "--since", "2026-13-45"], env=env, capture_output=True, text=True)
     assert r.returncode != 0 and "error:" in r.stderr and "Traceback" not in r.stderr
 
 

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.providers.ports import ProviderError
-from infoparser.providers.registry import Registry
-from infoparser.providers.tesseract import TesseractBackend
+from pith.providers.ports import ProviderError
+from pith.providers.registry import Registry
+from pith.providers.tesseract import TesseractBackend
 
 # real render of "Hello Sourdough World"
 IMG = Path(__file__).parent.parent / "fixtures" / "ocr_text.png"

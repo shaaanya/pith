@@ -9,8 +9,8 @@ import urllib.request
 import pytest
 from stubs.http_fixture_server import FixtureServer, Route
 
-from infoparser import netguard
-from infoparser.pipeline.extractors import web
+from pith import netguard
+from pith.pipeline.extractors import web
 
 PRIVATE = [
     "http://127.0.0.1/x",

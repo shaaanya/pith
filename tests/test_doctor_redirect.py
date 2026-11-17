@@ -5,8 +5,8 @@ import threading
 
 import pytest
 
-from infoparser import doctor
-from infoparser.config import Config
+from pith import doctor
+from pith.config import Config
 
 KEY = "dummy-key-not-real"
 

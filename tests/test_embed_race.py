@@ -2,9 +2,9 @@
 import numpy as np
 from stubs.hash_embedder import HashEmbedder
 
-from infoparser.pipeline import runner
-from infoparser.retrieval import index, vectors
-from infoparser.store import knowledge
+from pith.pipeline import runner
+from pith.retrieval import index, vectors
+from pith.store import knowledge
 
 TEXT = "Retrieval augmented generation combines search with generation.\n\nChunking matters."
 

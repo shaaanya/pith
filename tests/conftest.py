@@ -2,16 +2,16 @@
 import pytest
 from stubs.hash_embedder import HashEmbedder
 
-from infoparser.config import load_config
-from infoparser.pipeline import runner
-from infoparser.services import build
-from infoparser.worker import Worker
+from pith.config import load_config
+from pith.pipeline import runner
+from pith.services import build
+from pith.worker import Worker
 
 
 @pytest.fixture(name="svc")
 def svc_fixture(tmp_path):
     """Services over a fresh home under tmp_path."""
-    return build(load_config(env={"INFOPARSER_HOME": str(tmp_path / "home")}))
+    return build(load_config(env={"PITH_HOME": str(tmp_path / "home")}))
 
 
 @pytest.fixture

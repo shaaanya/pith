@@ -1,4 +1,4 @@
-"""Real `infoparser doctor` and a real media submit in an ISOLATED home, with whisper.cpp absent.
+"""Real `pith doctor` and a real media submit in an ISOLATED home, with whisper.cpp absent.
 
 Genuine for the degradation path only. Real transcription stays UNVERIFIED: there is no whisper-cli
 or model on this machine, and none is downloaded here.
@@ -19,8 +19,8 @@ def cli(tmp_path, *args):
     """Run the real CLI in a throwaway HOME (the real home is never touched)."""
     home = tmp_path / "h"
     env = {"HOME": str(home), "PATH": os.environ["PATH"],
-           "INFOPARSER_HOME": str(home / "InfoParser")}
-    return subprocess.run([sys.executable, "-m", "infoparser.cli", *args], capture_output=True,
+           "PITH_HOME": str(home / "Pith")}
+    return subprocess.run([sys.executable, "-m", "pith.cli", *args], capture_output=True,
                           text=True, timeout=120, check=False, env=env)
 
 
@@ -29,7 +29,7 @@ def test_doctor_reports_whisper_missing_as_warning_not_failure(tmp_path):
     r = cli(tmp_path, "doctor")
     assert r.returncode == 0
     assert "[WARN ] tool:whisper-cli: 'whisper-cli' not found on PATH" in r.stdout
-    assert not (tmp_path / "h" / "InfoParser" / "infoparser.db").exists()  # doctor creates nothing
+    assert not (tmp_path / "h" / "Pith" / "infoparser.db").exists()  # doctor creates nothing
 
 
 @needs("ffmpeg", "ffprobe")

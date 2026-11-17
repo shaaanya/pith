@@ -1,6 +1,6 @@
 """Text and timed chunking."""
-from infoparser.pipeline.chunk import chunk_text, chunk_timed
-from infoparser.providers.ports import TimedText
+from pith.pipeline.chunk import chunk_text, chunk_timed
+from pith.providers.ports import TimedText
 
 
 def test_chunk_splits_on_headings_and_respects_max():

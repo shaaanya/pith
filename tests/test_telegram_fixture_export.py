@@ -10,9 +10,9 @@ import time
 
 import pytest
 
-from infoparser.adapters.telegram_export import import_export
-from infoparser.pipeline import runner
-from infoparser.worker import Failed, NeedsClarification, Processed
+from pith.adapters.telegram_export import import_export
+from pith.pipeline import runner
+from pith.worker import Failed, NeedsClarification, Processed
 
 NOT_INCLUDED = "(File not included. Change data exporting settings to download.)"
 LINK = "https://example.org/read?utm_source=tg"
@@ -113,7 +113,7 @@ def test_default_never_fetches_url_only_message_and_flag_opts_in(svc, export):
 def test_cli_flag_default_and_opt_in(tmp_path, export):
     """`import-telegram` stores notes by default; --fetch-urls stores a url submission."""
     def run(home, *extra):
-        r = subprocess.run([sys.executable, "-m", "infoparser.cli", "--home", str(home),
+        r = subprocess.run([sys.executable, "-m", "pith.cli", "--home", str(home),
                             "import-telegram", str(export), *extra],
                            capture_output=True, text=True, timeout=60, check=False,
                            env={"HOME": str(tmp_path / "h"), "PATH": "/usr/bin:/bin"})

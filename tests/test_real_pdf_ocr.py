@@ -6,11 +6,11 @@ is checked in tests/optional/pypdf_checks.py (needs `uv run --with pypdf`).
 import pytest
 from realtools import ffmpeg, image_pdf, make_pdf, needs, pdf_page_png
 
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import pdf
-from infoparser.providers.registry import Registry
-from infoparser.providers.tesseract import TesseractBackend
-from infoparser.worker import NeedsClarification, Processed
+from pith.pipeline import runner
+from pith.pipeline.extractors import pdf
+from pith.providers.registry import Registry
+from pith.providers.tesseract import TesseractBackend
+from pith.worker import NeedsClarification, Processed
 
 PAGES = [["Hello Sourdough World", "second line here"], ["Page two Fermentation notes"],
          ["Third page starter hydration"]]

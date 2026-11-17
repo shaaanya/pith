@@ -2,7 +2,7 @@
 import pytest
 from stubs.openai_stub import OpenAIStub
 
-from infoparser.cli import main
+from pith.cli import main
 
 NOTE = "Retrieval augmented generation combines search with generation."
 

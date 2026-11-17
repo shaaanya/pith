@@ -7,12 +7,12 @@ import pytest
 
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
-from infoparser import cli, digest
-from infoparser.dashboard import api
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import web
-from infoparser.retrieval import search as search_mod
-from infoparser.worker import Processed
+from pith import cli, digest
+from pith.dashboard import api
+from pith.pipeline import runner
+from pith.pipeline.extractors import web
+from pith.retrieval import search as search_mod
+from pith.worker import Processed
 
 
 def _process(svc, url):

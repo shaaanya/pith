@@ -1,5 +1,5 @@
-from infoparser.pipeline import runner
-from infoparser.worker import Failed, NeedsClarification, Processed
+from pith.pipeline import runner
+from pith.worker import Failed, NeedsClarification, Processed
 
 NOTE = "Retrieval augmented generation combines search with generation.\n\nChunking strategy matters a lot."
 
@@ -48,7 +48,7 @@ def test_runner_unreadable_media_needs_clarification(svc):
 
 
 def test_runner_extractor_exception_is_failed_with_event(svc, monkeypatch):
-    from infoparser.pipeline.extractors import base
+    from pith.pipeline.extractors import base
     monkeypatch.setitem(base.EXTRACTORS, "note", lambda ctx: 1 / 0)
     iid = svc.inbox.submit(adapter="t", text=NOTE).id
     out = runner.process(svc, iid)
@@ -82,7 +82,7 @@ def test_runner_uses_profile_for_with_user_context(svc, monkeypatch):
 
 
 def test_runner_failed_keeps_original_error_if_event_write_fails(svc, monkeypatch):
-    from infoparser.pipeline.extractors import base
+    from pith.pipeline.extractors import base
     monkeypatch.setitem(base.EXTRACTORS, "note", lambda ctx: 1 / 0)
     real = runner._stage
 
@@ -98,7 +98,7 @@ def test_runner_failed_keeps_original_error_if_event_write_fails(svc, monkeypatc
 
 
 def test_runner_no_extractor_branch(svc, monkeypatch):
-    from infoparser.pipeline.extractors import base
+    from pith.pipeline.extractors import base
     monkeypatch.delitem(base.EXTRACTORS, "note")
     iid = svc.inbox.submit(adapter="t", text="hello there").id
     out = runner.process(svc, iid)
@@ -133,7 +133,7 @@ def test_clarify_writes_event_and_context(svc):
 
 def test_clarification_text_becomes_user_supplied_source(svc):
     from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
-    from infoparser.worker import Processed
+    from pith.worker import Processed
     with FixtureServer({"/wall": Route(FIXTURES / "login_wall.html")}) as srv:
         iid = svc.inbox.submit(adapter="t", text=wall_url(srv)).id
         assert isinstance(runner.process(svc, iid), NeedsClarification)

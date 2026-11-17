@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 
-HTML = (Path(__file__).parent.parent / "src/infoparser/dashboard/static/index.html").read_text()
+HTML = (Path(__file__).parent.parent / "src/pith/dashboard/static/index.html").read_text()
 JS = re.search(r'<script nonce="\{\{nonce\}\}">(.*)</script>', HTML, re.S).group(1)
 
 

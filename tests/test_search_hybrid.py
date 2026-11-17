@@ -1,8 +1,8 @@
 import pytest
 
-from infoparser.pipeline import runner
-from infoparser.retrieval import search as S
-from infoparser.retrieval.search import search, search_ex
+from pith.pipeline import runner
+from pith.retrieval import search as S
+from pith.retrieval.search import search, search_ex
 from stubs.concept_embedder import ConceptEmbedder
 from stubs.hash_embedder import HashEmbedder
 
@@ -128,7 +128,7 @@ def test_filters_by_topic_and_provenance(svc):
 def test_soft_deleted_items_never_returned(svc, use_embedder):
     use_embedder(svc, ConceptEmbedder())
     load(svc, NASH)
-    from infoparser.store.knowledge import delete_item
+    from pith.store.knowledge import delete_item
     for r in svc.conn.execute("SELECT id FROM knowledge_items").fetchall():
         delete_item(svc.conn, r[0])
     assert [h for h in search(svc, "game theory pricing") if h.item_id] == []
@@ -178,7 +178,7 @@ def test_since_applies_to_segments_and_items_alike(svc):
 
 
 def test_segments_of_fully_deleted_source_not_returned(svc):
-    from infoparser.store.knowledge import delete_item
+    from pith.store.knowledge import delete_item
     load(svc, "Alpha beta gamma delta one. Alpha beta gamma delta two. Alpha beta gamma delta three. "
               "Alpha beta gamma delta four. Alpha beta gamma delta five. Alpha beta gamma delta six. "
               "Alpha beta gamma delta seven. Trailing remark about zebrafish only.")

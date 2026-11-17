@@ -1,7 +1,7 @@
 """fs adapter skips (oversize, escaping symlink) are reported, not silent."""
 import logging
 
-from infoparser.adapters.fs import FsAdapter
+from pith.adapters.fs import FsAdapter
 
 
 def test_fs_skips_are_logged_once_and_files_kept(svc, tmp_path, caplog):
@@ -15,7 +15,7 @@ def test_fs_skips_are_logged_once_and_files_kept(svc, tmp_path, caplog):
     big.write_bytes(b"x" * 50)
     svc.cfg.max_fetch_bytes = 10
     fa = FsAdapter(svc.inbox, [drop], stable_polls=1)
-    with caplog.at_level(logging.WARNING, logger="infoparser.adapters.fs"):
+    with caplog.at_level(logging.WARNING, logger="pith.adapters.fs"):
         fa.poll()
         fa.poll()
     msgs = [r.getMessage() for r in caplog.records]
@@ -32,7 +32,7 @@ def test_fixed_file_rewarned_when_oversize_again_and_removed_paths_pruned(svc, t
     big.write_bytes(b"x" * 50)
     svc.cfg.max_fetch_bytes = 10
     fa = FsAdapter(svc.inbox, [drop], stable_polls=99)  # never submits: only skip tracking
-    with caplog.at_level(logging.WARNING, logger="infoparser.adapters.fs"):
+    with caplog.at_level(logging.WARNING, logger="pith.adapters.fs"):
         fa.poll()
         big.write_bytes(b"x" * 5)  # fixed
         fa.poll()

@@ -6,9 +6,9 @@ import urllib.request
 
 import pytest
 
-from infoparser import run_all
-from infoparser.adapters.http_ingest import load_token
-from infoparser.config import load_config
+from pith import run_all
+from pith.adapters.http_ingest import load_token
+from pith.config import load_config
 
 NOTE = "Quokkas are small marsupials from Australia.\n\nThey live on Rottnest Island and eat grass."
 
@@ -44,7 +44,7 @@ def call(info, method, path, body=None):
 
 @pytest.fixture
 def cfg(tmp_path):
-    return load_config(env={"INFOPARSER_HOME": str(tmp_path / "home")})
+    return load_config(env={"PITH_HOME": str(tmp_path / "home")})
 
 
 def wait_for(fn, secs=20):
@@ -67,7 +67,7 @@ def test_run_processes_submission_in_background(cfg):
         item = call(info, "GET", f"/api/items/{hits[0]['item_id']}")
         assert item["provenance"] in ("stated", "inferred", "external") and item["source"]["id"]
         # failed -> retry works end to end
-        from infoparser.services import build
+        from pith.services import build
         s = build(cfg)
         s.inbox.set_status(out["id"], "failed", "boom")
         assert call(info, "POST", f"/api/inbox/{out['id']}/retry", {})["ok"]
@@ -133,7 +133,7 @@ def test_no_dashboard_and_no_watch_flags(cfg):
 
 
 def test_crashed_worker_stops_the_process_loudly(cfg, monkeypatch, capsys):
-    from infoparser.worker import Worker
+    from pith.worker import Worker
 
     def boom(self):
         raise RuntimeError("worker exploded")

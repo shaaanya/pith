@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.providers.ports import ProviderError, TimedText
-from infoparser.providers.registry import Registry
-from infoparser.providers.whisper_cpp import WhisperCppBackend
+from pith.providers.ports import ProviderError, TimedText
+from pith.providers.registry import Registry
+from pith.providers.whisper_cpp import WhisperCppBackend
 
 FAKE = str(Path(__file__).parent.parent / "stubs" / "fake_whisper.py")
 

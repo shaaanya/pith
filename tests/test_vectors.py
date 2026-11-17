@@ -1,5 +1,5 @@
 """Vector store: cosine top-k and pending embeds."""
-from infoparser.retrieval import index, vectors
+from pith.retrieval import index, vectors
 
 
 def test_cosine_topk_filters_by_model_id(svc):

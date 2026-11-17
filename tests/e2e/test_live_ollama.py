@@ -1,6 +1,6 @@
 """Live Ollama checks. Skip cleanly unless a server answers AND the env-named models exist.
 
-Model names come ONLY from env: INFOPARSER_LIVE_CHAT_MODEL, INFOPARSER_LIVE_EMBED_MODEL.
+Model names come ONLY from env: PITH_LIVE_CHAT_MODEL, PITH_LIVE_EMBED_MODEL.
 The server URL honours OLLAMA_HOST (default 127.0.0.1:11434). Prerequisites: `ollama serve`
 running and the models fetched with `ollama pull <model>` (neither is done by these tests).
 """
@@ -53,7 +53,7 @@ def _report(res, label, backend, record_property):
 
 def test_live_ollama_pipeline(tmp_path, record_property):
     """Full pipeline against real local Ollama chat + embedding models (openai_compat)."""
-    chat, emb = _need("INFOPARSER_LIVE_CHAT_MODEL"), _need("INFOPARSER_LIVE_EMBED_MODEL")
+    chat, emb = _need("PITH_LIVE_CHAT_MODEL"), _need("PITH_LIVE_EMBED_MODEL")
     res = run_workflow_cfg(cfg_live(tmp_path / "live", chat, emb))
     _report(res, "openai_compat", "ollama", record_property)
     # deterministic parts: the real embedding model produced vectors and search used them
@@ -66,6 +66,6 @@ def test_live_ollama_cli(tmp_path, record_property):
     """Same pipeline through the cli backend running `ollama run <model>`."""
     if not shutil.which("ollama"):
         pytest.skip("`ollama` binary not on PATH")
-    chat = _need("INFOPARSER_LIVE_CHAT_MODEL")
+    chat = _need("PITH_LIVE_CHAT_MODEL")
     res = run_workflow_cfg(cfg_live_cli(tmp_path / "livecli", chat))
     _report(res, "cli(ollama run)", "ollama_cli", record_property)

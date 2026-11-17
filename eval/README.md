@@ -7,7 +7,7 @@ results and verdicts: [`docs/evaluation.md`](../docs/evaluation.md). Not collect
     uv run python eval/run_eval.py            # needs Ollama + qwen2.5:0.5b + nomic-embed-text already pulled
 
 Writes `eval/results/<UTC date>-<chat model>.json` (everything, incl. per-query rankings and per-run
-extraction records) and a `.md` summary. Uses a temporary home; it asserts `~/InfoParser` is untouched.
+extraction records) and a `.md` summary. Uses a temporary home; it asserts `~/Pith` is untouched.
 
 ## Dataset composition (`eval/data/`)
 

@@ -1,7 +1,7 @@
 """`submit --file` with an unusable path is one clean error line."""
 import pytest
 
-from infoparser.cli import main
+from pith.cli import main
 
 
 @pytest.mark.parametrize("make", [lambda tmp: tmp / "nope.pdf", lambda tmp: tmp])

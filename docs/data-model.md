@@ -1,7 +1,7 @@
 # Data model
 
 SQLite, schema version 3 (`PRAGMA user_version = 3`). Migrations are numbered SQL files in
-`src/infoparser/store/migrations/`: `001_init.sql`, `002_external_id.sql`, `003_external_ids.sql`. The
+`src/pith/store/migrations/`: `001_init.sql`, `002_external_id.sql`, `003_external_ids.sql`. The
 migration splitter is simple: no triggers in migration SQL. Ids are 26-character, time-sortable strings
 (`ids.new_id()`); timestamps are UTC ISO-8601 `YYYY-MM-DDTHH:MM:SSZ`.
 
@@ -35,7 +35,7 @@ migration splitter is simple: no triggers in migration SQL. Ids are 26-character
 ## Embedding model switches
 
 Changing the configured embedding model changes the `model_id`; old vectors stay but are ignored, search
-falls back to FTS until `infoparser reindex` has embedded under the new model. `reindex --prune-old`
+falls back to FTS until `pith reindex` has embedded under the new model. `reindex --prune-old`
 removes vectors of other models. Vectors are never required for correctness.
 
 A segment's vectors are deleted in the same transaction that changes or removes its text (reprocess), and

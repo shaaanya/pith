@@ -3,8 +3,8 @@ import sys
 
 import pytest
 
-from infoparser.providers.cli_backend import CliBackend
-from infoparser.providers.ports import ProviderError
+from pith.providers.cli_backend import CliBackend
+from pith.providers.ports import ProviderError
 
 MSG = [{"role": "user", "content": "hello"}]
 

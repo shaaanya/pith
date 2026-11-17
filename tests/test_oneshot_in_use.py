@@ -1,8 +1,8 @@
 """One-shot commands that write take the shared in-use lock, so a running restore excludes them."""
 import pytest
 
-from infoparser import locks
-from infoparser.cli import main
+from pith import locks
+from pith.cli import main
 
 COMMANDS = [("submit", "hello"), ("retry", "x"), ("clarify", "x", "text"), ("reindex",),
             ("export",), ("digest",), ("import-telegram", "nowhere")]

@@ -5,9 +5,9 @@ import re
 
 import pytest
 
-from infoparser import backup, cli, locks
-from infoparser.config import load_config
-from infoparser.services import build
+from pith import backup, cli, locks
+from pith.config import load_config
+from pith.services import build
 
 QUOKKA = "Quokkas are small marsupials from Australia."
 
@@ -18,7 +18,7 @@ def _home(tmp_path):
 
 def _populated(tmp_path):
     """A home with one queued item and a backup archive of it."""
-    cfg = load_config(env={"INFOPARSER_HOME": str(_home(tmp_path))})
+    cfg = load_config(env={"PITH_HOME": str(_home(tmp_path))})
     svc = build(cfg)
     svc.inbox.submit(adapter="t", text=QUOKKA)
     archive = tmp_path / "a.tar.gz"
@@ -38,7 +38,7 @@ def test_worker_ids_are_unique_per_call_and_name_the_process():
 
 
 def test_cli_worker_uses_a_unique_id_not_w1(tmp_path, monkeypatch):
-    """`infoparser worker` passes a fresh id to Worker."""
+    """`pith worker` passes a fresh id to Worker."""
     seen = []
 
     class Fake:  # pylint: disable=too-few-public-methods  # stands in for Worker
@@ -54,7 +54,7 @@ def test_cli_worker_uses_a_unique_id_not_w1(tmp_path, monkeypatch):
         def run_forever(self):
             """Never used by --once."""
 
-    monkeypatch.setattr("infoparser.worker.Worker", Fake)
+    monkeypatch.setattr("pith.worker.Worker", Fake)
     for _ in range(2):
         cli.main(["--home", str(_home(tmp_path)), "worker", "--once"])
     assert len(set(seen)) == 2 and "w1" not in seen
@@ -126,7 +126,7 @@ def test_library_restore_refuses_while_a_lease_is_live(tmp_path):
 
 
 def test_library_restore_refuses_while_run_lock_is_held(tmp_path):
-    """A running `infoparser run` holds run.lock; the library call still refuses."""
+    """A running `pith run` holds run.lock; the library call still refuses."""
     svc, archive = _populated(tmp_path)
     svc.conn.close()
     with open(_home(tmp_path) / "run.lock", "a+", encoding="utf-8") as f:

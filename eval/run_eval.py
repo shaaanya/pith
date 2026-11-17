@@ -1,4 +1,4 @@
-"""Reproducible evaluation of InfoParser retrieval, dedupe and extraction with REAL local models.
+"""Reproducible evaluation of Pith retrieval, dedupe and extraction with REAL local models.
 
 Needs a running Ollama (127.0.0.1:11434 or OLLAMA_HOST) with the chat and embedding models already
 pulled; it never pulls anything and never touches the network beyond that server. Product code and
@@ -7,7 +7,7 @@ Prefixes are applied inside the harness only. Run from the repo root:
 
     uv run python eval/run_eval.py [--runs 5] [--chat qwen2.5:0.5b] [--embed nomic-embed-text]
 
-Everything runs in a temporary home (never ~/InfoParser; checked on exit). Writes
+Everything runs in a temporary home (never ~/Pith; checked on exit). Writes
 eval/results/<UTC date>-<chat model>.json and a .md summary next to it.
 """
 import argparse
@@ -25,16 +25,16 @@ from pathlib import Path
 import numpy as np
 
 import metrics
-from infoparser.config import load_config
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline import runner
-from infoparser.pipeline.chunk import chunk_text
-from infoparser.pipeline import distill as distill_mod
-from infoparser.pipeline.schemas import SCHEMAS, validate
-from infoparser.providers.registry import Registry
-from infoparser.retrieval import vectors
-from infoparser.retrieval.search import search
-from infoparser.services import build
+from pith.config import load_config
+from pith.domain.models import SegmentIn
+from pith.pipeline import runner
+from pith.pipeline.chunk import chunk_text
+from pith.pipeline import distill as distill_mod
+from pith.pipeline.schemas import SCHEMAS, validate
+from pith.providers.registry import Registry
+from pith.retrieval import vectors
+from pith.retrieval.search import search
+from pith.services import build
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
@@ -70,12 +70,12 @@ def environment(chat, embed):
     return {"ollama_version": _get_json(base + "/api/version")["version"], "models": digests,
             "python": platform.python_version(), "numpy": np.__version__,
             "platform": platform.platform(), "git_head": head, "ollama_url": base,
-            "chat_temperature": "not set by InfoParser (Ollama/model default); not configurable"}
+            "chat_temperature": "not set by Pith (Ollama/model default); not configurable"}
 
 
 def make_cfg(home, chat, embed, *, route):
     """Config for one openai_compat backend against local Ollama, plus the heuristic backend."""
-    cfg = load_config(env={"INFOPARSER_HOME": str(home)})
+    cfg = load_config(env={"PITH_HOME": str(home)})
     cfg.backends = {"ollama": {"type": "openai_compat", "base_url": ollama_base() + "/v1",
                                "model": chat, "embed_model": embed, "timeout": 120},
                     "h": {"type": "heuristic"}}
@@ -393,7 +393,7 @@ def main():  # pylint: disable=too-many-locals  # linear script entry
     ap.add_argument("--extraction-docs", type=int, default=0, help="limit docs (smoke test only)")
     ap.add_argument("--out-dir", default=str(ROOT / "results"))
     args = ap.parse_args()
-    real_home = Path.home() / "InfoParser"
+    real_home = Path.home() / "Pith"
     existed = real_home.exists()
     retrieval = json.loads((DATA / "retrieval.json").read_text(encoding="utf-8"))
     pairs = json.loads((DATA / "dedupe.json").read_text(encoding="utf-8"))
@@ -401,7 +401,7 @@ def main():  # pylint: disable=too-many-locals  # linear script entry
     if args.extraction_docs:
         extraction = extraction[:args.extraction_docs]
     env = environment(args.chat, args.embed)
-    with tempfile.TemporaryDirectory(prefix="infoparser-eval-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="pith-eval-") as tmp:
         t0 = time.time()
         rets, latency, rankings = retrieval_phase(tmp, retrieval, args.chat, args.embed)
         print(f"retrieval done in {time.time() - t0:.0f}s", flush=True)
@@ -409,7 +409,7 @@ def main():  # pylint: disable=too-many-locals  # linear script entry
         print("dedupe done", flush=True)
         extr = extraction_phase(extraction, args.chat, args.embed, args.runs)
         print(f"extraction done in {time.time() - t0:.0f}s total", flush=True)
-    assert real_home.exists() == existed, "the eval touched ~/InfoParser"
+    assert real_home.exists() == existed, "the eval touched ~/Pith"
     now = datetime.datetime.now(datetime.timezone.utc)
     res = {"date": now.strftime("%Y-%m-%d"), "finished_utc": now.isoformat(timespec="seconds"),
            "chat_model": args.chat, "embed_model": args.embed, "environment": env,

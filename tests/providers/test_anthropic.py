@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from infoparser.providers.anthropic import AnthropicBackend
-from infoparser.providers.ports import CapabilityError, ProviderError, RemoteBlocked
-from infoparser.providers.registry import Registry
+from pith.providers.anthropic import AnthropicBackend
+from pith.providers.ports import CapabilityError, ProviderError, RemoteBlocked
+from pith.providers.registry import Registry
 from stubs.anthropic_stub import AnthropicStub
 
 MSGS = [{"role": "system", "content": "be terse"}, {"role": "user", "content": "hi"},

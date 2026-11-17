@@ -7,13 +7,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from infoparser.config import load_config
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import media, web
-from infoparser.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
-from infoparser.pipeline.extractors.vtt import parse_vtt
-from infoparser.providers.ports import ProviderError, TimedText
-from infoparser.worker import Failed, NeedsClarification, Processed
+from pith.config import load_config
+from pith.pipeline import runner
+from pith.pipeline.extractors import media, web
+from pith.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
+from pith.pipeline.extractors.vtt import parse_vtt
+from pith.providers.ports import ProviderError, TimedText
+from pith.worker import Failed, NeedsClarification, Processed
 
 FIX = Path(__file__).parent / "fixtures"
 FAKE = str(Path(__file__).parent / "stubs" / "fake_ytdlp.py")
@@ -53,7 +53,7 @@ def env(tmp_path, monkeypatch):
     log = tmp_path / "ytdlp.log"
     monkeypatch.setenv("FAKE_YTDLP_LOG", str(log))
     monkeypatch.delenv("FAKE_YTDLP_MODE", raising=False)
-    cfg = load_config(env={"INFOPARSER_HOME": str(tmp_path / "home"), "INFOPARSER_YT_DLP": FAKE})
+    cfg = load_config(env={"PITH_HOME": str(tmp_path / "home"), "PITH_YT_DLP": FAKE})
     dirs = []
     real = tempfile.mkdtemp
     monkeypatch.setattr(tempfile, "mkdtemp", lambda *a, **k: dirs.append(real(*a, **k)) or dirs[-1])
@@ -96,7 +96,7 @@ def test_media_falls_back_to_transcriber(env, monkeypatch):
     assert [t.text for t in ex.timed] == ["spoken words here", "more talk"]
     assert any("-x" in c for c in env.calls())
     assert tr.calls and not any(Path(d).exists() for d in env.dirs)
-    from infoparser.pipeline.chunk import chunk_timed
+    from pith.pipeline.chunk import chunk_timed
     assert chunk_timed(ex.timed)[0][1] == "t=0-9"
 
 
@@ -177,7 +177,7 @@ def make_media(tmp_path, kind):
 
 
 def file_ctx(env, tmp_path, path, **reg):
-    from infoparser.store.blobs import BlobStore
+    from pith.store.blobs import BlobStore
     blobs = BlobStore(tmp_path / "blobs")
     sha = blobs.put_file(path)
     row = {"canonical_url": None, "blob_sha256": sha, "original_filename": path.name, "payload_text": None}
@@ -283,7 +283,7 @@ def test_ffmpeg_frame_failure_contained(env, tmp_path, monkeypatch):
 
 @needs_ffmpeg
 def test_visual_item_has_real_range_locator(env, tmp_path):
-    from infoparser.pipeline.chunk import chunk_timed
+    from pith.pipeline.chunk import chunk_timed
     ex = media.extract(file_ctx(env, tmp_path, make_media(tmp_path, "silent"), describe=Vision()))
     v = ex.timed[0]
     assert v.start == 0 and v.end == 6.0 and v.text.startswith("[visual]")

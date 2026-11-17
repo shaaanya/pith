@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from infoparser.pipeline import runner
-from infoparser.pipeline.detect import detect
-from infoparser.worker import Processed
+from pith.pipeline import runner
+from pith.pipeline.detect import detect
+from pith.worker import Processed
 
 FAKE = str(Path(__file__).parent / "stubs" / "fake_ytdlp.py")
 

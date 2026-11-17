@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from infoparser.domain.models import Candidate, SegmentIn
-from infoparser.pipeline.provenance import check
-from infoparser.providers.heuristic import HeuristicBackend
+from pith.domain.models import Candidate, SegmentIn
+from pith.pipeline.provenance import check
+from pith.providers.heuristic import HeuristicBackend
 
 LONG = SegmentIn(0, "Rust has no garbage collector and uses ownership.", "char=0-50")
 SHORT = SegmentIn(1, "Use Rust.", "char=51-60")

@@ -1,8 +1,8 @@
 """A worker that lost its lease while processing writes nothing (no second source, no orphans)."""
-from infoparser import jobs
-from infoparser.pipeline import runner
-from infoparser.services import build
-from infoparser.worker import Worker
+from pith import jobs
+from pith.pipeline import runner
+from pith.services import build
+from pith.worker import Worker
 
 NOTE = ("Retrieval augmented generation combines search with generation.\n\n"
         "Chunking strategy matters a lot for retrieval quality.")

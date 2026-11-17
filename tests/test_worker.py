@@ -1,11 +1,11 @@
 import pytest
 
-from infoparser.config import load_config
-from infoparser.inbox.service import Inbox
-from infoparser.jobs import JobQueue
-from infoparser.store.blobs import BlobStore
-from infoparser.store.db import connect, migrate
-from infoparser.worker import Failed, NeedsClarification, Processed, Worker
+from pith.config import load_config
+from pith.inbox.service import Inbox
+from pith.jobs import JobQueue
+from pith.store.blobs import BlobStore
+from pith.store.db import connect, migrate
+from pith.worker import Failed, NeedsClarification, Processed, Worker
 
 
 def expire(conn):
@@ -18,7 +18,7 @@ class Crash(BaseException):
 
 @pytest.fixture
 def env(tmp_path):
-    cfg = load_config(env={"INFOPARSER_HOME": str(tmp_path)})
+    cfg = load_config(env={"PITH_HOME": str(tmp_path)})
     conn = connect(cfg.db_path)
     migrate(conn)
     inbox = Inbox(conn, BlobStore(cfg.blobs_dir), cfg)

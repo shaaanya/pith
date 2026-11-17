@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from infoparser.domain.models import Candidate, SegmentIn
-from infoparser.store import knowledge as K
-from infoparser.store.db import connect, migrate
+from pith.domain.models import Candidate, SegmentIn
+from pith.store import knowledge as K
+from pith.store.db import connect, migrate
 
 
 @pytest.fixture

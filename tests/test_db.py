@@ -4,7 +4,7 @@ import threading
 
 import pytest
 
-from infoparser.store.db import connect, migrate
+from pith.store.db import connect, migrate
 
 TABLES = {
     "inbox_items", "jobs", "processing_events", "sources", "segments",

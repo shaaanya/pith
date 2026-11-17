@@ -1,11 +1,11 @@
 """`quote: null` on one item must not sink the whole model reply."""
 import json
 
-from infoparser.domain.models import SegmentIn
-from infoparser.pipeline.distill import distill
-from infoparser.providers.heuristic import HeuristicBackend
-from infoparser.providers.ports import Capabilities, GenResult
-from infoparser.providers.registry import Registry
+from pith.domain.models import SegmentIn
+from pith.pipeline.distill import distill
+from pith.providers.heuristic import HeuristicBackend
+from pith.providers.ports import Capabilities, GenResult
+from pith.providers.registry import Registry
 
 TEXT = "Rust ownership prevents data races at compile time. Borrowing lets code read."
 

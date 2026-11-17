@@ -6,12 +6,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from infoparser import cli, doctor
-from infoparser.config import Config
-from infoparser.providers import egress, locality
-from infoparser.providers.openai_compat import OpenAICompatBackend
-from infoparser.providers.ports import ProviderError, RemoteBlocked
-from infoparser.providers.registry import Registry
+from pith import cli, doctor
+from pith.config import Config
+from pith.providers import egress, locality
+from pith.providers.openai_compat import OpenAICompatBackend
+from pith.providers.ports import ProviderError, RemoteBlocked
+from pith.providers.registry import Registry
 
 LAN = "http://192.0.2.7:9/v1"  # TEST-NET-1: never routable
 
@@ -96,7 +96,7 @@ def test_declared_local_on_lan_host_is_honoured_but_warned(tmp_path):
 
 
 def test_cli_doctor_prints_the_locality_warning(tmp_path, monkeypatch, capsys):
-    """`infoparser doctor` surfaces the warning and the egress command states the cli trust rule."""
+    """`pith doctor` surfaces the warning and the egress command states the cli trust rule."""
     conf = tmp_path / "c.toml"
     conf.write_text(f'[backends.lan]\ntype = "openai_compat"\nbase_url = "{LAN}"\nmodel = "m"\n'
                     'locality = "local"\n')

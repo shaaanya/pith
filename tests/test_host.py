@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from infoparser import host
+from pith import host
 
 DOC = ("Zebras sleep standing up because lions hunt at night. "
        "Their stripes confuse biting flies, a 2019 study found. " * 3)
@@ -66,7 +66,7 @@ def test_inbox_id_accepted(svc, src):
 
 
 def test_ask_retrieval_only_never_calls_a_generator(svc, src, monkeypatch):
-    from infoparser.retrieval.ask import ask
+    from pith.retrieval.ask import ask
     monkeypatch.setattr(svc.registry, "generators", lambda task: pytest.fail("generator used"))
     a = ask(svc, "zebras sleep", retrieval_only=True)
     assert a.mode == "retrieval-only" and a.retrieved

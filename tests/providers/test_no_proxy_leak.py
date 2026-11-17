@@ -6,10 +6,10 @@ import pytest
 from stubs.anthropic_stub import AnthropicStub
 from stubs.openai_stub import OpenAIStub
 
-from infoparser import doctor
-from infoparser.config import Config
-from infoparser.providers.anthropic import AnthropicBackend
-from infoparser.providers.registry import Registry
+from pith import doctor
+from pith.config import Config
+from pith.providers.anthropic import AnthropicBackend
+from pith.providers.registry import Registry
 
 MSG = [{"role": "user", "content": "MY PRIVATE NOTE"}]
 

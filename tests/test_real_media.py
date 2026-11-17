@@ -7,17 +7,17 @@ vision model is installed, so the model-side of this path is NOT verified here.
 import pytest
 from realtools import Probe, Reg, Vision, make_av, needs
 
-from infoparser.config import load_config
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import media
-from infoparser.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
-from infoparser.worker import NeedsClarification
+from pith.config import load_config
+from pith.pipeline import runner
+from pith.pipeline.extractors import media
+from pith.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
+from pith.worker import NeedsClarification
 
 pytestmark = needs("ffmpeg", "ffprobe")
 
 
 def _ctx(tmp_path, svc_blobs, path, **reg):
-    cfg = load_config(env={"INFOPARSER_HOME": str(tmp_path / "home")})
+    cfg = load_config(env={"PITH_HOME": str(tmp_path / "home")})
     row = {"canonical_url": None, "blob_sha256": svc_blobs.put_file(path),
            "original_filename": path.name, "payload_text": None}
     return ExtractCtx(row, svc_blobs, Reg(**reg), cfg)

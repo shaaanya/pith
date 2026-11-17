@@ -1,6 +1,6 @@
 """REAL yt-dlp (+ ffmpeg) against a LOOPBACK HTTP server: no external site is contacted.
 
-Genuine evidence that the flags InfoParser passes are accepted by the installed yt-dlp, that the
+Genuine evidence that the flags Pith passes are accepted by the installed yt-dlp, that the
 documented failure modes map to the documented outcomes, and that URLs are cited as submitted.
 Only yt-dlp's generic extractor is exercised; YouTube/Instagram/TikTok extractors are NOT.
 Transcriber/vision are scripted (whisper is not installed).
@@ -11,11 +11,11 @@ import pytest
 from realtools import Probe, Reg, Vision, make_av, needs, run
 from stubs.http_fixture_server import FIXTURES, FixtureServer, Route
 
-from infoparser.config import load_config
-from infoparser.pipeline import runner
-from infoparser.pipeline.extractors import media
-from infoparser.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
-from infoparser.worker import Failed
+from pith.config import load_config
+from pith.pipeline import runner
+from pith.pipeline.extractors import media
+from pith.pipeline.extractors.base import ExtractCtx, NeedsClarificationError
+from pith.worker import Failed
 
 pytestmark = needs("yt-dlp", "ffmpeg", "ffprobe")
 
@@ -44,7 +44,7 @@ def site_fixture(tmp_path):
         yield srv
 
 def _ctx(tmp_path, url, max_bytes=None, **reg):
-    env = {"INFOPARSER_HOME": str(tmp_path / "home")}
+    env = {"PITH_HOME": str(tmp_path / "home")}
     cfg = load_config(env=env)
     if max_bytes:
         cfg.max_fetch_bytes = max_bytes

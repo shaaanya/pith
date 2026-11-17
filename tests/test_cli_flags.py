@@ -1,7 +1,7 @@
 """--home / --config must work before AND after the subcommand, for every subcommand.
 
-Every subprocess runs with HOME and INFOPARSER_HOME pointed into tmp_path, so a regression
-can never touch the real ~/InfoParser; the (fake) default home must stay absent.
+Every subprocess runs with HOME and PITH_HOME pointed into tmp_path, so a regression
+can never touch the real ~/Pith; the (fake) default home must stay absent.
 """
 import os
 import subprocess
@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from infoparser import cli
+from pith import cli
 
 # (argv after the subcommand-independent flags, creates the database in the flagged home)
 RUNNABLE = [
@@ -37,10 +37,10 @@ ALL = [["init"], ["submit", "x"], ["inbox"], ["retry", "i"], ["worker"], ["searc
 def _run(tmp_path, argv, extra_env=None):
     fake_home = tmp_path / "fakehome"
     fake_home.mkdir(exist_ok=True)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("INFOPARSER_")}
-    env.update({"HOME": str(fake_home), "INFOPARSER_HOME": str(tmp_path / "envhome"),
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PITH_")}
+    env.update({"HOME": str(fake_home), "PITH_HOME": str(tmp_path / "envhome"),
                 **(extra_env or {})})
-    return subprocess.run([sys.executable, "-m", "infoparser.cli", *argv], env=env,
+    return subprocess.run([sys.executable, "-m", "pith.cli", *argv], env=env,
                           capture_output=True, text=True, timeout=60, check=False)
 
 
@@ -63,10 +63,10 @@ def test_flag_selects_home_in_either_position(tmp_path, cmd, creates_db, kind, p
     """Flag home is used, defaults and env home untouched."""
     argv, home = _flag_args(kind, position, tmp_path, cmd)
     # an empty env var means "unset" to load_config's `or`, so the config file's home applies
-    extra = {"INFOPARSER_HOME": ""} if kind == "config" else None
+    extra = {"PITH_HOME": ""} if kind == "config" else None
     res = _run(tmp_path, argv, extra)
     assert "Traceback" not in res.stderr, res.stderr
-    assert not (tmp_path / "fakehome" / "InfoParser").exists(), "touched the default home"
+    assert not (tmp_path / "fakehome" / "Pith").exists(), "touched the default home"
     if kind == "home":
         assert not (tmp_path / "envhome").exists(), "flag lost to the env home"
     if creates_db:

@@ -1,4 +1,4 @@
-from infoparser.pipeline.detect import detect
+from pith.pipeline.detect import detect
 
 
 def row(**kw):

@@ -1,6 +1,6 @@
 """Provenance check: quotes must be found in the cited segment."""
-from infoparser.domain.models import Candidate, SegmentIn
-from infoparser.pipeline.provenance import check
+from pith.domain.models import Candidate, SegmentIn
+from pith.pipeline.provenance import check
 
 SEGS = [SegmentIn(0, "Rust has   no garbage collector.", "char=0-10"),
         SegmentIn(1, "Other text.", "char=11-20")]

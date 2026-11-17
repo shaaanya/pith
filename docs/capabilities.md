@@ -48,7 +48,7 @@ A task name selects a chain of backends. The task names are exactly:
 
 ## Detection
 
-`infoparser doctor` reports each backend's declared capabilities and, for local `openai_compat` servers,
+`pith doctor` reports each backend's declared capabilities and, for local `openai_compat` servers,
 probes reachability and the embeddings endpoint with canned strings (3 s timeout). It does not probe JSON
 mode, does not contact remote backends, and never executes `cli` backends (it only checks the command is on
 PATH). Capabilities are declared in config and only embeddings are probed; a declaration that the server

@@ -2,7 +2,7 @@
 import ast
 from pathlib import Path
 
-SRC = Path(__file__).parent.parent / "src" / "infoparser"
+SRC = Path(__file__).parent.parent / "src" / "pith"
 LAYERS = ["domain", "pipeline", "inbox", "retrieval"]
 BACKENDS = {"heuristic", "openai_compat", "cli_backend", "anthropic", "tesseract", "whisper_cpp"}
 
@@ -15,16 +15,16 @@ def _bad_imports(path, root=SRC):
         elif isinstance(n, ast.ImportFrom):
             base = n.module or ""
             if n.level:  # relative import: resolve against this file's package
-                pkg = ["infoparser", *path.relative_to(root).parts[:-1]]
+                pkg = ["pith", *path.relative_to(root).parts[:-1]]
                 pkg = pkg[: len(pkg) - (n.level - 1)]
                 base = ".".join([*pkg, *([n.module] if n.module else [])])
             mods = [base]
-            if base == "infoparser.providers":
-                mods += [f"infoparser.providers.{a.name}" for a in n.names]
+            if base == "pith.providers":
+                mods += [f"pith.providers.{a.name}" for a in n.names]
         else:
             continue
         bad += [m for m in mods
-                if m.startswith("infoparser.providers.") and m.split(".")[2] in BACKENDS]
+                if m.startswith("pith.providers.") and m.split(".")[2] in BACKENDS]
     return bad
 
 
@@ -42,10 +42,10 @@ def test_scanner_flags_bad_imports(tmp_path):
     pkg = tmp_path / "domain"
     pkg.mkdir()
     cases = {
-        "a.py": "import infoparser.providers.heuristic",
-        "b.py": "from infoparser.providers import openai_compat",
+        "a.py": "import pith.providers.heuristic",
+        "b.py": "from pith.providers import openai_compat",
         "c.py": "from ..providers.anthropic import X",
-        "d.py": "from infoparser.providers.ports import P",
+        "d.py": "from pith.providers.ports import P",
     }
     for name, src in cases.items():
         (pkg / name).write_text(src)

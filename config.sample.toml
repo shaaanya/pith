@@ -1,9 +1,9 @@
-# Copy anywhere and pass it with `infoparser --config PATH ...` or INFOPARSER_CONFIG=PATH.
-# Without --config/INFOPARSER_CONFIG, <home>/config.toml is used if it exists (the dashboard's Settings
+# Copy anywhere and pass it with `pith --config PATH ...` or PITH_CONFIG=PATH.
+# Without --config/PITH_CONFIG, <home>/config.toml is used if it exists (the dashboard's Settings
 # tab writes it; its `home` key is ignored there). Without any file the defaults apply (heuristic only).
-# Env overrides: INFOPARSER_HOME, INFOPARSER_CONFIG, INFOPARSER_HTTP_TOKEN,
-# INFOPARSER_YT_DLP, INFOPARSER_FFMPEG. See docs/configuration.md for every key.
-home = "~/InfoParser"
+# Env overrides: PITH_HOME, PITH_CONFIG, PITH_HTTP_TOKEN,
+# PITH_YT_DLP, PITH_FFMPEG. See docs/configuration.md for every key.
+home = "~/Pith"
 
 [privacy]
 allow_remote = false   # remote-tagged backends refuse to run until true
@@ -15,7 +15,7 @@ max_fetch_bytes = 50000000
 
 [watch]
 dirs = [
-  "~/InfoParser/inbox",
+  "~/Pith/inbox",
   "~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/Claude Inbox",
 ]
 
@@ -97,7 +97,7 @@ classify = ["local", "heuristic"]
 # embed = ["local"]             # needs embed_model on that backend
 # answer = ["local"]            # `ask`; without one, ask returns cited excerpts only
 
-# HTTP ingest (`infoparser serve-http`). Loopback by default; the token is generated into
+# HTTP ingest (`pith serve-http`). Loopback by default; the token is generated into
 # <home>/http_token. A non-loopback bind requires an explicit token and is NOT recommended.
 # [http]
 # bind = "127.0.0.1"

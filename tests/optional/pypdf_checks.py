@@ -10,9 +10,9 @@ from realtools import image_pdf, make_pdf, needs, pdf_page_png
 
 pypdf = pytest.importorskip("pypdf")
 
-from infoparser.pipeline import runner  # noqa: E402  # pylint: disable=wrong-import-position
-from infoparser.pipeline.extractors import pdf  # noqa: E402  # pylint: disable=wrong-import-position
-from infoparser.worker import NeedsClarification, Processed  # noqa: E402  # pylint: disable=wrong-import-position
+from pith.pipeline import runner  # noqa: E402  # pylint: disable=wrong-import-position
+from pith.pipeline.extractors import pdf  # noqa: E402  # pylint: disable=wrong-import-position
+from pith.worker import NeedsClarification, Processed  # noqa: E402  # pylint: disable=wrong-import-position
 
 PAGES = [["Hello Sourdough World", "second line here"], ["Page two Fermentation notes"],
          ["Third page starter hydration"]]

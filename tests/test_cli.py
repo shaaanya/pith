@@ -1,4 +1,4 @@
-"""CLI round trips through a real subprocess (HOME and INFOPARSER_HOME isolated in tmp_path)."""
+"""CLI round trips through a real subprocess (HOME and PITH_HOME isolated in tmp_path)."""
 import json
 import os
 import subprocess
@@ -8,13 +8,13 @@ QUOKKA = "Quokkas are small marsupials from Australia."
 
 
 def _exec(env, *args):
-    return subprocess.run([sys.executable, "-m", "infoparser.cli", *args], env=env,
+    return subprocess.run([sys.executable, "-m", "pith.cli", *args], env=env,
                           capture_output=True, text=True, timeout=60, check=False)
 
 
 def run(home, *args):
-    """Run the CLI against `home`; HOME points beside it so the real ~/InfoParser is never used."""
-    env = {**os.environ, "INFOPARSER_HOME": str(home), "HOME": str(home) + "-userhome"}
+    """Run the CLI against `home`; HOME points beside it so the real ~/Pith is never used."""
+    env = {**os.environ, "PITH_HOME": str(home), "HOME": str(home) + "-userhome"}
     return _exec(env, *args)
 
 
@@ -41,13 +41,13 @@ def test_cli_unknown_id_clean_error_and_flags_after_subcommand(tmp_path):
     for args in (("retry", "nope"), ("show", "nope")):
         r = run(home, *args)
         assert r.returncode != 0 and "Traceback" not in r.stderr and "nope" in r.stderr
-    fake_home = tmp_path / "fakehome"  # a regression must never touch the real ~/InfoParser
+    fake_home = tmp_path / "fakehome"  # a regression must never touch the real ~/Pith
     fake_home.mkdir()
-    env = {**{k: v for k, v in os.environ.items() if k != "INFOPARSER_HOME"},
+    env = {**{k: v for k, v in os.environ.items() if k != "PITH_HOME"},
            "HOME": str(fake_home)}
     r = _exec(env, "init", "--home", str(tmp_path / "h2"))
     assert r.returncode == 0 and (tmp_path / "h2" / "infoparser.db").exists()
-    assert not (fake_home / "InfoParser").exists()
+    assert not (fake_home / "Pith").exists()
 
 
 def test_cli_ask_and_search_citation_format_no_answer_backend(tmp_path):

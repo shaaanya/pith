@@ -1,8 +1,8 @@
-from infoparser.domain.models import Candidate
-from infoparser.pipeline import entities, runner
-from infoparser.retrieval.search import search
-from infoparser.store import knowledge
-from infoparser.store.knowledge import get_item
+from pith.domain.models import Candidate
+from pith.pipeline import entities, runner
+from pith.retrieval.search import search
+from pith.store import knowledge
+from pith.store.knowledge import get_item
 
 
 def mk(svc, cands):
@@ -57,7 +57,7 @@ def _runner_with(monkeypatch, cands):
 
 
 def test_malformed_entities_do_not_fail_item(svc, monkeypatch):
-    from infoparser.worker import Processed
+    from pith.worker import Processed
     _runner_with(monkeypatch, [Candidate("insight", "a", "alpha body text", entities=123, topics=[None])])
     iid = svc.inbox.submit(adapter="t", text="alpha body text here").id
     assert isinstance(runner.process(svc, iid), Processed)
@@ -65,7 +65,7 @@ def test_malformed_entities_do_not_fail_item(svc, monkeypatch):
 
 
 def test_entities_apply_crash_is_contained(svc, monkeypatch):
-    from infoparser.worker import Processed
+    from pith.worker import Processed
     _runner_with(monkeypatch, [Candidate("insight", "a", "alpha body text")])
     monkeypatch.setattr(entities, "apply", lambda *a: 1 / 0)
     iid = svc.inbox.submit(adapter="t", text="alpha body text here").id
@@ -77,8 +77,8 @@ def test_entities_apply_crash_is_contained(svc, monkeypatch):
 
 
 def test_event_log_failure_in_enrichment_does_not_fail_item(svc, monkeypatch, use_embedder):
-    from infoparser.worker import Processed
-    from infoparser.pipeline import dedupe
+    from pith.worker import Processed
+    from pith.pipeline import dedupe
     monkeypatch.setattr(dedupe, "find_near_duplicates", lambda *a, **k: 1 / 0)
     real = runner._stage
 
@@ -105,7 +105,7 @@ def count_for(svc, ids):
 
 
 def test_reprocess_purges_links_of_replaced_items_keeps_user_edited(svc):
-    from infoparser.retrieval import vectors
+    from pith.retrieval import vectors
     cands = [Candidate("insight", "a", "alpha", entities=["E"], topics=["T"]),
              Candidate("insight", "b", "beta", entities=["E"], topics=["T"])]
     sid = knowledge.save_source(svc.conn, url=None, title="t", author=None, platform=None, content_type="note",
@@ -129,7 +129,7 @@ def test_reprocess_purges_links_of_replaced_items_keeps_user_edited(svc):
 
 
 def test_update_item_invalidates_embedding(svc):
-    from infoparser.retrieval import vectors
+    from pith.retrieval import vectors
     ids = mk(svc, [Candidate("insight", "a", "alpha")])
     vectors.put(svc.conn, "item", ids, "m", [[1, 0]])
     knowledge.update_item(svc.conn, ids[0], body="changed")
@@ -137,7 +137,7 @@ def test_update_item_invalidates_embedding(svc):
 
 
 def test_cosine_topk_excludes_soft_deleted_items(svc):
-    from infoparser.retrieval import vectors
+    from pith.retrieval import vectors
     ids = mk(svc, [Candidate("insight", "a", "alpha")])
     vectors.put(svc.conn, "item", ids, "m", [[1, 0]])
     svc.conn.execute("UPDATE knowledge_items SET deleted_at='x'")
@@ -145,5 +145,5 @@ def test_cosine_topk_excludes_soft_deleted_items(svc):
 
 
 def test_normalize_lives_in_domain():
-    from infoparser.domain.text import normalize
+    from pith.domain.text import normalize
     assert normalize("  Open   AI ") == "open ai"

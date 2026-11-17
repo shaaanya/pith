@@ -4,8 +4,8 @@ import json
 import pytest
 from stubs.openai_stub import OpenAIStub
 
-from infoparser.providers.openai_compat import OpenAICompatBackend
-from infoparser.providers.ports import Capabilities, CapabilityError, ProviderError
+from pith.providers.openai_compat import OpenAICompatBackend
+from pith.providers.ports import Capabilities, CapabilityError, ProviderError
 
 MSG = [{"role": "user", "content": "hi"}]
 SCHEMA = {"type": "object"}

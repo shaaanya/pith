@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from infoparser.providers.ports import ProviderError, run_cli
+from pith.providers.ports import ProviderError, run_cli
 
 
 def py(code):

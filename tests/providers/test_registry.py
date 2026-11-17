@@ -1,6 +1,6 @@
 import pytest
 
-from infoparser.providers.registry import Registry
+from pith.providers.registry import Registry
 
 H = {"type": "heuristic"}
 
@@ -37,8 +37,8 @@ def test_registry_unknown_task_ref_raises(make_cfg):
 
 
 def test_registry_unshipped_type_errors_only_when_configured(make_cfg, monkeypatch):
-    from infoparser.providers import registry as R
-    monkeypatch.setitem(R.TYPES, "ghost", "infoparser.providers.nonexistent:Ghost")
+    from pith.providers import registry as R
+    monkeypatch.setitem(R.TYPES, "ghost", "pith.providers.nonexistent:Ghost")
     Registry.from_config(make_cfg({"a": H}))  # never imported unless configured
     with pytest.raises(ValueError, match="unavailable"):
         Registry.from_config(make_cfg({"t": {"type": "ghost"}}))
@@ -64,7 +64,7 @@ def test_registry_skips_recorded_and_described(make_cfg):
 
 
 def test_registry_explicit_remote_raises_remote_blocked(make_cfg):
-    from infoparser.providers.ports import RemoteBlocked
+    from pith.providers.ports import RemoteBlocked
     be = {"far": {"type": "cli", "command": ["x"], "locality": "remote"}}
     with pytest.raises(RemoteBlocked):
         Registry.from_config(make_cfg(be)).get("far")
