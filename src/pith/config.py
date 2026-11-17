@@ -1,5 +1,6 @@
 """Configuration: TOML file plus PITH_* environment overrides."""
 import os
+import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -36,12 +37,40 @@ def _int(data: dict, section: str, key: str, default: int, minimum: int = 0) -> 
     return v
 
 
+_BROWSER = re.compile(
+    r"(?i)(brave|chrome|chromium|edge|firefox|opera|safari|vivaldi|whale)([+:][^\n\r]*)?")
+
+
+def _browser(data: dict) -> str | None:
+    """media.cookies_from_browser: a yt-dlp BROWSER[+KEYRING][:PROFILE] value, else ConfigError.
+    The browser name must come first so the value can never be read as a command-line flag."""
+    v = _str(data, "media", "cookies_from_browser", None)
+    if not v:
+        return None
+    if not _BROWSER.fullmatch(v):
+        raise ConfigError("media.cookies_from_browser must be a browser name, optionally followed "
+                          f"by :PROFILE (e.g. firefox:pith), got {v!r}")
+    return v
+
+
 def _strs(v, what: str) -> list[str]:
     """v as a list of str (one bare string is the one-element list), else ConfigError."""
     v = [v] if isinstance(v, str) else v
     if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
         raise ConfigError(f"{what} must be a list of strings, got {v!r}")
     return v
+
+
+def _channels(data: dict) -> dict[str, dict]:
+    """[channels.<name>] tables; `enabled`, when present, must be a boolean."""
+    out = {}
+    for name, v in _table(data, "channels").items():
+        if not isinstance(v, dict):
+            raise ConfigError(f"channels.{name} must be a table, got {v!r}")
+        if not isinstance(v.get("enabled", True), bool):
+            raise ConfigError(f"channels.{name}.enabled must be true or false, got {v['enabled']!r}")
+        out[name] = dict(v)
+    return out
 
 
 @dataclass
@@ -53,6 +82,7 @@ class Config:  # pylint: disable=too-many-instance-attributes  # flat settings r
     blobs_dir: Path
     vault_dir: Path
     watch_dirs: list[Path] = field(default_factory=list)
+    channels: dict[str, dict] = field(default_factory=dict)  # [channels.<name>] tables, raw
     backends: dict[str, dict] = field(default_factory=dict)
     tasks: dict[str, list[str]] = field(default_factory=dict)
     allow_remote: bool = False
@@ -61,6 +91,9 @@ class Config:  # pylint: disable=too-many-instance-attributes  # flat settings r
     max_fetch_bytes: int = 50_000_000
     yt_dlp_binary: str = "yt-dlp"
     ffmpeg_binary: str = "ffmpeg"
+    cookies_from_browser: str | None = None  # opt-in: yt-dlp --cookies-from-browser value
+    cookie_domains: list[str] = field(default_factory=lambda: ["instagram.com", "tiktok.com"])
+    cookie_gap_seconds: int = 20  # minimum gap between logged-in fetches to one host
     http_bind: str = "127.0.0.1"
     http_port: int = 8787
     http_token: str | None = None  # explicit token required for a non-loopback bind
@@ -110,6 +143,7 @@ def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
     if not isinstance(watch, list):  # a bare string would be iterated per character
         raise ConfigError(f"watch.dirs must be a list of strings, got {watch!r}")
     tasks = {k: _strs(v, f"tasks.{k}") for k, v in _table(data, "tasks").items()}
+    channels = _channels(data)
     for k, v in _table(data, "backends").items():
         if not isinstance(v, dict):
             raise ConfigError(f"backends.{k} must be a table, got {v!r}")
@@ -123,6 +157,7 @@ def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
         blobs_dir=home / "blobs",
         vault_dir=home / "vault",
         watch_dirs=[Path(d).expanduser() for d in _strs(watch, 'watch.dirs')],
+        channels=channels,
         backends={k: dict(v) for k, v in _table(data, "backends").items()},
         tasks=tasks,
         allow_remote=allow_remote,
@@ -136,5 +171,10 @@ def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
         max_fetch_bytes=_int(data, "limits", "max_fetch_bytes", 50_000_000, 1),
         yt_dlp_binary=env.get("PITH_YT_DLP") or _str(data, "media", "yt_dlp", "yt-dlp"),
         ffmpeg_binary=env.get("PITH_FFMPEG") or _str(data, "media", "ffmpeg", "ffmpeg"),
+        cookies_from_browser=_browser(data),
+        cookie_domains=[d.lower().lstrip(".") for d in _strs(
+            _table(data, "media").get("cookie_domains", ["instagram.com", "tiktok.com"]),
+            "media.cookie_domains")],
+        cookie_gap_seconds=_int(data, "media", "cookie_gap_seconds", 20),
         source=Path(path).expanduser() if path else None,
     )

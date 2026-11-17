@@ -46,8 +46,9 @@ class FsAdapter:
 
     name = "fs"
 
-    def __init__(self, inbox, dirs: list[Path], stable_polls: int = 2):
+    def __init__(self, inbox, dirs: list[Path], stable_polls: int = 2, interval: float = 5.0):
         self.inbox, self.dirs, self.stable_polls = inbox, [Path(d) for d in dirs], stable_polls
+        self.interval = interval
         self._seen: dict[Path, tuple[int, int]] = {}  # path -> (size, consecutive stable polls)
         self.skipped: dict[Path, str] = {}
 

@@ -173,6 +173,32 @@ def save(cfg: Config, body) -> Config:
         return _write(cfg, target, text)
 
 
+def enable_channel(cfg: Config, name: str) -> Config:
+    """Set `[channels.<name>] enabled = true` in the config file, keeping every other key. The
+    previous file is kept as config.toml.bak; a file already enabling it is not touched."""
+    target = cfg.source or cfg.home / "config.toml"
+    with _LOCK:
+        try:
+            raw = tomllib.loads(target.read_text(encoding="utf-8")) if target.is_file() else {}
+        except (OSError, ValueError) as e:
+            raise ValueError(f"cannot read {target}: {e}") from e
+        chans = raw.setdefault("channels", {})
+        if not isinstance(chans, dict) or not isinstance(chans.setdefault(name, {}), dict):
+            raise ValueError(f"{target}: [channels.{name}] is not a table; edit the file by hand")
+        if chans[name].get("enabled") is True:
+            return cfg
+        chans[name]["enabled"] = True
+        try:
+            text = ("# Rewritten by pith (setup or dashboard Settings). Comments are not kept;\n"
+                    "# the previous file is saved as config.toml.bak.\n" + dumps(raw) + "\n")
+            if tomllib.loads(text) != raw:
+                raise ValueError("round-trip mismatch")
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{target} uses TOML pith cannot rewrite ({e}); "
+                             f"add [channels.{name}] enabled = true by hand") from e
+        return _write(cfg, target, text)
+
+
 def _write(cfg: Config, target: Path, text: str) -> Config:
     """Write `text` beside `target`, validate it as a real config, then atomically replace."""
     tmp = target.with_name(f".{target.name}.tmp{os.getpid()}")

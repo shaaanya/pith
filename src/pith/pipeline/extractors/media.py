@@ -27,6 +27,8 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -49,6 +51,9 @@ FFMPEG_TIMEOUT = 600
 FRAME_SECONDS, MAX_FRAMES, SHORT_TRANSCRIPT = 3, 8, 200
 NO_TRANSCRIBER = "no captions and no transcription backend"
 _SOCIAL = ("instagram.com", "tiktok.com")
+_clock, _sleep = time.monotonic, time.sleep  # module-level so tests can replace them
+_last: dict[str, float] = {}  # cookie host -> when its last logged-in fetch was allowed to start
+_last_lock = threading.Lock()
 _LOGIN = re.compile(
     r"login|log in|sign in|cookies|rate.?limit|private|not available|empty media|requires? auth",
     re.I,
@@ -56,6 +61,17 @@ _LOGIN = re.compile(
 _OG = re.compile(
     r'<meta[^>]+(?:property|name)=["\'](?:og:)?description["\'][^>]+content=["\']([^"\']*)', re.I
 )
+
+
+def _throttle(host: str, gap: float) -> None:
+    """Space logged-in fetches to one host `gap` seconds apart: a human-like pace is what keeps
+    the account behind the browser session from being flagged."""
+    with _last_lock:
+        now = _clock()
+        start = max(now, _last.get(host, now - gap) + gap)
+        _last[host] = start
+    if start > now:
+        _sleep(start - now)
 
 
 def _run(cmd: list[str], timeout: float, what: str) -> subprocess.CompletedProcess:
@@ -79,8 +95,11 @@ class MediaToolError(RuntimeError):
 class YtDlp:
     """Thin yt-dlp wrapper: argument lists only, URL after `--`."""
 
-    def __init__(self, binary: str = "yt-dlp", max_bytes: int | None = None):
+    def __init__(self, binary: str = "yt-dlp", max_bytes: int | None = None,
+                 cookies: str | None = None):
         self.binary, self.max_bytes = binary, max_bytes
+        # cookies: a validated --cookies-from-browser value (config rejects anything flag-like)
+        self.auth = ["--cookies-from-browser", cookies, "--sleep-requests", "1"] if cookies else []
         self.size = ["--max-filesize", str(max_bytes)] if max_bytes else []
 
     def _ok(self, cmd, timeout):
@@ -100,7 +119,7 @@ class YtDlp:
 
     def info_and_subs(self, url: str, tmpdir: Path) -> tuple[dict, Path | None]:
         """Metadata plus the first English caption file, if any (nothing else downloaded)."""
-        base = [self.binary, "--no-playlist", "--no-warnings"]
+        base = [self.binary, "--no-playlist", "--no-warnings", *self.auth]
         out = self._ok([*base, "--dump-json", "--", url], INFO_TIMEOUT).stdout.strip()
         if not out:
             raise MediaToolError("yt-dlp returned no metadata")
@@ -139,6 +158,7 @@ class YtDlp:
                 self.binary,
                 "--no-playlist",
                 "--no-warnings",
+                *self.auth,
                 *self.size,
                 "-x",
                 "--audio-format",
@@ -159,6 +179,7 @@ class YtDlp:
                 self.binary,
                 "--no-playlist",
                 "--no-warnings",
+                *self.auth,
                 *self.size,
                 "-f",
                 "worst[ext=mp4]/worst",
@@ -188,7 +209,7 @@ def _caption_from_page(url: str, untrusted: bool = False) -> str | None:
 
 
 def _login_clarification(
-    url: str, _err: str, info: dict | None, untrusted: bool = False
+    url: str, err: str, info: dict | None, untrusted: bool = False, cookies: str | None = None
 ) -> NeedsClarificationError:
     caption = (
         (info or {}).get("description")
@@ -197,6 +218,9 @@ def _login_clarification(
     )
     where = url.split("/")[2] if "//" in url else url
     msg = f"login or rate limit from {where}; paste the transcript or text"
+    if cookies:
+        msg += (f". Fetched with your browser session ({cookies}), which may have expired: log in "
+                f"again in that browser profile. yt-dlp said: {err.replace(url, '<url>')[:200]}")
     if caption:
         msg += f". Caption found: {caption[:300]}"
     return NeedsClarificationError(msg, pasteable=True)
@@ -334,8 +358,13 @@ def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
         # yt-dlp follows its own redirects outside the guard (see docs/limitations.md): only hand
         # it a URL whose host resolves to public addresses.
         netguard.check_url(url, allow_private=False)
-    yt = YtDlp(ctx.cfg.yt_dlp_binary, ctx.cfg.max_fetch_bytes)
     host = (urlparse(url).hostname or "").removeprefix("www.")
+    cookie_host = next((d for d in ctx.cfg.cookie_domains if host == d or host.endswith("." + d)),
+                       None)
+    cookies = ctx.cfg.cookies_from_browser if cookie_host else None
+    yt = YtDlp(ctx.cfg.yt_dlp_binary, ctx.cfg.max_fetch_bytes, cookies)
+    if cookies:
+        _throttle(cookie_host, ctx.cfg.cookie_gap_seconds)
     social = any(host == h or host.endswith("." + h) for h in _SOCIAL)
     info: dict = {}
     try:
@@ -359,7 +388,8 @@ def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
                 ferr = f"{type(e).__name__}: {e}"
     except MediaToolError as e:
         if social or _LOGIN.search(str(e).replace(url, "")):  # yt-dlp may echo the URL
-            raise _login_clarification(url, str(e), info, netguard.untrusted(ctx.row)) from e
+            raise _login_clarification(url, str(e), info, netguard.untrusted(ctx.row),
+                                       cookies) from e
         raise RuntimeError(f"yt-dlp: {e}") from e
     ctype = "audio" if info.get("vcodec") == "none" else "video"
     cited = info.get("webpage_url") or url  # what yt-dlp says served it, else as submitted

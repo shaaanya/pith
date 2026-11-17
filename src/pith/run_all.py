@@ -1,4 +1,4 @@
-"""`pith run`: dashboard + worker loop + fs watcher in one process, clean shutdown.
+"""`pith run`: dashboard + worker loop + one thread per enabled channel in one process, clean shutdown.
 
 One `run` per home: <home>/run.lock is held with flock (released by the OS if we die, so no
 stale-lock or PID-reuse races); the PID inside is only for the error message. Each thread owns
@@ -15,7 +15,8 @@ import traceback
 from pathlib import Path
 
 from pith import locks
-from pith.adapters.fs import FsAdapter
+from pith.adapters import build_channel, enabled_channels
+from pith.adapters.base import ChannelState, run_channel
 from pith.dashboard.server import make_server
 from pith.pipeline import runner
 from pith.services import build
@@ -103,11 +104,11 @@ def _worker(cfg, stop, conns, live) -> None:
            worker_id="run").run_forever(0.5, stop)
 
 
-def _watcher(cfg, stop, conns) -> None:
-    """Thread body: poll the drop folders with its own connection until `stop`."""
+def _channel(cfg, stop, conns, name) -> None:
+    """Thread body: run channel `name` with its own connection until `stop`."""
     s = build(cfg)
     conns.append(s.conn)
-    FsAdapter(s.inbox, s.cfg.watch_dirs).run_forever(5.0, stop)
+    run_channel(build_channel(name, s), ChannelState(s.conn, name), stop)
 
 
 def _make_dashboard(svc, port: int):
@@ -140,7 +141,9 @@ def run(cfg, port: int = 8777, *,  # pylint: disable=too-many-arguments  # publi
             server.listeners.append(lambda reg: [setattr(x, "registry", reg) for x in list(live)])
         starts = [threads.add("worker", lambda conns: _worker(cfg, stop, conns, live))]
         if watch:
-            starts.append(threads.add("watcher", lambda conns: _watcher(cfg, stop, conns)))
+            for name in enabled_channels(cfg):
+                starts.append(threads.add(
+                    f"channel:{name}", lambda conns, n=name: _channel(cfg, stop, conns, n)))
         if server:
             starts.append(threads.add("dashboard", lambda conns: server.serve_forever()))
         for t in starts:

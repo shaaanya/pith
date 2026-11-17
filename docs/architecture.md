@@ -5,7 +5,7 @@ hexagonal: a domain/pipeline core talks to the outside world only through ports,
 plug in at the edges.
 
 ```
-adapters: CLI | drop folder (fs) | Telegram export | HTTP /v1/inbox | dashboard "add"
+adapters: CLI | channels (drop folder, Telegram bot) | Telegram export | HTTP /v1/inbox | dashboard "add"
         |   Inbox.submit()                       <- the only ingress contract
         v
 inbox (domain) --> jobs table (SQLite leases) --> worker
@@ -33,7 +33,7 @@ retrieval (search, ask) | dashboard (thin HTTP + one static page) | CLI
 | `providers/` | `ports.py` (the only provider surface the core imports), `registry.py`, one module per backend, `egress.py`. |
 | `retrieval/` | FTS and vector search, RRF fusion, `ask`. |
 | `store/` | Connection and migrations (`db.py`), blob store, knowledge store, vectors. |
-| `adapters/` | `fs`, `telegram_export`, `http_ingest`. They only call `Inbox.submit()`. |
+| `adapters/` | Channels (`base.py` protocol and run loop; `fs`, `telegram_bot`), plus `telegram_export` and `http_ingest`. A channel is `name`, `interval`, `poll()`; register it in `adapters/__init__.py` `CHANNELS`. They only call `Inbox.submit()`; they never reply to content (Telegram's pairing handshake aside). |
 | `dashboard/` | `api.py` (logic over services), `server.py` (routing and auth), `static/index.html` (renders only). |
 | `export.py`, `backup.py`, `digest.py`, `doctor.py`, `run_all.py`, `cli.py` | Operations. |
 

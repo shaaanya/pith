@@ -59,6 +59,18 @@ def _init(a):
     s = _services(a)
     _make_dirs(s.cfg)
     print(f"initialized {s.cfg.home}")
+    if sys.stdin.isatty() and sys.stdout.isatty():  # offer the channel setup; never in scripts
+        print()
+        _setup(a)
+
+
+def _setup(a):
+    from pith.adapters.setup import run_setup
+    s = _services(a)
+    _make_dirs(s.cfg)
+    rc = run_setup(s)
+    if rc:
+        sys.exit(rc)
 
 
 @_in_use
@@ -304,7 +316,9 @@ def _digest(a):
         print(f"written: {r.path}", file=sys.stderr)
 
 
-ADAPTERS = ("fs", "telegram_export", "http")
+from pith.adapters import CHANNELS  # noqa: E402  # light: the registry only imports lazily
+
+ADAPTERS = (*CHANNELS, "telegram_export", "http")
 
 
 def _adapters_list(_args):
@@ -328,11 +342,42 @@ def _watch(a):
         pass
 
 
+@_in_use
+def _run_channel(a):
+    import threading
+    from pith.adapters import build_channel
+    from pith.adapters.base import ChannelState, run_channel
+    s = _services(a)
+    try:
+        ch = build_channel(a.name, s)
+    except (ValueError, OSError) as e:
+        sys.exit(f"error: {e}")
+    try:
+        run_channel(ch, ChannelState(s.conn, a.name), threading.Event())
+    except KeyboardInterrupt:
+        pass
+
+
+def _adapters_pair(a):
+    from pith.adapters.base import ChannelState
+    from pith.adapters.telegram_bot import new_pairing_code
+    s = _services(a)
+    code = new_pairing_code(ChannelState(s.conn, a.name))
+    print(f"pairing code: {code}\n"
+          "1. Create a bot with @BotFather and save its token in "
+          f"{s.cfg.home}/telegram_token (or set PITH_TELEGRAM_TOKEN).\n"
+          "2. Add this to your config.toml:\n[channels.telegram]\nenabled = true\n"
+          "3. Run `pith run`, open a private chat with your bot, press Start and send it the code "
+          "above when it asks. The bot confirms and that chat is allowed.")
+
+
 def _adapters_run(a):
     if a.name == "fs":
         return _watch(a)
     if a.name == "http":
         return _serve_http(a)
+    if a.name in CHANNELS:
+        return _run_channel(a)
     sys.exit(f"error: adapter {a.name} is not a long-running adapter (use import-telegram)")
 
 
@@ -421,6 +466,7 @@ _JSON = _arg("--json", action="store_true")
 # subcommand -> (handler, arguments)
 COMMANDS = {
     "init": (_init, []),
+    "setup": (_setup, []),
     "submit": (_submit, [_arg("text", nargs="?"), _arg("--context", "--why"), _arg("--file")]),
     "inbox": (_inbox, [_arg("--status")]),
     "retry": (_retry, [_arg("id")]),
@@ -492,6 +538,9 @@ def build_parser():
     run.add_argument("name", choices=ADAPTERS)
     run.add_argument(*_ONCE[0], **_ONCE[1])
     run.set_defaults(f=_adapters_run)
+    pair = asub.add_parser("pair", parents=[common])
+    pair.add_argument("name", choices=["telegram"])
+    pair.set_defaults(f=_adapters_pair)
     return parser
 
 

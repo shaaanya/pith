@@ -41,6 +41,32 @@ is resolved against your user home.
 |---|---|---|
 | `dirs` | `["<home>/inbox"]` | Folders polled by the drop-folder adapter (`watch`, `run`). `~` is expanded. Setting it replaces the default. `init` creates only the first one |
 
+## `[channels.<name>]`
+
+Channels are one-way feeders into the inbox (see `docs/inbox-contract.md`); `pith run` starts one thread per
+enabled channel and `pith adapters run <name>` runs one alone. `fs` is on unless `enabled = false`; every other
+channel needs `enabled = true`. Channels only receive; the one exception is the Telegram pairing handshake (below). Status (`last_ok_at`, `last_error`,
+`submitted`) and cursors live in the `channel_state` table.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `fs.enabled` | `true` | The drop-folder channel (folders from `[watch] dirs`) |
+| `fs.interval` | `5.0` | Seconds between folder scans |
+| `telegram.enabled` | `false` | The Telegram bot channel |
+| `telegram.allowed_chat_ids` | `[]` | Chat ids always accepted. Other chats join by pairing (below) |
+| `telegram.poll_timeout` | `25` | Long-poll seconds for `getUpdates` |
+| `telegram.api_base` | `https://api.telegram.org` | Only change for testing |
+
+Quickest setup: create a bot with @BotFather (you own it), then run `pith setup` (also offered at the end of
+`pith init` in a terminal). It asks for the token (hidden), checks it with Telegram, saves it, enables the channel and
+prints a one-time pairing code to send to the bot; then `pith run`. Manual setup, which `pith setup` automates:
+put the token in `<home>/telegram_token` (mode 0600) or set
+`PITH_TELEGRAM_TOKEN`; the token is never read from `config.toml`. Run `pith adapters pair telegram` to get a
+one-time code, then send that code to the bot once from the chat you want to use. The bot asks for the code after you press Start, confirms, and then stays silent about content (it never
+replies to links, notes or files); the
+chat is allowed from then on. Messages from any other chat are ignored. Links, notes, documents, photos, voice,
+audio and video you send become inbox items (files up to `max_fetch_bytes`).
+
 ## `[http]`
 
 Used by `pith serve-http` (and its token by the dashboard).
@@ -67,6 +93,27 @@ The dashboard port is not a config key: `pith run --port N` / `pith dashboard --
 |---|---|---|
 | `yt_dlp` | `yt-dlp` | Executable for video metadata and captions. Also `PITH_YT_DLP` |
 | `ffmpeg` | `ffmpeg` | Executable for audio conversion and frames. Also `PITH_FFMPEG` |
+| `cookies_from_browser` | unset (off) | Opt-in. A `yt-dlp` `BROWSER[:PROFILE]` value such as `firefox:pith`; `yt-dlp` then reads that browser profile's cookies for the hosts in `cookie_domains`. See below |
+| `cookie_domains` | `["instagram.com", "tiktok.com"]` | The only hosts (and their subdomains) the cookies are used for |
+| `cookie_gap_seconds` | `20` | Minimum seconds between logged-in fetches to one host, so the account is not hit in bursts |
+
+### Instagram and TikTok (login-walled links)
+
+Without a login, Instagram and TikTok refuse `yt-dlp`, so a shared reel stops at `needs_clarification` ("login or
+rate limit ... paste the transcript or text"). The only way a bare link works is to fetch it as a logged-in user:
+
+1. **Use a throwaway account, never your main one.** Automated fetching is against Instagram's terms and can get
+   an account flagged or locked. Pith never touches the account's password; it only reads cookies.
+2. Create a dedicated browser profile (Firefox: `firefox -P` -> create profile `pith`), open it, and log in to the
+   throwaway account there. Firefox is the default suggestion because Chrome-family browsers trigger a macOS
+   keychain prompt on every read.
+3. Add to `config.toml`: `[media]` / `cookies_from_browser = "firefox:pith"`.
+
+Cookies are used only for `cookie_domains`, fetches to those hosts are spaced `cookie_gap_seconds` apart and the
+requests inside one fetch are slowed (`--sleep-requests 1`). If the session expires or the account gets a
+checkpoint, the item falls back to the clarification and says so ("your browser session ... may have expired");
+log in again in that profile and `pith retry <id>`. Reels have no caption track, so a transcription backend is
+still required. Not verified against the real sites (see `docs/limitations.md`); Instagram can change this at any time.
 
 ## `[backends.NAME]`
 

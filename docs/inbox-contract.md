@@ -3,6 +3,9 @@
 Everything that enters the system goes through `Inbox.submit()` (`src/pith/inbox/service.py`).
 Adapters never touch the database or the blob store themselves.
 
+Channels (`pith/adapters/base.py`) are the long-running adapters: `name`, `interval` and `poll() -> int`, run by
+`run_channel` with error backoff and status in `channel_state`. Channels are one-way: they only submit (the Telegram pairing handshake is the one exception).
+
 ## Submission
 
 `submit(adapter=..., text=... | file=..., filename=, mime=, user_context=, platform=, external_id=)`:
