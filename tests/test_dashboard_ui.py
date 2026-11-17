@@ -1,36 +1,43 @@
-"""Static guards on the single-file UI (no browser in CI): no HTML sinks, null-safe rendering."""
+"""Static guards on the built single-file UI (no browser in CI).
+
+The page is now a React build (frontend/). The bundle legitimately contains React's own DOM code, so the
+HTML-sink rule is enforced where we control it: on the frontend SOURCE (also by ESLint), while the
+artifact is checked for the CSP-facing invariants the server depends on.
+"""
 import re
 from pathlib import Path
 
-HTML = (Path(__file__).parent.parent / "src/pith/dashboard/static/index.html").read_text()
-JS = re.search(r'<script nonce="\{\{nonce\}\}">(.*)</script>', HTML, re.S).group(1)
+ROOT = Path(__file__).parent.parent
+HTML = (ROOT / "src/pith/dashboard/static/index.html").read_text()
+SRC = ROOT / "frontend/src"
 
 
-def test_no_html_injection_sinks():
-    """The page has no HTML-injection sinks and no external urls."""
-    for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(",
-                 "new Function", "srcdoc"):
-        assert sink not in JS, sink
-    external = re.search(r"https?://(?!\\)", HTML.replace("https?://", ""))
-    assert not external, "no external URLs in the page"
-    assert "<link" not in HTML and "src=" not in HTML.replace('script nonce', "")
+def test_every_inline_tag_carries_the_nonce_placeholder():
+    """The server swaps {{nonce}} per request; an un-nonced inline tag would be blocked by the CSP."""
+    tags = re.findall(r"<(script|style)\b([^>]*)>", HTML)
+    assert tags, "expected inline script and style"
+    for name, attrs in tags:
+        assert 'nonce="{{nonce}}"' in attrs, f"<{name}{attrs}> has no nonce"
+        assert "src=" not in attrs, "no external script"
 
 
-def test_raw_append_and_replace_only_inside_render_helpers():
-    """Raw DOM appends stay inside the render helpers."""
-    # Element.append stringifies null ("null" shows up on screen):
-    # everything goes through put()/clear()
-    lines = [ln.strip() for ln in JS.splitlines()
-             if re.search(r"\.(append|replaceChildren|prepend)\(", ln)]
-    assert len(lines) == 2, lines
-    assert any(ln.startswith("parent.append(") for ln in lines)
-    assert any("parent.replaceChildren()" in ln for ln in lines)
+def test_no_external_resources_in_the_page():
+    """connect/img/default are 'self'/'none': no links, no remote urls, no data: urls."""
+    assert "<link" not in HTML
+    assert not re.search(r"url\(\s*['\"]?(https?:|data:)", HTML)
+    assert not re.search(r"""(src|href)=["']https?://""", HTML)
 
 
-def test_put_helper_skips_null_and_false():
-    """put() skips null and false."""
-    m = re.search(r"function put\(.*?\n}\n", JS, re.S).group(0)
-    assert "!= null" in m and "!== false" in m
+def test_frontend_source_has_no_html_injection_sinks():
+    """Same rule as before, on the code we write (ESLint enforces it too)."""
+    sinks = ("dangerouslySetInnerHTML", "innerHTML", "outerHTML", "insertAdjacentHTML",
+             "document.write", "eval(", "new Function", "srcdoc")
+    for f in SRC.rglob("*.ts*"):
+        if f.name.endswith((".test.ts", ".test.tsx")):
+            continue
+        text = "\n".join(ln for ln in f.read_text().splitlines() if not ln.lstrip().startswith(("//", "*", "/*")))
+        for sink in sinks:
+            assert sink not in text, f"{sink} in {f.relative_to(ROOT)}"
 
 
 def test_clarify_textarea_placeholder_says_pasted_text_replaces_content():

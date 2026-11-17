@@ -75,6 +75,8 @@ def state(s) -> dict:
         ).fetchone()[0],
         "backends": s.registry.describe(),
         "allow_remote": s.cfg.allow_remote,
+        "capture": {"watch": [str(d) for d in s.cfg.watch_dirs],
+                    "http": f"{s.cfg.http_bind}:{s.cfg.http_port}"},
     }
 
 
@@ -345,6 +347,23 @@ def _hit(h) -> dict:
     }
 
 
+def _note_ids(s, source_ids) -> dict:
+    """source_id -> id of the note (or legacy summary) a search hit or excerpt should open."""
+    ids = sorted({x for x in source_ids if x})
+    if not ids:
+        return {}
+    return {r["source_id"]: r["id"] for r in s.conn.execute(
+        "SELECT k.source_id, k.id FROM knowledge_items k WHERE k.deleted_at IS NULL AND "
+        f"{_NOTE} AND k.source_id IN ({','.join('?' * len(ids))}) ORDER BY k.created_at DESC",
+        ids)}
+
+
+def _with_notes(s, rows: list[dict], key: str) -> list[dict]:
+    """Add note_id (the note to open) to each hit or excerpt."""
+    notes = _note_ids(s, [r.get(key) for r in rows])
+    return [{**r, "note_id": notes.get(r.get(key)) or r.get("item_id")} for r in rows]
+
+
 def search(s, q: str, filters: dict, limit: int = 20) -> dict:
     """Hybrid search with filters; reports the retrieval mode."""
     if not isinstance(q, str) or len(q) > MAX_QUERY:
@@ -354,7 +373,7 @@ def search(s, q: str, filters: dict, limit: int = 20) -> dict:
         "mode": res.mode,
         "warnings": res.warnings,
         "egress": res.egress,
-        "hits": [_hit(h) for h in res.hits],
+        "hits": _with_notes(s, [_hit(h) for h in res.hits], "source_id"),
     }
 
 
@@ -366,10 +385,83 @@ def ask(s, q) -> dict:
         e["url"] = safe_url(e["url"])
         e["deep_link"] = safe_url(e["deep_link"])
     d["deep_links"] = [u for u in map(safe_url, d["deep_links"]) if u]
+    d["retrieved"] = _with_notes(s, d["retrieved"], "source_id")
     return d
 
 
 # ---- library views
+_NOTE = ("(k.kind='note' OR (k.kind='summary' AND NOT EXISTS (SELECT 1 FROM knowledge_items n"
+         " WHERE n.source_id=k.source_id AND n.kind='note' AND n.deleted_at IS NULL)))")
+
+
+def _lead(body: str, n: int = 220) -> str | None:
+    """First knowledge lines of a note body (no headings, no 'Why saved'), for a list row."""
+    lines = [re.sub(r"^\s*(?:[-*]|\d+\.)\s+", "", x).strip() for x in (body or "").splitlines()
+             if x.strip() and not x.lstrip().startswith(("#", "**Why saved", "**Limits", "```"))]
+    return " · ".join(lines)[:n] or None
+
+
+def library(s, q: dict, limit: int = 40) -> dict:
+    """Notes newest first (cursor = created_at|id), plus what is in flight and what needs the user.
+
+    `active` and `attention` are only returned for the first page. Filters: topic, type
+    (sources.content_type)."""
+    limit = max(1, min(limit, 100))
+    where, args = [_NOTE, "k.deleted_at IS NULL"], []
+    if q.get("topic"):
+        where.append("EXISTS (SELECT 1 FROM item_topics i JOIN topics t ON t.id=i.topic_id"
+                     " WHERE i.item_id=k.id AND t.name=?)")
+        args.append(q["topic"])
+    if q.get("type"):
+        where.append("src.content_type=?")
+        args.append(q["type"])
+    base = " AND ".join(where)
+    total = s.conn.execute("SELECT count(*) FROM knowledge_items k LEFT JOIN sources src"
+                           f" ON src.id=k.source_id WHERE {base}", args).fetchone()[0]
+    cur = q.get("before")
+    if cur:
+        ts, _, last = cur.partition("|")
+        base += " AND (k.created_at < ? OR (k.created_at = ? AND k.id < ?))"
+        args += [ts, ts, last]
+    rows = s.conn.execute(
+        "SELECT k.id, k.title, k.kind, k.body, k.provenance, k.confidence, k.flagged, k.created_at,"
+        " src.url, src.platform, src.content_type FROM knowledge_items k"
+        f" LEFT JOIN sources src ON src.id=k.source_id WHERE {base}"
+        " ORDER BY k.created_at DESC, k.id DESC LIMIT ?", (*args, limit + 1)).fetchall()
+    more = len(rows) > limit
+    rows = rows[:limit]
+    ids = [r["id"] for r in rows]
+    tops: dict[str, list[str]] = {i: [] for i in ids}
+    if ids:
+        for r in s.conn.execute(
+                "SELECT i.item_id, t.name FROM item_topics i JOIN topics t ON t.id=i.topic_id"
+                f" WHERE i.item_id IN ({','.join('?' * len(ids))}) ORDER BY t.name", ids):
+            tops[r["item_id"]].append(r["name"])
+    items = []
+    for r in rows:
+        url = safe_url(r["url"])
+        m = re.search(r"\*\*Why saved:\*\*\s*(.+)", r["body"] or "")
+        items.append({
+            "id": r["id"], "title": r["title"], "kind": r["kind"], "lead": _lead(r["body"]),
+            "intent": m[1] if m else None, "created_at": r["created_at"],
+            "provenance": r["provenance"], "confidence": r["confidence"],
+            "flagged": bool(r["flagged"]), "url": url,
+            "host": urlparse(url).netloc.removeprefix("www.") if url else None,
+            "platform": r["platform"], "type": r["content_type"], "topics": tops[r["id"]]})
+    out = {"items": items, "total": total,
+           "next": f"{items[-1]['created_at']}|{items[-1]['id']}" if more else None}
+    if not cur:
+        out["types"] = {r[0]: r[1] for r in s.conn.execute(
+            "SELECT src.content_type, count(*) FROM knowledge_items k JOIN sources src"
+            f" ON src.id=k.source_id WHERE {_NOTE} AND k.deleted_at IS NULL"
+            " AND src.content_type IS NOT NULL GROUP BY 1 ORDER BY 2 DESC")}
+        out["active"] = [_inbox_row(r) for st in ("processing", "pending", "new")
+                         for r in reversed(s.inbox.list(st, 100))]
+        out["attention"] = [_inbox_row(r) for st in ("needs_clarification", "failed")
+                            for r in s.inbox.list(st, 200)]
+    return out
+
+
 def topics(s) -> list[dict]:
     """Topics with live item counts."""
     return [

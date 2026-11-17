@@ -304,6 +304,8 @@ _ROUTES = (
     (rf"/api/inbox/{_ID}/clarify", {"POST": _clarify}, True),
     ("/api/search", {"GET": lambda h, s, x, q: api.search(
         s, q.get("q", ""), {k: q.get(k) for k in ("kind", "topic", "provenance")})}, False),
+    ("/api/library", {"GET": lambda h, s, x, q: api.library(
+        s, q, int(q["limit"]) if q.get("limit", "").isdigit() else 40)}, False),
     ("/api/ask", {"POST": _ask}, False),
     (rf"/api/items/{_ID}", {"GET": lambda h, s, x, q: api.item_detail(s, x[1]),
                             "PATCH": lambda h, s, x, q: api.item_update(s, x[1], h.json_body()),

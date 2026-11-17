@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+/* ───────── Design tokens ─────────
+   Warm paper + ink with one rust accent (carried over from the previous Pith design).
+   Light by default, dark under prefers-color-scheme, either forced with data-theme. */
+:root {
+  --paper: oklch(98% 0.006 85);
+  --panel: oklch(95.8% 0.009 85);
+  --raise: oklch(100% 0 0);
+  --ink: oklch(24% 0.02 60);
+  --soft: oklch(40% 0.02 65);
+  --mut: oklch(48% 0.018 70);
+  --line: oklch(88% 0.012 80);
+  --hair: oklch(92% 0.01 80);
+  --acc: oklch(50% 0.135 42);
+  --acc-ink: oklch(98% 0.01 70);
+  --acc-tint: oklch(93% 0.04 60);
+  --ok: oklch(44% 0.11 150);
+  --ok-tint: oklch(94% 0.04 150);
+  --warn: oklch(48% 0.11 70);
+  --warn-tint: oklch(94% 0.045 80);
+  --bad: oklch(48% 0.16 28);
+  --bad-tint: oklch(94% 0.035 25);
+  --hit: oklch(92% 0.09 95);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: oklch(19% 0.012 70);
+    --panel: oklch(22.5% 0.012 70);
+    --raise: oklch(26% 0.012 70);
+    --ink: oklch(93% 0.012 85);
+    --soft: oklch(80% 0.014 82);
+    --mut: oklch(70% 0.016 80);
+    --line: oklch(33% 0.012 70);
+    --hair: oklch(28% 0.012 70);
+    --acc: oklch(75% 0.12 55);
+    --acc-ink: oklch(20% 0.02 60);
+    --acc-tint: oklch(30% 0.05 55);
+    --ok: oklch(75% 0.12 150);
+    --ok-tint: oklch(28% 0.04 150);
+    --warn: oklch(78% 0.11 80);
+    --warn-tint: oklch(28% 0.04 80);
+    --bad: oklch(74% 0.14 28);
+    --bad-tint: oklch(27% 0.05 25);
+    --hit: oklch(40% 0.08 90);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: oklch(19% 0.012 70);
+  --panel: oklch(22.5% 0.012 70);
+  --raise: oklch(26% 0.012 70);
+  --ink: oklch(93% 0.012 85);
+  --soft: oklch(80% 0.014 82);
+  --mut: oklch(70% 0.016 80);
+  --line: oklch(33% 0.012 70);
+  --hair: oklch(28% 0.012 70);
+  --acc: oklch(75% 0.12 55);
+  --acc-ink: oklch(20% 0.02 60);
+  --acc-tint: oklch(30% 0.05 55);
+  --ok: oklch(75% 0.12 150);
+  --ok-tint: oklch(28% 0.04 150);
+  --warn: oklch(78% 0.11 80);
+  --warn-tint: oklch(28% 0.04 80);
+  --bad: oklch(74% 0.14 28);
+  --bad-tint: oklch(27% 0.05 25);
+  --hit: oklch(40% 0.08 90);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-raise: var(--raise);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-mut: var(--mut);
+  --color-line: var(--line);
+  --color-hair: var(--hair);
+  --color-acc: var(--acc);
+  --color-acc-ink: var(--acc-ink);
+  --color-acc-tint: var(--acc-tint);
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-bad: var(--bad);
+  --color-bad-tint: var(--bad-tint);
+  --color-hit: var(--hit);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --breakpoint-xs: 30rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    background: var(--paper);
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button,
+  [role="button"],
+  a {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: var(--acc-tint);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Reading column: serif, 68ch, numbered steps. Used by the reader and the answer card. */
+@layer components {
+  .prose-pith {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+    max-width: 68ch;
+  }
+  .prose-pith > * + * {
+    margin-top: 0.9em;
+  }
+  .prose-pith h2,
+  .prose-pith h3 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin-top: 1.6em;
+    line-height: 1.3;
+  }
+  .prose-pith h2 {
+    font-size: 1.05rem;
+  }
+  .prose-pith h3 {
+    font-size: 0.95rem;
+    color: var(--soft);
+  }
+  .prose-pith ul,
+  .prose-pith ol {
+    padding-left: 1.4em;
+  }
+  .prose-pith ul {
+    list-style: disc;
+  }
+  .prose-pith ol {
+    list-style: decimal;
+  }
+  .prose-pith li + li {
+    margin-top: 0.4em;
+  }
+  .prose-pith li::marker {
+    color: var(--mut);
+  }
+  .prose-pith code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+    overflow-wrap: anywhere;
+  }
+  .prose-pith pre {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.55;
+    background: var(--panel);
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+  }
+  .prose-pith pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .prose-pith a {
+    color: var(--acc);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .prose-pith blockquote {
+    border-left: 2px solid var(--line);
+    padding-left: 1em;
+    color: var(--soft);
+  }
+  mark.hit {
+    background: var(--hit);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+}
+
+@keyframes pith-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pith-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.enter {
+  animation: pith-fade 0.22s var(--ease-out) both;
+}
+.pulse {
+  animation: pith-pulse 1.6s ease-in-out infinite;
+}

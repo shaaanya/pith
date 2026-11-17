@@ -163,3 +163,25 @@ def test_api_digest_uses_digest_module_and_never_writes(svc):
     # dry-run: opening the dashboard must not use up the interval
     assert not (svc.cfg.home / "digests").exists()
     assert "egress" in api.privacy(svc)
+
+
+def test_library_lists_notes_and_surfaces_attention(svc):
+    """Library returns processed notes with a lead, and keeps failed/clarify items visible."""
+    ok = api.inbox_submit(svc, {"text": NOTE, "context": "animals"})
+    blank = api.inbox_submit(svc, {"text": "   "})
+    process(svc)
+    lib = api.library(svc, {})
+    assert lib["total"] >= 1 and lib["items"][0]["lead"] and lib["next"] is None
+    assert [r["id"] for r in lib["attention"]] == [blank["id"]]
+    assert api.inbox_get(svc, ok["id"])["status"] == "processed"
+    assert api.library(svc, {"type": "pdf"})["items"] == []
+    assert api.library(svc, {"before": f"{lib['items'][0]['created_at']}|0"})["items"] == []
+
+
+def test_search_hits_open_a_note(svc):
+    """Every hit carries note_id so a segment or unit hit opens the whole note."""
+    api.inbox_submit(svc, {"text": NOTE})
+    process(svc)
+    hits = api.search(svc, "quokkas", {})["hits"]
+    notes = {i["id"] for i in api.library(svc, {})["items"]}
+    assert hits and all(h["note_id"] in notes for h in hits)
