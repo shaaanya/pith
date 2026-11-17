@@ -1,83 +1,86 @@
 # InfoParser
 
-A local-first personal knowledge system. You send it things you want to keep (URLs, notes, files, PDFs,
-images, videos, a Telegram export). It stores the original, extracts the text, distils it into small
-knowledge items with a recorded provenance, and lets you search and ask questions with cited sources.
+Local-first knowledge capture. Save a link, file, video or note; get one searchable note that holds
+the actual information (steps, numbers, names), not a description of it. Runs on your machine; models
+are optional.
 
-It does not require a model or an account. With no model configured, a deterministic extractive fallback
-(`heuristic`) does the distillation and `ask` returns cited excerpts instead of a generated answer. Models
-(local servers, a command-line tool, or a hosted API) are optional backends behind one interface.
+```
+uv sync
+uv run infoparser                                    # worker + dashboard on 127.0.0.1
+uv run infoparser submit "<url or text>" --why "what I want from it"
+uv run infoparser search "keywords"
+uv run infoparser ask "question about what I saved"
+```
 
-Status: Python 3.13, standard library plus `numpy`. The test suite and a clean-home demo are recorded in
-[docs/verification.md](docs/verification.md). Several things are NOT verified; read
-[docs/limitations.md](docs/limitations.md) before relying on it.
+Models, transcription and OCR are set in the dashboard's Settings tab or `config.toml`
+(see `config.sample.toml`). With no model, a deterministic fallback still stores and searches.
 
-## Install and first run
+## How it works
 
-    uv sync
-    uv run infoparser          # creates ~/InfoParser, starts worker + folder watcher + dashboard, opens the browser
+```mermaid
+flowchart LR
+  subgraph IN[Capture]
+    S((Save)) --> A[CLI / folder / HTTP / Telegram export]
+    A --> Q[(Inbox queue)]
+  end
+  subgraph WK[Worker]
+    Q --> D{Type?}
+    D -->|web, PDF, office| E1[Extract text]
+    D -->|image| E2[OCR]
+    D -->|video, audio| G{Captions?}
+    G -->|yes| E3[Use captions]
+    G -->|no| T{Transcriber?}
+    T -->|yes| E4[Transcribe]
+    T -->|no| C[/Needs clarification/]
+    E1 & E2 & E3 & E4 --> K[Chunk]
+    K --> N[Build note]
+  end
+  subgraph ST[Store]
+    N --> DB[(SQLite + FTS5)]
+    N --> B[(Original blobs)]
+    DB --> V[Markdown vault]
+  end
+  subgraph US[Use]
+    DB --> R[Search / Ask with citations]
+    R --> O((Answer))
+  end
+```
 
-That one command is `infoparser run` (Ctrl-C stops it). Choose models in the dashboard's **Settings** tab
-(add a local server such as Ollama, click "Detect models", pick one, Save; it applies immediately and is
-stored in `~/InfoParser/config.toml`). Hosted backends read their API key from an environment variable of
-the launching shell; keys are never typed into the UI. Backends that run a program (`cli`, `tesseract`,
-`whisper_cpp`) are edited in the config file only.
+## Building a note
 
-The same things from the command line:
+A small local model only finds the facts. Code checks and writes the note.
 
-    uv run infoparser init                       # creates ~/InfoParser (or $INFOPARSER_HOME)
-    uv run infoparser submit "https://example.com/some-article"
-    uv run infoparser submit "a note to remember" --context "why I saved it"
-    uv run infoparser worker --once              # process everything queued, then exit
-    uv run infoparser search "keywords"
-    uv run infoparser ask "a question about what you saved"
-    uv run infoparser export                     # write the Markdown vault
+```mermaid
+flowchart LR
+  subgraph PREP[Code]
+    P1[Fix mishearings from the description] --> P2[Dictated symbols and number words to code and digits]
+  end
+  subgraph MODEL[Model]
+    M1[Extract typed units: step, fact, claim, resource, warning]
+  end
+  subgraph CHECK[Code]
+    V1{Number or words not in source?}
+    V1 -->|yes| X((Drop unit))
+    V1 -->|no| V2{Commentary or promo?}
+    V2 -->|yes| X
+    V2 -->|no| V3[Keep, link to source segment]
+    V3 --> V4{Your reason matched?}
+    V4 -->|no| M2[Focused second pass]
+    V4 -->|yes| W[Compose note + mention index]
+    M2 --> W
+  end
+  P2 --> M1 --> V1
+  W --> DONE((Note))
+```
 
-For a long-running setup use `uv run infoparser run` (worker + dashboard on 127.0.0.1 + drop-folder
-watcher). See [docs/deployment.md](docs/deployment.md).
+- Your reason for saving is used only if you wrote it. It is never guessed.
+- A fact the source does not support is dropped. Incomplete beats wrong.
+- On 14 synthetic cases with `gemma4:e4b`: recall 0.99, no blocking failures
+  ([results](docs/note-pipeline.md)).
 
-## What it does
+## Docs
 
-- Ingest: one contract, `Inbox.submit()`, used by the CLI, a watched folder, a Telegram Desktop export
-  importer, and a token-protected local HTTP endpoint. A submission is durable before it returns; nothing
-  is extracted in the submit path. See [docs/inbox-contract.md](docs/inbox-contract.md).
-- Process: web pages, PDFs, docx/pptx/xlsx, images (OCR), video/audio (captions first, then
-  transcription), plain text. See [docs/pipeline.md](docs/pipeline.md).
-- Provenance: every knowledge item is `stated` (backed by a quote that is checked against the source),
-  `inferred`, or `external`. A `stated` item whose quote is not found is downgraded.
-- Retrieve: SQLite FTS5 plus optional embeddings fused by reciprocal rank fusion; `ask` answers only from
-  numbered excerpts and validates the citations.
-- Keep: one SQLite file, content-addressed original blobs, and a Markdown vault that is a derived export.
-  `backup` / `restore` / `verify` are built in. See [docs/backup-restore.md](docs/backup-restore.md).
+[architecture](docs/architecture.md) · [pipeline](docs/pipeline.md) · [note pipeline](docs/note-pipeline.md) ·
+[configuration](docs/configuration.md) · [limitations](docs/limitations.md)
 
-## Documentation
-
-| Document | Contents |
-|---|---|
-| [architecture](docs/architecture.md) | Layers, storage, what is source of truth |
-| [inbox-contract](docs/inbox-contract.md) | Submission, states, retry, duplicates, HTTP/folder/Telegram adapters |
-| [pipeline](docs/pipeline.md) | Extractors, chunking, distillation, provenance, dedupe |
-| [note-pipeline](docs/note-pipeline.md) | Knowledge notes: spec, architecture, diagnosis, benchmark results, limitations |
-| [data-model](docs/data-model.md) | Tables (schema v3), ids, locators |
-| [providers](docs/providers.md) | Ports, backends, task chains, agentic-CLI assessment, privacy/egress |
-| [capabilities](docs/capabilities.md) | Capability flags and how tasks resolve to backends |
-| [configuration](docs/configuration.md) | Every config key and environment variable |
-| [deployment](docs/deployment.md) | Running it, files on disk, security model |
-| [backup-restore](docs/backup-restore.md) | Backup, verify, restore |
-| [testing](docs/testing.md) | Unit, e2e and live tests, environment variables |
-| [limitations](docs/limitations.md) | Known gaps and everything that is UNVERIFIED |
-| [roadmap](docs/roadmap.md) | Not built |
-| [verification](docs/verification.md) | Test run, provider matrix, end-to-end demo |
-| [recipes](docs/recipes/) | iOS Shortcut, Telegram bot, browser bookmarklet, launchd |
-
-Design rationale: [docs/superpowers/specs/2026-11-05-infoparser-design.md](docs/superpowers/specs/2026-11-05-infoparser-design.md).
-Build checklist: [docs/CHECKLIST.md](docs/CHECKLIST.md). Sample config: [config.sample.toml](config.sample.toml).
-
-## Privacy in one paragraph
-
-Hosted backends are blocked unless `[privacy] allow_remote = true`. An `openai_compat` backend with a
-non-loopback `base_url` counts as remote even if you forget to say so; `cli` backends are trusted as
-declared (their locality cannot be detected). Web pages you submit are fetched
-from their own sites, and `yt-dlp` contacts the video sites you submit. `infoparser egress` and
-`infoparser doctor` show which routes could send text off the machine. See the privacy section of
-[docs/providers.md](docs/providers.md).
+Python 3.13. Some paths are unverified; read the limitations first.
