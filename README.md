@@ -57,6 +57,7 @@ watcher). See [docs/deployment.md](docs/deployment.md).
 | [architecture](docs/architecture.md) | Layers, storage, what is source of truth |
 | [inbox-contract](docs/inbox-contract.md) | Submission, states, retry, duplicates, HTTP/folder/Telegram adapters |
 | [pipeline](docs/pipeline.md) | Extractors, chunking, distillation, provenance, dedupe |
+| [note-pipeline](docs/note-pipeline.md) | Knowledge notes: spec, architecture, diagnosis, benchmark results, limitations |
 | [data-model](docs/data-model.md) | Tables (schema v3), ids, locators |
 | [providers](docs/providers.md) | Ports, backends, task chains, agentic-CLI assessment, privacy/egress |
 | [capabilities](docs/capabilities.md) | Capability flags and how tasks resolve to backends |

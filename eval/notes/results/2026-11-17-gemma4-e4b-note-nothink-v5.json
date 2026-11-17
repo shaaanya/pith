@@ -1,0 +1,1489 @@
+{
+ "summary": {
+  "variant": "note-nothink-v5",
+  "model": "gemma4:e4b",
+  "cases": 14,
+  "mean_recall": 0.986,
+  "blocking": 0,
+  "commentary_total": 0,
+  "invented_number_cases": 0,
+  "mean_words": 123,
+  "total_calls": 13,
+  "total_seconds": 277.1
+ },
+ "rows": [
+  {
+   "id": "twitch_reel",
+   "output": {
+    "note": "30-day preparation plan for Twitch Payments Software Engineer role\n\n## Steps\n\n1. Figure out the tech stack by looking at older Twitch job postings and engineering blog articles.\n2. Learn payments fundamentals, which are idempotency and database transactions, by reading Chapter 7 of Designing Data-Intensive Applications.\n3. Do the Tour of Go and read Marc Brooker's writing on DynamoDB and Aurora DSQL.\n4. Every morning practice system design on Devmaxx, focusing on the database questions.\n5. Build a fishing tournament manager using Lambda, DynamoDB, SQS, and Step Functions.\n\n## Facts\n\n- Twitch posted an entry-level payments software engineer role with a salary range of $127K-$185K.\n- The tech stack uses Go, DynamoDB, Lambda, SQS, and Step Functions.",
+    "index": "30-day preparation plan for Twitch Payments Software Engineer role\n\n## Steps\n\n1. Figure out the tech stack by looking at older Twitch job postings and engineering blog articles.\n2. Learn payments fundamentals, which are idempotency and database transactions, by reading Chapter 7 of Designing Data-Intensive Applications.\n3. Do the Tour of Go and read Marc Brooker's writing on DynamoDB and Aurora DSQL.\n4. Every morning practice system design on Devmaxx, focusing on the database questions.\n5. Build a fishing tournament manager using Lambda, DynamoDB, SQS, and Step Functions.\n\n## Facts\n\n- Twitch posted an entry-level payments software engineer role with a salary range of $127K-$185K.\n- The tech stack uses Go, DynamoDB, Lambda, SQS, and Step Functions. Step Functions, Designing Data-Intensive Applications, Tour of Go, Marc Brooker, Aurora DSQL, Comment GUIDE, entry-level, DynamoDB, SQS, DSQL, GUIDE, Twitch, Lambda, Devmaxx",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "30-day preparation plan for Twitch Payments Software Engineer role",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "Twitch posted an entry-level payments software engineer role with a salary range of $127K-$185K.",
+       "support": 0.83,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Figure out the tech stack by looking at older Twitch job postings and engineering blog articles.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The tech stack uses Go, DynamoDB, Lambda, SQS, and Step Functions.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Learn payments fundamentals, which are idempotency and database transactions, by reading Chapter 7 of Designing Data-Intensive Applications.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Do the Tour of Go and read Marc Brooker's writing on DynamoDB and Aurora DSQL.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Every morning practice system design on Devmaxx, focusing on the database questions.",
+       "support": 1.0,
+       "segment_idx": 5,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Build a fishing tournament manager using Lambda, DynamoDB, SQS, and Step Functions.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      },
+      {
+       "heard": "entry level",
+       "term": "entry-level"
+      },
+      {
+       "heard": "dynamo db",
+       "term": "DynamoDB"
+      },
+      {
+       "heard": "item potency",
+       "term": "idempotency"
+      },
+      {
+       "heard": "data intensive",
+       "term": "Data-Intensive"
+      },
+      {
+       "heard": "mark",
+       "term": "Marc"
+      },
+      {
+       "heard": "dev max",
+       "term": "Devmaxx"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 3623,
+      "raw_units": 7,
+      "seconds": 15.7
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 117,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 15.7,
+   "calls": 1
+  },
+  {
+   "id": "postgres_noisy_transcript",
+   "output": {
+    "note": "Postgres performance fixes\n\n1. When creating an index, use CREATE INDEX CONCURRENTLY so that writes are not blocked.\n2. Always run EXPLAIN (ANALYZE, BUFFERS) before and after changes to see the actual numbers.\n3. Stop using OFFSET pagination because it gets slower the deeper you go.\n4. Use keyset pagination where WHERE id > $last_id ORDER BY id LIMIT 50.",
+    "index": "Postgres performance fixes\n\n1. When creating an index, use CREATE INDEX CONCURRENTLY so that writes are not blocked.\n2. Always run EXPLAIN (ANALYZE, BUFFERS) before and after changes to see the actual numbers.\n3. Stop using OFFSET pagination because it gets slower the deeper you go.\n4. Use keyset pagination where WHERE id > $last_id ORDER BY id LIMIT 50. CREATE INDEX CONCURRENTLY, Replace OFFSET, ORDER BY, last_id, CREATE, INDEX, CONCURRENTLY, EXPLAIN, ANALYZE, BUFFERS, OFFSET, WHERE, ORDER, LIMIT, Postgres, EXPLAIN (ANALYZE, BUFFERS), OFFSET pagination, keyset pagination",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Postgres performance fixes",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "step",
+       "text": "When creating an index, use CREATE INDEX CONCURRENTLY so that writes are not blocked.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Always run EXPLAIN (ANALYZE, BUFFERS) before and after changes to see the actual numbers.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Stop using OFFSET pagination because it gets slower the deeper you go.",
+       "support": 0.86,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Use keyset pagination where WHERE id > $last_id ORDER BY id LIMIT 50.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      },
+      {
+       "heard": "key set",
+       "term": "keyset"
+      },
+      {
+       "heard": "I D",
+       "term": "id"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2867,
+      "raw_units": 4,
+      "seconds": 11.3
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 60,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 11.3,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_intent",
+   "output": {
+    "note": "**Why saved:** Saved for the Claude Code skill mentioned in the middle\n\nCoding agents, code review, and burnout\n\n## Relevant to why you saved this\n\n- A Claude Code skill called systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.\n\n## Facts\n\n- The show discusses shipping faster with coding agents.\n- Dana and Marcus agree to cap work in progress at 3 tasks.\n- They also discuss how on call rotations should change when agents ship code at night.\n\n## Claims\n\n- Dana thinks the biggest win of using coding agents is fewer context switches.\n- Marcus disagrees, saying review time just moves to a different place.\n- Dana says small pull requests still matter because reviewers still read linearly.\n- Dana believes burnout is the real risk with agents because the pace never drops.",
+    "index": "**Why saved:** Saved for the Claude Code skill mentioned in the middle\n\nCoding agents, code review, and burnout\n\n## Relevant to why you saved this\n\n- A Claude Code skill called systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.\n\n## Facts\n\n- The show discusses shipping faster with coding agents.\n- Dana and Marcus agree to cap work in progress at 3 tasks.\n- They also discuss how on call rotations should change when agents ship code at night.\n\n## Claims\n\n- Dana thinks the biggest win of using coding agents is fewer context switches.\n- Marcus disagrees, saying review time just moves to a different place.\n- Dana says small pull requests still matter because reviewers still read linearly.\n- Dana believes burnout is the real risk with agents because the pace never drops. Claude Code, Four Thousand Weeks, Oliver Burkeman, systematic-debugging, Claude Code skill, Dana, Marcus",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Coding agents, code review, and burnout",
+     "intent": {
+      "state": "explicit",
+      "text": "Saved for the Claude Code skill mentioned in the middle"
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "The show discusses shipping faster with coding agents.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana thinks the biggest win of using coding agents is fewer context switches.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Marcus disagrees, saying review time just moves to a different place.",
+       "support": 0.88,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana says small pull requests still matter because reviewers still read linearly.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "A Claude Code skill called systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana believes burnout is the real risk with agents because the pace never drops.",
+       "support": 0.9,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Dana and Marcus agree to cap work in progress at 3 tasks.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "They also discuss how on call rotations should change when agents ship code at night.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {
+      "unsupported_number": 1
+     },
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 3477,
+      "raw_units": 9,
+      "seconds": 16.0
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 144,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 16.0,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_no_intent",
+   "output": {
+    "note": "Episode 41 discussion on shipping faster with coding agents\n\n## Steps\n\n1. systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.\n2. The participants agreed to cap work in progress at 3 tasks.\n\n## Facts\n\n- The episode discusses shipping faster with coding agents.\n- There is a Claude Code skill called systematic-debugging.\n- Marcus blocks mornings for deep work and does no meetings before noon.\n- They also discussed how on call rotations should change when agents ship code at night.\n\n## Claims\n\n- Dana thinks the biggest win is fewer context switches, not speed.\n- Marcus disagrees, saying review time just moves to a different place.\n- Dana says small pull requests still matter because reviewers still read linearly.\n- Dana says burnout is the real risk with agents because the pace never drops.\n- Marcus recommends the book Four Thousand Weeks by Oliver Burkeman for thinking about limits.",
+    "index": "Episode 41 discussion on shipping faster with coding agents\n\n## Steps\n\n1. systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.\n2. The participants agreed to cap work in progress at 3 tasks.\n\n## Facts\n\n- The episode discusses shipping faster with coding agents.\n- There is a Claude Code skill called systematic-debugging.\n- Marcus blocks mornings for deep work and does no meetings before noon.\n- They also discussed how on call rotations should change when agents ship code at night.\n\n## Claims\n\n- Dana thinks the biggest win is fewer context switches, not speed.\n- Marcus disagrees, saying review time just moves to a different place.\n- Dana says small pull requests still matter because reviewers still read linearly.\n- Dana says burnout is the real risk with agents because the pace never drops.\n- Marcus recommends the book Four Thousand Weeks by Oliver Burkeman for thinking about limits. Claude Code, Four Thousand Weeks, Oliver Burkeman, systematic-debugging, Dana, Marcus, Claude",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Episode 41 discussion on shipping faster with coding agents",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "The episode discusses shipping faster with coding agents.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana thinks the biggest win is fewer context switches, not speed.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Marcus disagrees, saying review time just moves to a different place.",
+       "support": 0.88,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana says small pull requests still matter because reviewers still read linearly.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "There is a Claude Code skill called systematic-debugging.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "systematic-debugging forces the agent to reproduce the bug and write down a hypothesis before touching any code.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Marcus blocks mornings for deep work and does no meetings before noon.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Dana says burnout is the real risk with agents because the pace never drops.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The participants agreed to cap work in progress at 3 tasks.",
+       "support": 0.83,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Marcus recommends the book Four Thousand Weeks by Oliver Burkeman for thinking about limits.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "They also discussed how on call rotations should change when agents ship code at night.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {
+      "unsupported_number": 1
+     },
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 3289,
+      "raw_units": 12,
+      "seconds": 19.8
+     }
+    }
+   },
+   "recall": 0.8,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 159,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 19.8,
+   "calls": 1
+  },
+  {
+   "id": "docker_tutorial",
+   "output": {
+    "note": "Deploy a Flask app on a VPS with Docker\n\n1. Create a Dockerfile starting from python 3.12 slim.\n2. Copy requirements.txt and run pip install no cache dir.\n3. Copy the app and set the command to gunicorn bound to 0.0.0.0 port 8000 with app:app.\n4. Build the image with docker build -t flaskapp .\n5. Run the container with docker run -d -p 80:8000 --env-file .env --restart unless stopped flaskapp.\n6. Add the .env file to .gitignore because it needs DATABASE_URL and SECRET_KEY.\n7. Check docker logs flaskapp if the container exits.\n8. Put caddy in front for https so it gets the certificate automatically.\n9. The caddyfile should contain just your domain and reverse_proxy localhost:8000.",
+    "index": "Deploy a Flask app on a VPS with Docker\n\n1. Create a Dockerfile starting from python 3.12 slim.\n2. Copy requirements.txt and run pip install no cache dir.\n3. Copy the app and set the command to gunicorn bound to 0.0.0.0 port 8000 with app:app.\n4. Build the image with docker build -t flaskapp .\n5. Run the container with docker run -d -p 80:8000 --env-file .env --restart unless stopped flaskapp.\n6. Add the .env file to .gitignore because it needs DATABASE_URL and SECRET_KEY.\n7. Check docker logs flaskapp if the container exits.\n8. Put caddy in front for https so it gets the certificate automatically.\n9. The caddyfile should contain just your domain and reverse_proxy localhost:8000. flask-deploy, VPS, python 3.12 slim, requirements.txt, gunicorn, 0.0.0.0, 8000, DATABASE_URL, SECRET_KEY, docker logs flaskapp, caddy",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Deploy a Flask app on a VPS with Docker",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "step",
+       "text": "Create a Dockerfile starting from python 3.12 slim.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Copy requirements.txt and run pip install no cache dir.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Copy the app and set the command to gunicorn bound to 0.0.0.0 port 8000 with app:app.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Build the image with docker build -t flaskapp .",
+       "support": 0.75,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Run the container with docker run -d -p 80:8000 --env-file .env --restart unless stopped flaskapp.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Add the .env file to .gitignore because it needs DATABASE_URL and SECRET_KEY.",
+       "support": 0.9,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Check docker logs flaskapp if the container exits.",
+       "support": 1.0,
+       "segment_idx": 3,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Put caddy in front for https so it gets the certificate automatically.",
+       "support": 1.0,
+       "segment_idx": 4,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The caddyfile should contain just your domain and reverse_proxy localhost:8000.",
+       "support": 0.86,
+       "segment_idx": 4,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2893,
+      "raw_units": 9,
+      "seconds": 24.1
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 117,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 24.1,
+   "calls": 1
+  },
+  {
+   "id": "opinion_essay",
+   "output": {
+    "note": "Developer productivity metrics critique\n\n## Facts\n\n- At one company, commit counts per developer rose 40% within a quarter after being added to a dashboard.\n- At that same company, shipped features per quarter fell from 11 to 8.\n- Developers at that company split work into tiny commits and avoided hard refactors that produce a single large change.\n- A one line fix to a payment bug can matter more than a month of churn.\n- Pairing and review produce no commits for the reviewer.\n- The median waiting time between review and deploy was 3 days.\n- DORA metrics include deployment frequency, lead time for changes, change failure rate, and time to restore service.\n- The author notes DORA metrics should be tracked per team, not per individual.\n- The author notes that DORA metrics still carry the risk of gaming.\n\n## Claims\n\n- Counting commits to measure developer productivity is a mistake because of Goodhart's law.\n- The author's first argument is that commits measure activity, not value.\n- The author's second argument is that the metric punishes collaboration.\n- The author's third argument is that commit counting hides the real constraint, which in the described cases was waiting time between review and deploy.\n- Critics reply that some quantitative signal is needed for management.\n- The author concedes this and suggests DORA metrics instead.\n\n## Definitions\n\n- Goodhart's law states that once a measure becomes a target, it stops being a good measure.",
+    "index": "Developer productivity metrics critique\n\n## Facts\n\n- At one company, commit counts per developer rose 40% within a quarter after being added to a dashboard.\n- At that same company, shipped features per quarter fell from 11 to 8.\n- Developers at that company split work into tiny commits and avoided hard refactors that produce a single large change.\n- A one line fix to a payment bug can matter more than a month of churn.\n- Pairing and review produce no commits for the reviewer.\n- The median waiting time between review and deploy was 3 days.\n- DORA metrics include deployment frequency, lead time for changes, change failure rate, and time to restore service.\n- The author notes DORA metrics should be tracked per team, not per individual.\n- The author notes that DORA metrics still carry the risk of gaming.\n\n## Claims\n\n- Counting commits to measure developer productivity is a mistake because of Goodhart's law.\n- The author's first argument is that commits measure activity, not value.\n- The author's second argument is that the metric punishes collaboration.\n- The author's third argument is that commit counting hides the real constraint, which in the described cases was waiting time between review and deploy.\n- Critics reply that some quantitative signal is needed for management.\n- The author concedes this and suggests DORA metrics instead.\n\n## Definitions\n\n- Goodhart's law states that once a measure becomes a target, it stops being a good measure. DORA, Goodhart's law",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Developer productivity metrics critique",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "claim",
+       "text": "Counting commits to measure developer productivity is a mistake because of Goodhart's law.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "definition",
+       "text": "Goodhart's law states that once a measure becomes a target, it stops being a good measure.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "At one company, commit counts per developer rose 40% within a quarter after being added to a dashboard.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "At that same company, shipped features per quarter fell from 11 to 8.",
+       "support": 0.86,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Developers at that company split work into tiny commits and avoided hard refactors that produce a single large change.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The author's first argument is that commits measure activity, not value.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "A one line fix to a payment bug can matter more than a month of churn.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The author's second argument is that the metric punishes collaboration.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Pairing and review produce no commits for the reviewer.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The author's third argument is that commit counting hides the real constraint, which in the described cases was waiting time between review and deploy.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The median waiting time between review and deploy was 3 days.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "Critics reply that some quantitative signal is needed for management.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The author concedes this and suggests DORA metrics instead.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "DORA metrics include deployment frequency, lead time for changes, change failure rate, and time to restore service.",
+       "support": 0.92,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The author notes DORA metrics should be tracked per team, not per individual.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The author notes that DORA metrics still carry the risk of gaming.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "Developers",
+       "term": "developer"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 3344,
+      "raw_units": 16,
+      "seconds": 26.7
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 247,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 26.7,
+   "calls": 1
+  },
+  {
+   "id": "news_numbers",
+   "output": {
+    "note": "Harbour Ferries Kestrel Route Suspension\n\n## Facts\n\n- Harbour Ferries suspended all sailings on the Kestrel route on Tuesday 14 October.\n- The suspension was due to an inspection finding cracks in the hull of the MV Linnet.\n- The company confirmed 212 passengers were on board when the cracks were reported on 9 October.\n- Nobody was hurt when the cracks were reported.\n- The MV Linnet was built in 1998.\n- The Linnet carries up to 340 passengers.\n- Transport minister Priya Anand stated the suspension would last at least 3 weeks.\n- Priya Anand said the ferry operator would receive no compensation for lost fares.\n- A union representative named Tom Reyes alleged that two earlier inspection reports in 2023 had flagged corrosion and were not acted on.\n- Harbour Ferries denied the allegation and said the 2023 reports found only cosmetic wear.\n- Replacement buses will run every 20 minutes from Wednesday.\n- Replacement bus trips cost 4.50 pounds, which is the same as the ferry fare.\n\n## Claims\n\n- The claim regarding the earlier inspection reports has not been verified.",
+    "index": "Harbour Ferries Kestrel Route Suspension\n\n## Facts\n\n- Harbour Ferries suspended all sailings on the Kestrel route on Tuesday 14 October.\n- The suspension was due to an inspection finding cracks in the hull of the MV Linnet.\n- The company confirmed 212 passengers were on board when the cracks were reported on 9 October.\n- Nobody was hurt when the cracks were reported.\n- The MV Linnet was built in 1998.\n- The Linnet carries up to 340 passengers.\n- Transport minister Priya Anand stated the suspension would last at least 3 weeks.\n- Priya Anand said the ferry operator would receive no compensation for lost fares.\n- A union representative named Tom Reyes alleged that two earlier inspection reports in 2023 had flagged corrosion and were not acted on.\n- Harbour Ferries denied the allegation and said the 2023 reports found only cosmetic wear.\n- Replacement buses will run every 20 minutes from Wednesday.\n- Replacement bus trips cost 4.50 pounds, which is the same as the ferry fare.\n\n## Claims\n\n- The claim regarding the earlier inspection reports has not been verified. Harbour Ferries, MV Linnet, The Linnet, Priya Anand, Tom Reyes, Kestrel, Tuesday 14 October, 9 October",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Harbour Ferries Kestrel Route Suspension",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "Harbour Ferries suspended all sailings on the Kestrel route on Tuesday 14 October.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The suspension was due to an inspection finding cracks in the hull of the MV Linnet.",
+       "support": 0.71,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The company confirmed 212 passengers were on board when the cracks were reported on 9 October.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Nobody was hurt when the cracks were reported.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The MV Linnet was built in 1998.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The Linnet carries up to 340 passengers.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Transport minister Priya Anand stated the suspension would last at least 3 weeks.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Priya Anand said the ferry operator would receive no compensation for lost fares.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "A union representative named Tom Reyes alleged that two earlier inspection reports in 2023 had flagged corrosion and were not acted on.",
+       "support": 0.92,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Harbour Ferries denied the allegation and said the 2023 reports found only cosmetic wear.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The claim regarding the earlier inspection reports has not been verified.",
+       "support": 0.86,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Replacement buses will run every 20 minutes from Wednesday.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Replacement bus trips cost 4.50 pounds, which is the same as the ferry fare.",
+       "support": 0.88,
+       "segment_idx": 1,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 3028,
+      "raw_units": 13,
+      "seconds": 38.6
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 185,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 38.7,
+   "calls": 1
+  },
+  {
+   "id": "web_table_article",
+   "output": {
+    "note": "Message Queue Selection Guide\n\n## Steps\n\n1. Pick Apache Kafka only if consumers must re-read history or if more than 100,000 messages per second are needed.\n2. Pick Amazon SQS FIFO when order matters per customer.\n\n## Facts\n\n- Amazon SQS Standard has best effort ordering, no replay, a maximum message size of 256 KB, and no operational cost.\n- Amazon SQS FIFO has strict per group ordering, no replay, a maximum message size of 256 KB, and no operational cost.\n- Apache Kafka has strict per partition ordering, replay capability, a default maximum message size of 1 MB, and high operational cost.\n- RabbitMQ has per queue ordering, no replay, a maximum message size of 128 MB, and medium operational cost.\n\n## Claims\n\n- The decision for most teams comes down to ordering guarantees and operational cost.\n- The recommendation is to start with a managed queue unless replay is needed.\n\n## Caveats\n\n- Avoid RabbitMQ lazy queues for payloads near the 128 MB limit because memory pressure causes stalls.",
+    "index": "Message Queue Selection Guide\n\n## Steps\n\n1. Pick Apache Kafka only if consumers must re-read history or if more than 100,000 messages per second are needed.\n2. Pick Amazon SQS FIFO when order matters per customer.\n\n## Facts\n\n- Amazon SQS Standard has best effort ordering, no replay, a maximum message size of 256 KB, and no operational cost.\n- Amazon SQS FIFO has strict per group ordering, no replay, a maximum message size of 256 KB, and no operational cost.\n- Apache Kafka has strict per partition ordering, replay capability, a default maximum message size of 1 MB, and high operational cost.\n- RabbitMQ has per queue ordering, no replay, a maximum message size of 128 MB, and medium operational cost.\n\n## Claims\n\n- The decision for most teams comes down to ordering guarantees and operational cost.\n- The recommendation is to start with a managed queue unless replay is needed.\n\n## Caveats\n\n- Avoid RabbitMQ lazy queues for payloads near the 128 MB limit because memory pressure causes stalls. Amazon SQS Standard, Amazon SQS FIFO, Apache Kafka, Pick Kafka, Pick SQS FIFO, Avoid RabbitMQ, re-read, SQS, FIFO, RabbitMQ",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Message Queue Selection Guide",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "claim",
+       "text": "The decision for most teams comes down to ordering guarantees and operational cost.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "The recommendation is to start with a managed queue unless replay is needed.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Amazon SQS Standard has best effort ordering, no replay, a maximum message size of 256 KB, and no operational cost.",
+       "support": 0.92,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Amazon SQS FIFO has strict per group ordering, no replay, a maximum message size of 256 KB, and no operational cost.",
+       "support": 0.92,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Apache Kafka has strict per partition ordering, replay capability, a default maximum message size of 1 MB, and high operational cost.",
+       "support": 0.87,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "RabbitMQ has per queue ordering, no replay, a maximum message size of 128 MB, and medium operational cost.",
+       "support": 0.91,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Pick Apache Kafka only if consumers must re-read history or if more than 100,000 messages per second are needed.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Pick Amazon SQS FIFO when order matters per customer.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "warning",
+       "text": "Avoid RabbitMQ lazy queues for payloads near the 128 MB limit because memory pressure causes stalls.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "messages",
+       "term": "message"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2926,
+      "raw_units": 9,
+      "seconds": 34.4
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 171,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 34.4,
+   "calls": 1
+  },
+  {
+   "id": "plain_note",
+   "output": {
+    "note": "Dentist Thu 3pm, bring insurance card. Ask about the night guard. Pick up Mira's inhaler refill before 6.",
+    "index": "Dentist Thu 3pm, bring insurance card. Ask about the night guard. Pick up Mira's inhaler refill before 6.",
+    "by": "verbatim",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "Dentist Thu 3pm, bring insurance card. Ask about the night guard. Pick up Mira's inhaler refill before 6.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [],
+     "stats": {
+      "calls": 0,
+      "verbatim": true
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 18,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 0.0,
+   "calls": 0
+  },
+  {
+   "id": "promo_filler_reel",
+   "output": {
+    "note": "My 5am routine\n\n## Steps\n\n1. The first hour after waking has no phone use.\n2. The person drinks 500 ml of water.\n3. The person does 10 minutes of mobility.\n4. At six, the person writes for 45 minutes before anything else.\n\n## Facts\n\n- The person wakes at five.\n- A cold shower is optional because the research on it is weak.",
+    "index": "My 5am routine\n\n## Steps\n\n1. The first hour after waking has no phone use.\n2. The person drinks 500 ml of water.\n3. The person does 10 minutes of mobility.\n4. At six, the person writes for 45 minutes before anything else.\n\n## Facts\n\n- The person wakes at five.\n- A cold shower is optional because the research on it is weak. LINK IN BIO, LINK, BIO, ROUTINE, 500 ml",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "My 5am routine",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "The person wakes at five.",
+       "support": 0.67,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The first hour after waking has no phone use.",
+       "support": 0.6,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The person drinks 500 ml of water.",
+       "support": 0.67,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The person does 10 minutes of mobility.",
+       "support": 0.67,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "At six, the person writes for 45 minutes before anything else.",
+       "support": 0.86,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "A cold shower is optional because the research on it is weak.",
+       "support": 0.83,
+       "segment_idx": 1,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2684,
+      "raw_units": 6,
+      "seconds": 16.2
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 64,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 16.2,
+   "calls": 1
+  },
+  {
+   "id": "incomplete_list",
+   "output": {
+    "note": "Ten habits of great engineers\n\n## Steps\n\n1. They write design docs before code.\n2. They read the code of the tools they use.\n3. They delete code happily.\n4. They ask what problem are we solving before how.\n\n## Facts\n\n- There are ten habits of great engineers.\n\n**Limits:** The remaining five habits are not provided in the source.",
+    "index": "Ten habits of great engineers\n\n## Steps\n\n1. They write design docs before code.\n2. They read the code of the tools they use.\n3. They delete code happily.\n4. They ask what problem are we solving before how.\n\n## Facts\n\n- There are ten habits of great engineers.\n\n**Limits:** The remaining five habits are not provided in the source.",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [
+     "The remaining five habits are not provided in the source."
+    ],
+    "data": {
+     "version": "note-v1",
+     "context": "Ten habits of great engineers",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "There are ten habits of great engineers.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "They write design docs before code.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "They read the code of the tools they use.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "They delete code happily.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "They ask what problem are we solving before how.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      }
+     ],
+     "gaps": [
+      "The remaining five habits are not provided in the source."
+     ],
+     "limits": [],
+     "dropped": {},
+     "repairs": [],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2539,
+      "raw_units": 5,
+      "seconds": 8.7
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 60,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 8.7,
+   "calls": 1
+  },
+  {
+   "id": "ocr_config_screenshot",
+   "output": {
+    "note": "**Why saved:** Settings to copy for the nginx rate limit\n\nNginx rate limiting settings\n\n## Steps\n\n1. A limit_req_zone is defined within the http block.\n2. A location block is defined for /api/.\n3. Inside the /api/ location, a limit_req is configured using zone=api.\n4. The limit_req_status is set to 429.\n5. The nginx configuration can be reloaded using the command sudo nginx -s reload.\n\n## Facts\n\n- The limit_req_zone uses $binary_remote_addr as the key.\n- The zone is named api:10m.\n- The rate specified for the zone is 5r/s.\n- The limit_req configuration also includes burst=10 and nodelay.\n- The zone size of 10m is approximately 160k IPs.\n\n## Source text, exact\n```\nnginx.conf\nhttp {\n  limit_req_zone $binary_remote_addr zone=api:10m rate=5r/s;\n  server {\n    location /api/ {\n      limit_req zone=api burst=10 nodelay;\n      limit_req_status 429;\n    }\n  }\n}\n# 10m zone ~ 160k IPs\nreload: sudo nginx -s reload\n```",
+    "index": "**Why saved:** Settings to copy for the nginx rate limit\n\nNginx rate limiting settings\n\n## Steps\n\n1. A limit_req_zone is defined within the http block.\n2. A location block is defined for /api/.\n3. Inside the /api/ location, a limit_req is configured using zone=api.\n4. The limit_req_status is set to 429.\n5. The nginx configuration can be reloaded using the command sudo nginx -s reload.\n\n## Facts\n\n- The limit_req_zone uses $binary_remote_addr as the key.\n- The zone is named api:10m.\n- The rate specified for the zone is 5r/s.\n- The limit_req configuration also includes burst=10 and nodelay.\n- The zone size of 10m is approximately 160k IPs.\n\n## Source text, exact\n```\nnginx.conf\nhttp {\n  limit_req_zone $binary_remote_addr zone=api:10m rate=5r/s;\n  server {\n    location /api/ {\n      limit_req zone=api burst=10 nodelay;\n      limit_req_status 429;\n    }\n  }\n}\n# 10m zone ~ 160k IPs\nreload: sudo nginx -s reload\n``` limit_req_zone, binary_remote_addr, limit_req, limit_req_status, IPs, nginx.conf, http, api:10m, 5r/s, /api/, 429",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Nginx rate limiting settings",
+     "intent": {
+      "state": "explicit",
+      "text": "Settings to copy for the nginx rate limit"
+     },
+     "units": [
+      {
+       "type": "step",
+       "text": "A limit_req_zone is defined within the http block.",
+       "support": 0.57,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The limit_req_zone uses $binary_remote_addr as the key.",
+       "support": 0.86,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The zone is named api:10m.",
+       "support": 0.75,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The rate specified for the zone is 5r/s.",
+       "support": 0.67,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "A location block is defined for /api/.",
+       "support": 0.5,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "Inside the /api/ location, a limit_req is configured using zone=api.",
+       "support": 0.86,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The limit_req configuration also includes burst=10 and nodelay.",
+       "support": 0.83,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The limit_req_status is set to 429.",
+       "support": 0.75,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The zone size of 10m is approximately 160k IPs.",
+       "support": 0.67,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The nginx configuration can be reloaded using the command sudo nginx -s reload.",
+       "support": 0.8,
+       "segment_idx": 0,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {
+      "unsupported_text": 2
+     },
+     "repairs": [],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2595,
+      "raw_units": 12,
+      "seconds": 29.8
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 147,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 29.8,
+   "calls": 1
+  },
+  {
+   "id": "paper_results",
+   "output": {
+    "note": "WindowSparse attention pattern performance\n\n## Facts\n\n- On the LongDocQA benchmark, WindowSparse reaches 71.4 F1.\n- Full attention reaches 68.9 F1 on the LongDocQA benchmark.\n- WindowSparse uses 3.1x less memory at 16k tokens compared to full attention.\n- Memory at 16k tokens for full attention is 38.2 GB.\n- Memory at 16k tokens for WindowSparse is 12.3 GB.\n- Training used 64 A100 GPUs for 9 days.\n- The improvement over full attention is within one standard deviation on three of the 5 tasks.\n- WindowSparse underperforms on tasks requiring long-range exact copy, dropping to 41.0 F1 on the SyntheticCopy task.\n- Full attention reaches 88.5 F1 on the SyntheticCopy task.\n- The evaluation was not conducted beyond 32k tokens.\n\n## Definitions\n\n- WindowSparse is a sparse attention pattern that combines local windows of 512 tokens with 8 global tokens per layer.",
+    "index": "WindowSparse attention pattern performance\n\n## Facts\n\n- On the LongDocQA benchmark, WindowSparse reaches 71.4 F1.\n- Full attention reaches 68.9 F1 on the LongDocQA benchmark.\n- WindowSparse uses 3.1x less memory at 16k tokens compared to full attention.\n- Memory at 16k tokens for full attention is 38.2 GB.\n- Memory at 16k tokens for WindowSparse is 12.3 GB.\n- Training used 64 A100 GPUs for 9 days.\n- The improvement over full attention is within one standard deviation on three of the 5 tasks.\n- WindowSparse underperforms on tasks requiring long-range exact copy, dropping to 41.0 F1 on the SyntheticCopy task.\n- Full attention reaches 88.5 F1 on the SyntheticCopy task.\n- The evaluation was not conducted beyond 32k tokens.\n\n## Definitions\n\n- WindowSparse is a sparse attention pattern that combines local windows of 512 tokens with 8 global tokens per layer. A100 GPUs, long-range, WindowSparse, LongDocQA, GPUs, SyntheticCopy, A100",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "WindowSparse attention pattern performance",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "definition",
+       "text": "WindowSparse is a sparse attention pattern that combines local windows of 512 tokens with 8 global tokens per layer.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "On the LongDocQA benchmark, WindowSparse reaches 71.4 F1.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Full attention reaches 68.9 F1 on the LongDocQA benchmark.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "WindowSparse uses 3.1x less memory at 16k tokens compared to full attention.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Memory at 16k tokens for full attention is 38.2 GB.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Memory at 16k tokens for WindowSparse is 12.3 GB.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Training used 64 A100 GPUs for 9 days.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The improvement over full attention is within one standard deviation on three of the 5 tasks.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "WindowSparse underperforms on tasks requiring long-range exact copy, dropping to 41.0 F1 on the SyntheticCopy task.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Full attention reaches 88.5 F1 on the SyntheticCopy task.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The evaluation was not conducted beyond 32k tokens.",
+       "support": 0.8,
+       "segment_idx": 2,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {},
+     "repairs": [
+      {
+       "heard": "dictated symbols (dash, dot, colon...) and number words",
+       "term": "converted"
+      }
+     ],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2872,
+      "raw_units": 11,
+      "seconds": 20.4
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 143,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 20.4,
+   "calls": 1
+  },
+  {
+   "id": "correction_in_talk",
+   "output": {
+    "note": "Database sharding strategy change\n\n## Steps\n\n1. The strategy was switched to sharding by document id hash.\n\n## Facts\n\n- The search cluster originally had 8 nodes.\n- Sharding by customer handled 2,000 queries per second.\n- One huge customer made one shard hot.\n- P99 latency reached 900 ms with sharding by customer.\n- After the switch, p99 dropped to 120 ms.\n- The cluster was moved to 12 nodes after the switch.\n\n## Claims\n\n- One lesson is not to shard on a key whose distribution is not controlled.",
+    "index": "Database sharding strategy change\n\n## Steps\n\n1. The strategy was switched to sharding by document id hash.\n\n## Facts\n\n- The search cluster originally had 8 nodes.\n- Sharding by customer handled 2,000 queries per second.\n- One huge customer made one shard hot.\n- P99 latency reached 900 ms with sharding by customer.\n- After the switch, p99 dropped to 120 ms.\n- The cluster was moved to 12 nodes after the switch.\n\n## Claims\n\n- One lesson is not to shard on a key whose distribution is not controlled. document id hash",
+    "by": "ollama:gemma4:e4b",
+    "gaps": [],
+    "data": {
+     "version": "note-v1",
+     "context": "Database sharding strategy change",
+     "intent": {
+      "state": "unknown",
+      "text": null
+     },
+     "units": [
+      {
+       "type": "fact",
+       "text": "The search cluster originally had 8 nodes.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "Sharding by customer handled 2,000 queries per second.",
+       "support": 1.0,
+       "segment_idx": 0,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "One huge customer made one shard hot.",
+       "support": 1.0,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "P99 latency reached 900 ms with sharding by customer.",
+       "support": 0.8,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "step",
+       "text": "The strategy was switched to sharding by document id hash.",
+       "support": 0.8,
+       "segment_idx": 1,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "After the switch, p99 dropped to 120 ms.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "fact",
+       "text": "The cluster was moved to 12 nodes after the switch.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      },
+      {
+       "type": "claim",
+       "text": "One lesson is not to shard on a key whose distribution is not controlled.",
+       "support": 1.0,
+       "segment_idx": 2,
+       "focus": null
+      }
+     ],
+     "gaps": [],
+     "limits": [],
+     "dropped": {
+      "unsupported_text": 1
+     },
+     "repairs": [],
+     "stats": {
+      "calls": 1,
+      "prompt_chars": 2697,
+      "raw_units": 9,
+      "seconds": 15.3
+     }
+    }
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 91,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 15.3,
+   "calls": 1
+  }
+ ]
+}

@@ -46,6 +46,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
         self.api_key_env, self.locality, self.embed_model = api_key_env, locality, embed_model
         self.timeout, self.transcribe_model = timeout, transcribe_model or model
         self.vision_model = self.rerank_model = model
+        self.think = self.num_ctx = None  # Ollama-native chat options, see generate()
         base = capabilities or Capabilities()
         self.capabilities = Capabilities(**{**base.__dict__, "text": True,
                                             "embeddings": base.embeddings or bool(embed_model)})
@@ -66,6 +67,7 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
                 spec.get("timeout", 120), Capabilities(**caps), spec.get("transcribe_model"))
         b.vision_model = spec.get("vision_model") or b.model
         b.rerank_model = spec.get("rerank_model") or b.model
+        b.think, b.num_ctx = spec.get("think"), spec.get("num_ctx")
         return b
 
     def _headers(self):
@@ -100,6 +102,8 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
 
     def generate(self, messages, *, json_schema=None, max_tokens=None) -> GenResult:
         """Chat completion; a JSON schema goes in response_format or into the prompt."""
+        if self.think is not None or self.num_ctx:
+            return self._generate_ollama(messages, json_schema, max_tokens)
         body = {"model": self.model, "messages": list(messages)}
         if max_tokens:
             body["max_tokens"] = max_tokens
@@ -112,6 +116,33 @@ class OpenAICompatBackend:  # pylint: disable=too-many-instance-attributes  # pl
                     *messages, {"role": "user", "content": schema_instruction(json_schema)}]
         data = self._call("/chat/completions", json.dumps(body).encode())
         return GenResult(self._content(data), data.get("model", self.model), self.name)
+
+    def _generate_ollama(self, messages, json_schema, max_tokens) -> GenResult:
+        """Ollama's native /api/chat, used when the spec sets `think` and/or `num_ctx`.
+
+        Measured on gemma4:e4b: /v1 ignores `think` (thinking models burn 70-115 s on reasoning
+        tokens) while /api/chat with think=false answered the same prompt in 9 s; /v1 also keeps
+        Ollama's default 4096-token context, `num_ctx` raises it. `format` (structured output) is
+        501 on some runners, so the schema always goes in the prompt."""
+        msgs = list(messages)
+        if json_schema is not None:
+            msgs.append({"role": "user", "content": schema_instruction(json_schema)})
+        opts = {k: v for k, v in (("num_ctx", self.num_ctx), ("num_predict", max_tokens)) if v}
+        body = {"model": self.model, "messages": msgs, "stream": False, "options": opts}
+        if self.think is not None:
+            body["think"] = bool(self.think)
+        root = self.base_url.removesuffix("/v1")
+        req = urllib.request.Request(root + "/api/chat", data=json.dumps(body).encode(),
+                                     method="POST", headers={"Content-Type": "application/json"})
+        try:
+            with opener(self.locality == "local").open(req, timeout=self.timeout) as r:
+                data = json.loads(r.read())
+            text = data["message"]["content"]
+        except urllib.error.HTTPError as e:
+            raise ProviderError(f"{self.name}: HTTP {e.code} {e.read()[:200]!r}") from e
+        except (urllib.error.URLError, OSError, TimeoutError, ValueError, KeyError, TypeError) as e:
+            raise ProviderError(f"{self.name}: {e}") from e
+        return GenResult(text, data.get("model", self.model), self.name)
 
     def embed(self, texts) -> EmbedResult:
         """Embed texts with embed_model."""

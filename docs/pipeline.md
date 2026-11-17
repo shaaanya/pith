@@ -1,5 +1,9 @@
 # Processing pipeline
 
+The distill stage builds one knowledge note per source (`pipeline/note.py`); see
+[note-pipeline.md](note-pipeline.md) for its spec, design and benchmark. The legacy summary and insights
+distiller below remains as the fallback when only the heuristic backend exists.
+
 A worker claims a job and calls `pipeline/runner.py:process(services, inbox_id)`. The stages, each recorded
 as a `processing_events` row:
 

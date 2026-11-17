@@ -1,0 +1,326 @@
+{
+  "_readme": "Note-quality benchmark. All sources are written for this evaluation (fictional or paraphrased, no scraped or personal data). `must` = groups of acceptable alternatives (casefolded substring match); a group is satisfied when ANY alternative occurs. critical=true groups failing is a BLOCKING failure. `must_not` strings are blocking. `index_only` groups may be satisfied by the entity/mention index instead of the note body. References are PROVISIONAL (written by the author from the source text, not yet human reviewed). Do not edit cases to make a pipeline score better.",
+  "cases": [
+    {
+      "id": "twitch_reel",
+      "kind": "video",
+      "title": "Twitch Payments SWE prep",
+      "intent": null,
+      "description": "Twitch just posted an entry-level Payments software engineer role ($127K-$185K). Here's my 30-day prep plan.\n\n1) Find the tech stack using older Twitch job postings and engineering blog articles: Go, DynamoDB, Lambda, SQS and Step Functions.\n2) Learn payments fundamentals: idempotency and database transactions. Chapter 7 of Designing Data-Intensive Applications.\n3) Do the Tour of Go, then read Marc Brooker's writing on DynamoDB and Aurora DSQL.\n4) Practice system design on Devmaxx every morning, especially the database questions.\n5) Build a fishing tournament manager using Lambda, DynamoDB, SQS and Step Functions.\n\nComment GUIDE and I'll DM you my full guide. Follow for more!",
+      "segments": [
+        ["t=0-14", "so twitch just posted an entry level payments software engineer role and I want to walk you through how I would prepare for it in thirty days"],
+        ["t=14-34", "first figure out their stack look at older twitch job postings and their engineering blog they use go dynamo db lambda sqs and step functions"],
+        ["t=34-58", "then learn the payments basics which is item potency and database transactions there is a great chapter seven in designing data intensive applications on that"],
+        ["t=58-82", "next do the tour of go and read mark brooker he writes about dynamo db and aurora dsql"],
+        ["t=82-104", "every morning practice system design on dev max focus on the database questions"],
+        ["t=104-122", "and finally build a fishing tournament manager with lambda dynamo db sqs and step functions comment guide and I will send you the full guide"]
+      ],
+      "must": [
+        {"any": ["$127k", "127k"], "critical": false},
+        {"any": ["go"], "critical": true, "word": true},
+        {"any": ["dynamodb"], "critical": true},
+        {"any": ["step functions"], "critical": true},
+        {"any": ["sqs"], "critical": true},
+        {"any": ["idempotency"], "critical": true},
+        {"any": ["chapter 7", "ch. 7", "chapter seven"], "critical": true},
+        {"any": ["designing data-intensive applications", "designing data intensive applications"], "critical": true},
+        {"any": ["tour of go"], "critical": true},
+        {"any": ["marc brooker", "mark brooker"], "critical": true},
+        {"any": ["aurora dsql"], "critical": true},
+        {"any": ["devmaxx"], "critical": true},
+        {"any": ["fishing tournament"], "critical": true}
+      ],
+      "must_not": ["item potency", "day 1", "day 15", "week 1", "week 2", "comment guide", "dm you"]
+    },
+    {
+      "id": "postgres_noisy_transcript",
+      "kind": "video",
+      "title": "Postgres index tips",
+      "intent": null,
+      "description": "3 Postgres performance fixes I use on every project:\n- CREATE INDEX CONCURRENTLY so writes are not blocked\n- EXPLAIN (ANALYZE, BUFFERS) before and after every change\n- Replace OFFSET pagination with keyset pagination: WHERE id > $last_id ORDER BY id LIMIT 50",
+      "segments": [
+        ["t=0-20", "okay three post grass performance fixes number one when you create an index use create index concurrently otherwise you lock the table for rights"],
+        ["t=20-45", "number two always run explain analyze with buffers before and after so you see the actual numbers not guesses"],
+        ["t=45-70", "number three stop using offset for pagination it gets slower the deeper you go use key set pagination where I D is greater than the last I D order by I D limit fifty"]
+      ],
+      "must": [
+        {"any": ["create index concurrently"], "critical": true},
+        {"any": ["explain (analyze, buffers)", "explain analyze", "explain (analyze,buffers)"], "critical": true},
+        {"any": ["keyset"], "critical": true},
+        {"any": ["limit 50"], "critical": true},
+        {"any": ["where id > $last_id", "id > $last_id", "id > last"], "critical": false}
+      ],
+      "must_not": ["post grass", "key set"]
+    },
+    {
+      "id": "podcast_brief_mention_intent",
+      "kind": "video",
+      "title": "Dev podcast ep 41: shipping with agents",
+      "intent": "Saved for the Claude Code skill mentioned in the middle",
+      "description": "Episode 41. We talk about agent workflows, code review habits, and burnout.",
+      "segments": [
+        ["t=0-300", "welcome back to the show today we are talking about shipping faster with coding agents. Dana thinks the biggest win is not speed but fewer context switches. Marcus disagrees and says review time just moves to a different place. They go back and forth on whether small pull requests still matter when an agent writes the code. Dana says yes because reviewers still read linearly."],
+        ["t=300-420", "one thing that really changed my debugging, there is a Claude Code skill called systematic-debugging, it forces the agent to reproduce the bug and write down a hypothesis before touching any code. I only found it last week. Anyway. Marcus what about meetings."],
+        ["t=420-900", "Marcus says he blocks mornings for deep work and does no meetings before noon. Dana says burnout is the real risk with agents because the pace never drops. They agree to cap work in progress at three tasks. Marcus recommends the book Four Thousand Weeks by Oliver Burkeman for thinking about limits. They also discuss how on call rotations should change when agents ship code at night."]
+      ],
+      "must": [
+        {"any": ["systematic-debugging", "systematic debugging"], "critical": true},
+        {"any": ["reproduce"], "critical": true},
+        {"any": ["hypothesis"], "critical": true},
+        {"any": ["four thousand weeks"], "critical": false, "index_only": true},
+        {"any": ["oliver burkeman"], "critical": false, "index_only": true}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "podcast_brief_mention_no_intent",
+      "kind": "video",
+      "title": "Dev podcast ep 41: shipping with agents",
+      "intent": null,
+      "description": "Episode 41. We talk about agent workflows, code review habits, and burnout.",
+      "segments": [
+        ["t=0-300", "welcome back to the show today we are talking about shipping faster with coding agents. Dana thinks the biggest win is not speed but fewer context switches. Marcus disagrees and says review time just moves to a different place. They go back and forth on whether small pull requests still matter when an agent writes the code. Dana says yes because reviewers still read linearly."],
+        ["t=300-420", "one thing that really changed my debugging, there is a Claude Code skill called systematic-debugging, it forces the agent to reproduce the bug and write down a hypothesis before touching any code. I only found it last week. Anyway. Marcus what about meetings."],
+        ["t=420-900", "Marcus says he blocks mornings for deep work and does no meetings before noon. Dana says burnout is the real risk with agents because the pace never drops. They agree to cap work in progress at three tasks. Marcus recommends the book Four Thousand Weeks by Oliver Burkeman for thinking about limits. They also discuss how on call rotations should change when agents ship code at night."]
+      ],
+      "must": [
+        {"any": ["systematic-debugging", "systematic debugging"], "critical": false, "index_only": true},
+        {"any": ["four thousand weeks"], "critical": false, "index_only": true},
+        {"any": ["oliver burkeman"], "critical": false, "index_only": true},
+        {"any": ["three tasks", "three"], "critical": false},
+        {"any": ["no meetings before noon", "before noon"], "critical": false}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "docker_tutorial",
+      "kind": "video",
+      "title": "Deploy a Flask app with Docker",
+      "intent": null,
+      "description": "Deploy a Flask app on a VPS with Docker in 10 minutes. Repo: github.com/example/flask-deploy",
+      "segments": [
+        ["t=0-60", "first create a Dockerfile starting from python 3.12 slim. copy requirements.txt and run pip install no cache dir. then copy the app and set the command to gunicorn bound to 0.0.0.0 port 8000 with app colon app"],
+        ["t=60-130", "build it with docker build dash t flaskapp dot. run it with docker run dash d dash p 80 colon 8000 dash dash env file dot env dash dash restart unless stopped flaskapp"],
+        ["t=130-190", "your dot env needs DATABASE_URL and SECRET_KEY. never commit that file add it to dot gitignore. if the container exits check docker logs flaskapp"],
+        ["t=190-240", "for https put caddy in front it gets the certificate automatically, the caddyfile is just your domain and reverse underscore proxy localhost colon 8000"]
+      ],
+      "must": [
+        {"any": ["python 3.12", "python:3.12"], "critical": false},
+        {"any": ["gunicorn"], "critical": true},
+        {"any": ["docker build -t flaskapp ."], "critical": true},
+        {"any": ["-p 80:8000"], "critical": true},
+        {"any": ["--env-file .env", "env-file"], "critical": true},
+        {"any": ["--restart unless-stopped", "unless-stopped", "unless stopped"], "critical": false},
+        {"any": ["database_url"], "critical": true},
+        {"any": ["secret_key"], "critical": true},
+        {"any": ["docker logs flaskapp"], "critical": false},
+        {"any": ["caddy"], "critical": true},
+        {"any": ["reverse_proxy"], "critical": false}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "opinion_essay",
+      "kind": "web",
+      "title": "Why we should stop measuring developer productivity by commits",
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["char=0-900", "Counting commits to measure developer productivity is a mistake, and the reason is Goodhart's law: once a measure becomes a target it stops being a good measure. At one company the author describes, commit counts per developer rose 40% within a quarter after they were added to a dashboard, while shipped features per quarter fell from 11 to 8. Developers split work into tiny commits and avoided hard refactors that produce a single large change."],
+        ["char=900-1800", "The author makes three arguments. First, commits measure activity, not value: a one line fix to a payment bug can matter more than a month of churn. Second, the metric punishes collaboration, because pairing and review produce no commits for the reviewer. Third, it hides the real constraint, which in the cases described was waiting time between review and deploy, a median of 3 days."],
+        ["char=1800-2500", "Critics reply that some quantitative signal is needed for management. The author concedes this and suggests DORA metrics instead: deployment frequency, lead time for changes, change failure rate and time to restore service. The author notes these should be tracked per team, never per individual, and still carry the risk of gaming."]
+      ],
+      "must": [
+        {"any": ["goodhart"], "critical": true},
+        {"any": ["40%"], "critical": true},
+        {"any": ["11 to 8", "from 11", "11 features"], "critical": true},
+        {"any": ["activity, not value", "activity not value", "measure activity"], "critical": true},
+        {"any": ["collaboration"], "critical": true},
+        {"any": ["3 days", "three days"], "critical": true},
+        {"any": ["dora"], "critical": true},
+        {"any": ["lead time"], "critical": true},
+        {"any": ["change failure rate"], "critical": false},
+        {"any": ["per team"], "critical": true}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "news_numbers",
+      "kind": "web",
+      "title": "Harbour Ferries suspends service after hull inspection",
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["char=0-700", "Harbour Ferries said on Tuesday 14 October it was suspending all sailings on the Kestrel route after an inspection found cracks in the hull of the MV Linnet. The company confirmed 212 passengers were on board when the cracks were reported on 9 October and that nobody was hurt. The Linnet, built in 1998, carries up to 340 passengers."],
+        ["char=700-1500", "Transport minister Priya Anand said the suspension would last at least 3 weeks and that the ferry operator would receive no compensation for lost fares. A union representative, Tom Reyes, alleged that two earlier inspection reports in 2023 had flagged corrosion and were not acted on. Harbour Ferries denied this and said the 2023 reports found only cosmetic wear. The claim has not been verified. Replacement buses will run every 20 minutes from Wednesday and cost 4.50 pounds per trip, the same as the ferry fare."]
+      ],
+      "must": [
+        {"any": ["harbour ferries"], "critical": true},
+        {"any": ["kestrel"], "critical": true},
+        {"any": ["linnet"], "critical": true},
+        {"any": ["14 october"], "critical": false},
+        {"any": ["212"], "critical": true},
+        {"any": ["340"], "critical": false},
+        {"any": ["priya anand"], "critical": true},
+        {"any": ["3 weeks", "three weeks"], "critical": true},
+        {"any": ["tom reyes"], "critical": true},
+        {"any": ["alleg"], "critical": true},
+        {"any": ["not been verified", "unverified", "not verified"], "critical": true},
+        {"any": ["every 20 minutes"], "critical": true},
+        {"any": ["4.50"], "critical": true}
+      ],
+      "must_not": ["confirmed that the 2023 reports flagged corrosion"]
+    },
+    {
+      "id": "web_table_article",
+      "kind": "web",
+      "title": "Choosing a message queue",
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["char=0-600", "# Choosing a message queue\n\nFor most teams the decision comes down to ordering guarantees and operational cost. Our recommendation: start with a managed queue unless you need replay."],
+        ["char=600-1500", "| Queue | Ordering | Replay | Max message size | Ops cost |\n|---|---|---|---|---|\n| Amazon SQS Standard | best effort | no | 256 KB | none |\n| Amazon SQS FIFO | strict per group | no | 256 KB | none |\n| Apache Kafka | strict per partition | yes | 1 MB default | high |\n| RabbitMQ | per queue | no | 128 MB | medium |"],
+        ["char=1500-2100", "Pick Kafka only if consumers must re-read history or you need more than 100,000 messages per second. Pick SQS FIFO when order matters per customer. Avoid RabbitMQ lazy queues for payloads near the 128 MB limit because memory pressure causes stalls."]
+      ],
+      "must": [
+        {"any": ["sqs fifo"], "critical": true},
+        {"any": ["256 kb"], "critical": true},
+        {"any": ["kafka"], "critical": true},
+        {"any": ["1 mb"], "critical": true},
+        {"any": ["rabbitmq"], "critical": true},
+        {"any": ["128 mb"], "critical": true},
+        {"any": ["replay"], "critical": true},
+        {"any": ["100,000"], "critical": true},
+        {"any": ["managed queue"], "critical": false}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "plain_note",
+      "kind": "note",
+      "title": null,
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["char=0-160", "Dentist Thu 3pm, bring insurance card. Ask about the night guard. Pick up Mira's inhaler refill before 6."]
+      ],
+      "must": [
+        {"any": ["thu"], "critical": true},
+        {"any": ["3pm", "3 pm"], "critical": true},
+        {"any": ["insurance card"], "critical": true},
+        {"any": ["night guard"], "critical": true},
+        {"any": ["mira"], "critical": true},
+        {"any": ["inhaler"], "critical": true},
+        {"any": ["before 6"], "critical": true}
+      ],
+      "must_not": [],
+      "max_words": 60
+    },
+    {
+      "id": "promo_filler_reel",
+      "kind": "video",
+      "title": "Morning routine",
+      "intent": null,
+      "description": "My 5am routine. LINK IN BIO for my course (50% off today only!). Follow, like, comment ROUTINE and I'll send the template. #productivity #5amclub",
+      "segments": [
+        ["t=0-40", "hey guys welcome back, smash that like button. okay so my routine. I wake at five, no phone for the first hour. I drink 500 ml of water, then do ten minutes of mobility. At six I write for 45 minutes before anything else. Cold shower is optional, the research on it is weak."],
+        ["t=40-70", "link in my bio for the course, follow me for more, see you tomorrow guys"]
+      ],
+      "must": [
+        {"any": ["five", "5am", "5 am", "5:00"], "critical": true},
+        {"any": ["no phone"], "critical": true},
+        {"any": ["500 ml"], "critical": true},
+        {"any": ["ten minutes", "10 minutes"], "critical": true},
+        {"any": ["45 minutes"], "critical": true},
+        {"any": ["research", "weak"], "critical": false}
+      ],
+      "must_not": ["link in bio", "link in my bio", "smash", "50% off", "follow me", "like button", "#productivity"]
+    },
+    {
+      "id": "incomplete_list",
+      "kind": "video",
+      "title": "10 habits of great engineers",
+      "intent": null,
+      "description": "10 habits of great engineers. Which one do you do? Full list in my newsletter!",
+      "segments": [
+        ["t=0-60", "here are ten habits of great engineers. one, they write things down, design docs before code. two, they read the code of the tools they use. three, they delete code happily. four, they ask what problem are we solving before how. the rest are in my newsletter go sign up"]
+      ],
+      "must": [
+        {"any": ["design doc"], "critical": true},
+        {"any": ["read the code", "read code"], "critical": true},
+        {"any": ["delete code", "deleting code"], "critical": true},
+        {"any": ["what problem"], "critical": true}
+      ],
+      "must_not": ["five,", "habit 5", "habit five", "sixth", "seventh"],
+      "expect_gap": true
+    },
+    {
+      "id": "ocr_config_screenshot",
+      "kind": "image",
+      "title": "Screenshot",
+      "intent": "Settings to copy for the nginx rate limit",
+      "description": null,
+      "segments": [
+        ["ocr", "nginx.conf\nhttp {\n  limit_req_zone $binary_remote_addr zone=api:10m rate=5r/s;\n  server {\n    location /api/ {\n      limit_req zone=api burst=10 nodelay;\n      limit_req_status 429;\n    }\n  }\n}\n# 10m zone ~ 160k IPs\nreload: sudo nginx -s reload"]
+      ],
+      "must": [
+        {"any": ["limit_req_zone"], "critical": true},
+        {"any": ["rate=5r/s"], "critical": true},
+        {"any": ["zone=api:10m"], "critical": true},
+        {"any": ["burst=10"], "critical": true},
+        {"any": ["nodelay"], "critical": true},
+        {"any": ["429"], "critical": true},
+        {"any": ["nginx -s reload"], "critical": false}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "paper_results",
+      "kind": "pdf",
+      "title": "Sparse attention for long documents",
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["page=1", "Abstract. We propose WindowSparse, a sparse attention pattern combining local windows of 512 tokens with 8 global tokens per layer. On the LongDocQA benchmark WindowSparse reaches 71.4 F1, compared with 68.9 for full attention, while using 3.1x less memory at 16k tokens."],
+        ["page=4", "Table 2. Memory at 16k tokens: full attention 38.2 GB, WindowSparse 12.3 GB. Training used 64 A100 GPUs for 9 days. We note that the improvement over full attention is within one standard deviation on three of the five tasks."],
+        ["page=7", "Limitations. WindowSparse underperforms on tasks requiring long-range exact copy, dropping to 41.0 F1 on the SyntheticCopy task versus 88.5 for full attention. We did not evaluate beyond 32k tokens."]
+      ],
+      "must": [
+        {"any": ["windowsparse"], "critical": true},
+        {"any": ["512"], "critical": true},
+        {"any": ["71.4"], "critical": true},
+        {"any": ["68.9"], "critical": true},
+        {"any": ["3.1x", "3.1×"], "critical": true},
+        {"any": ["38.2"], "critical": false},
+        {"any": ["12.3"], "critical": false},
+        {"any": ["one standard deviation"], "critical": true},
+        {"any": ["41.0"], "critical": true},
+        {"any": ["88.5"], "critical": true},
+        {"any": ["32k"], "critical": false}
+      ],
+      "must_not": []
+    },
+    {
+      "id": "correction_in_talk",
+      "kind": "video",
+      "title": "Talk: scaling our search cluster",
+      "intent": null,
+      "description": null,
+      "segments": [
+        ["t=0-120", "when we started our search cluster had 6 nodes and we thought sharding by customer was the answer, it handled 2,000 queries per second."],
+        ["t=120-300", "sharding by customer turned out to be a mistake: one huge customer made one shard hot and p99 latency hit 900 ms. so we switched to sharding by document id hash."],
+        ["t=300-420", "quick correction to what I said earlier, the original cluster had 8 nodes not 6. after the switch p99 dropped to 120 ms and we moved to 12 nodes. the lesson is do not shard on a key whose distribution you do not control."]
+      ],
+      "must": [
+        {"any": ["8 nodes"], "critical": true},
+        {"any": ["900 ms"], "critical": true},
+        {"any": ["120 ms"], "critical": true},
+        {"any": ["document id", "document-id", "doc id"], "critical": true},
+        {"any": ["12 nodes"], "critical": true},
+        {"any": ["distribution"], "critical": true},
+        {"any": ["2,000"], "critical": false}
+      ],
+      "must_not": ["had 6 nodes", "started with 6"]
+    }
+  ]
+}

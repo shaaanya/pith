@@ -1,0 +1,351 @@
+{
+ "summary": {
+  "variant": "legacy-headprompt-nothink",
+  "model": "gemma4:e4b",
+  "cases": 14,
+  "mean_recall": 0.458,
+  "blocking": 12,
+  "commentary_total": 3,
+  "invented_number_cases": 0,
+  "mean_words": 90,
+  "total_calls": 14,
+  "total_seconds": 229.3
+ },
+ "rows": [
+  {
+   "id": "twitch_reel",
+   "output": {
+    "note": "A 30-day preparation plan for an entry-level Payments Software Engineer role at Twitch, focusing on technology stack discovery, fundamental learning, tool mastery, and project building.\nThe necessary tech stack for Twitch needs to be identified by reviewing older job postings and engineering blog articles.\nPayment fundamentals, specifically idempotency and database transactions, must be studied, referencing 'Chapter 7 of Designing Data-Intensive Applications.'\nSpecific technical deep dives are recommended, including 'The Tour of Go,' reading Marc Brooker's writings on DynamoDB and Aurora DSQL, and practicing system design problems.\nA practical project using the targeted AWS services is proposed: building a 'fishing tournament manager.'",
+    "index": "A 30-day preparation plan for an entry-level Payments Software Engineer role at Twitch, focusing on technology stack discovery, fundamental learning, tool mastery, and project building.\nThe necessary tech stack for Twitch needs to be identified by reviewing older job postings and engineering blog articles.\nPayment fundamentals, specifically idempotency and database transactions, must be studied, referencing 'Chapter 7 of Designing Data-Intensive Applications.'\nSpecific technical deep dives are recommended, including 'The Tour of Go,' reading Marc Brooker's writings on DynamoDB and Aurora DSQL, and practicing system design problems.\nA practical project using the targeted AWS services is proposed: building a 'fishing tournament manager.' Go DynamoDB Lambda SQS Step Functions Idempotency Aurora DSQL Go DynamoDB Lambda SQS Step Functions Idempotency Aurora DSQL Go DynamoDB Lambda SQS Step Functions Idempotency Aurora DSQL Go DynamoDB Lambda SQS Step Functions Idempotency Aurora DSQL Go DynamoDB Lambda SQS Step Functions Idempotency Aurora DSQL",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.69,
+   "critical_missing": [
+    "step functions",
+    "sqs",
+    "devmaxx"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 101,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 21.8,
+   "calls": 1
+  },
+  {
+   "id": "postgres_noisy_transcript",
+   "output": {
+    "note": "Three key tips for Postgres performance improvements: using concurrent index creation, running EXPLAIN ANALYZE, and switching from offset to keyset pagination.\nWhen creating an index, use CONCURRENTLY to prevent locking the table during writes.\nAlways use 'EXPLAIN (ANALYZE, BUFFERS)' before and after modifications to view actual performance metrics.\nReplace OFFSET pagination with keyset pagination, specifically using 'WHERE id > $last_id ORDER BY id LIMIT 50'.",
+    "index": "Three key tips for Postgres performance improvements: using concurrent index creation, running EXPLAIN ANALYZE, and switching from offset to keyset pagination.\nWhen creating an index, use CONCURRENTLY to prevent locking the table during writes.\nAlways use 'EXPLAIN (ANALYZE, BUFFERS)' before and after modifications to view actual performance metrics.\nReplace OFFSET pagination with keyset pagination, specifically using 'WHERE id > $last_id ORDER BY id LIMIT 50'. CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) keyset pagination CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) keyset pagination CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) keyset pagination CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) keyset pagination",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.8,
+   "critical_missing": [
+    "create index concurrently"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 65,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 11.8,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_intent",
+   "output": {
+    "note": "The podcast episode discusses the impact of coding agents on the software development lifecycle, focusing on efficiency, code review, debugging processes, and managing developer burnout.\nThe core debate revolves around whether coding agents increase overall speed or primarily reduce context switching.\nA specific AI skill, 'systematic-debugging', forces the agent to follow a strict debugging protocol before making code changes.\nDiscussions covered strategies for managing workload, such as limiting work in progress and changing on-call rotation policies when automated tools are used.",
+    "index": "The podcast episode discusses the impact of coding agents on the software development lifecycle, focusing on efficiency, code review, debugging processes, and managing developer burnout.\nThe core debate revolves around whether coding agents increase overall speed or primarily reduce context switching.\nA specific AI skill, 'systematic-debugging', forces the agent to follow a strict debugging protocol before making code changes.\nDiscussions covered strategies for managing workload, such as limiting work in progress and changing on-call rotation policies when automated tools are used. Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.4,
+   "critical_missing": [
+    "reproduce",
+    "hypothesis"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 1,
+   "words": 81,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 17.2,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_no_intent",
+   "output": {
+    "note": "The podcast episode discusses shipping faster with coding agents, focusing on agent workflows, code review habits, and burnout, with a debate between the benefits of reduced context switching versus shifting review time.\nDana believes the main benefit of coding agents is not speed, but reducing context switches, while Marcus contends that review time simply moves.\nBoth speakers discussed debugging improvements, mentioning a specific Claude Code skill.\nThey addressed burnout, with Dana stating that the pace with agents never drops, leading them to agree on a limit for in-progress tasks.",
+    "index": "The podcast episode discusses shipping faster with coding agents, focusing on agent workflows, code review habits, and burnout, with a debate between the benefits of reduced context switching versus shifting review time.\nDana believes the main benefit of coding agents is not speed, but reducing context switches, while Marcus contends that review time simply moves.\nBoth speakers discussed debugging improvements, mentioning a specific Claude Code skill.\nThey addressed burnout, with Dana stating that the pace with agents never drops, leading them to agree on a limit for in-progress tasks. Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman Dana Marcus Claude Code skill Oliver Burkeman",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.2,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 1,
+   "words": 89,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 15.5,
+   "calls": 1
+  },
+  {
+   "id": "docker_tutorial",
+   "output": {
+    "note": "This guide provides steps to deploy a Flask application using Docker, including building the image, running the container, and setting up HTTPS with Caddy.\nThe Dockerfile creation involves specific steps: using a base image, copying files, and defining the startup command.\nThe build command is provided as 'docker build dash t flaskapp dot'.\nThe runtime command is complex, involving specific tagging and exposure: 'docker run dash d dash p 80 colon 8000 dash dash env file dot env dash dash restart unless stopped flaskapp'.\nSecurity and configuration require using a '.env' file for sensitive data like 'DATABASE_URL' and 'SECRET_KEY', which must be excluded from version control.\nFor HTTPS, Caddy is recommended to automatically handle SSL certificates.",
+    "index": "This guide provides steps to deploy a Flask application using Docker, including building the image, running the container, and setting up HTTPS with Caddy.\nThe Dockerfile creation involves specific steps: using a base image, copying files, and defining the startup command.\nThe build command is provided as 'docker build dash t flaskapp dot'.\nThe runtime command is complex, involving specific tagging and exposure: 'docker run dash d dash p 80 colon 8000 dash dash env file dot env dash dash restart unless stopped flaskapp'.\nSecurity and configuration require using a '.env' file for sensitive data like 'DATABASE_URL' and 'SECRET_KEY', which must be excluded from version control.\nFor HTTPS, Caddy is recommended to automatically handle SSL certificates. python 3.12 slim 8000 flaskapp Caddy python 3.12 slim 8000 flaskapp Caddy python 3.12 slim 8000 flaskapp Caddy python 3.12 slim 8000 flaskapp Caddy python 3.12 slim 8000 flaskapp Caddy python 3.12 slim 8000 flaskapp Caddy",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.36,
+   "critical_missing": [
+    "gunicorn",
+    "docker build -t flaskapp .",
+    "-p 80:8000",
+    "--env-file .env"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 116,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 19.1,
+   "calls": 1
+  },
+  {
+   "id": "opinion_essay",
+   "output": {
+    "note": "The article argues against using commit counts to measure developer productivity, citing Goodhart's law, and proposes DORA metrics as a better alternative, while acknowledging limitations.\nMeasuring developer productivity solely by commits is flawed because once a measure becomes a target, it loses its accuracy.\nCommit counting can lead to perverse incentives, such as creating many small commits and avoiding large refactors.\nThe metric penalizes collaborative work because activities like pairing and code reviews do not generate commits for the participants.\nThe actual bottleneck in the described scenarios was not the coding activity, but the time waiting for deployment after a review.\nCommits measure activity, not value, as a small fix can be more valuable than prolonged work.\nCollaboration is penalized by commit counting.\nDORA metrics (deployment frequency, lead time for changes, change failure rate, and time to restore service) are suggested as superior alternatives.\nThe suggested metrics should be tracked per team, not per individual.",
+    "index": "The article argues against using commit counts to measure developer productivity, citing Goodhart's law, and proposes DORA metrics as a better alternative, while acknowledging limitations.\nMeasuring developer productivity solely by commits is flawed because once a measure becomes a target, it loses its accuracy.\nCommit counting can lead to perverse incentives, such as creating many small commits and avoiding large refactors.\nThe metric penalizes collaborative work because activities like pairing and code reviews do not generate commits for the participants.\nThe actual bottleneck in the described scenarios was not the coding activity, but the time waiting for deployment after a review.\nCommits measure activity, not value, as a small fix can be more valuable than prolonged work.\nCollaboration is penalized by commit counting.\nDORA metrics (deployment frequency, lead time for changes, change failure rate, and time to restore service) are suggested as superior alternatives.\nThe suggested metrics should be tracked per team, not per individual. Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.7,
+   "critical_missing": [
+    "40%",
+    "11 to 8",
+    "3 days"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 1,
+   "words": 155,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 17.7,
+   "calls": 1
+  },
+  {
+   "id": "news_numbers",
+   "output": {
+    "note": "Harbour Ferries suspended service on the Kestrel route after an inspection revealed hull cracks in the MV Linnet. The suspension is expected to last at least three weeks, and replacements buses will run, but the company stated passengers would receive no compensation.\nThe suspension was announced on Tuesday, October 14th, due to findings on the MV Linnet.\nPrior to the suspension, 212 passengers were aboard the Linnet when the cracks were reported on October 9th, but no injuries were reported.\nA union representative claimed that previous inspection reports in 2023 flagged corrosion that was ignored, a claim Harbour Ferries denied.\nAll sailings on the Kestrel route are suspended.\nThe issue is cracks found in the hull of the MV Linnet.\nThe suspension period is stated to be 'at least 3 weeks'.\nReplacement buses are available, costing 4.50 pounds per trip.",
+    "index": "Harbour Ferries suspended service on the Kestrel route after an inspection revealed hull cracks in the MV Linnet. The suspension is expected to last at least three weeks, and replacements buses will run, but the company stated passengers would receive no compensation.\nThe suspension was announced on Tuesday, October 14th, due to findings on the MV Linnet.\nPrior to the suspension, 212 passengers were aboard the Linnet when the cracks were reported on October 9th, but no injuries were reported.\nA union representative claimed that previous inspection reports in 2023 flagged corrosion that was ignored, a claim Harbour Ferries denied.\nAll sailings on the Kestrel route are suspended.\nThe issue is cracks found in the hull of the MV Linnet.\nThe suspension period is stated to be 'at least 3 weeks'.\nReplacement buses are available, costing 4.50 pounds per trip. Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route Harbour Ferries MV Linnet Priya Anand Tom Reyes Kestrel route",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.46,
+   "critical_missing": [
+    "priya anand",
+    "tom reyes",
+    "alleg",
+    "not been verified",
+    "every 20 minutes"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 140,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 19.7,
+   "calls": 1
+  },
+  {
+   "id": "web_table_article",
+   "output": {
+    "note": "The selection of a message queue depends on priorities like ordering guarantees and operational cost, with specific recommendations given for different use cases.\nA general recommendation is to begin with a managed queue unless replay capability is necessary.\nApache Kafka should only be chosen when consumers require reading the message history or when throughput exceeds 100,000 messages per second.\nAmazon SQS FIFO should be used when the order of messages is important on a per-customer basis.\nRabbitMQ is advised against for lazy queues whose payloads are approaching the 128 MB limit due to potential memory-related stalls.\nManaged queues (like SQS) are recommended as a starting point.\nKafka offers replay capability but has a 'high' ops cost.\nSQS FIFO provides strict ordering guarantees per group.\nRabbitMQ has a 'medium' ops cost and strict ordering per queue.",
+    "index": "The selection of a message queue depends on priorities like ordering guarantees and operational cost, with specific recommendations given for different use cases.\nA general recommendation is to begin with a managed queue unless replay capability is necessary.\nApache Kafka should only be chosen when consumers require reading the message history or when throughput exceeds 100,000 messages per second.\nAmazon SQS FIFO should be used when the order of messages is important on a per-customer basis.\nRabbitMQ is advised against for lazy queues whose payloads are approaching the 128 MB limit due to potential memory-related stalls.\nManaged queues (like SQS) are recommended as a starting point.\nKafka offers replay capability but has a 'high' ops cost.\nSQS FIFO provides strict ordering guarantees per group.\nRabbitMQ has a 'medium' ops cost and strict ordering per queue. Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.78,
+   "critical_missing": [
+    "256 kb",
+    "1 mb"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 135,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 19.5,
+   "calls": 1
+  },
+  {
+   "id": "plain_note",
+   "output": {
+    "note": "Appointments and errands include a dentist visit, checking on a night guard, and picking up a medication refill.\nDentist appointment scheduled for Thursday at 3 pm, requiring the insurance card to be brought.\nA question needs to be asked regarding the night guard.\nMira's inhaler refill must be collected before 6 pm.",
+    "index": "Appointments and errands include a dentist visit, checking on a night guard, and picking up a medication refill.\nDentist appointment scheduled for Thursday at 3 pm, requiring the insurance card to be brought.\nA question needs to be asked regarding the night guard.\nMira's inhaler refill must be collected before 6 pm. Thu 3pm Mira 6 Thu 3pm Mira 6 Thu 3pm Mira 6 Thu 3pm Mira 6",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 52,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 11.5,
+   "calls": 1
+  },
+  {
+   "id": "promo_filler_reel",
+   "output": {
+    "note": "A morning routine starting at 5 am, which involves no phone use for the first hour, hydration, mobility work, and writing before optional cold shower.\nThe routine begins at 5 am and bans phone use for the first hour.\nThe morning activities include drinking water, mobility exercises, and writing.\nTaking a cold shower is presented as optional due to weak research.",
+    "index": "A morning routine starting at 5 am, which involves no phone use for the first hour, hydration, mobility work, and writing before optional cold shower.\nThe routine begins at 5 am and bans phone use for the first hour.\nThe morning activities include drinking water, mobility exercises, and writing.\nTaking a cold shower is presented as optional due to weak research. 5am 500 ml 5am 500 ml 5am 500 ml 5am 500 ml",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.5,
+   "critical_missing": [
+    "500 ml",
+    "ten minutes",
+    "45 minutes"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 61,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 12.5,
+   "calls": 1
+  },
+  {
+   "id": "incomplete_list",
+   "output": {
+    "note": "The provided text lists several habits attributed to great engineers, with the remaining habits reserved for a newsletter subscription.\nWriting things down\nCode review of tools\nCode refactoring\nProblem definition first",
+    "index": "The provided text lists several habits attributed to great engineers, with the remaining habits reserved for a newsletter subscription.\nWriting things down\nCode review of tools\nCode refactoring\nProblem definition first ",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.0,
+   "critical_missing": [
+    "design doc",
+    "read the code",
+    "delete code",
+    "what problem"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 31,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 10.4,
+   "calls": 1
+  },
+  {
+   "id": "ocr_config_screenshot",
+   "output": {
+    "note": "Configuration for setting up an nginx rate limit using a shared memory zone and applying it to a specific location.\nA rate limiting zone named 'api' is defined with a size of 10MB and a rate of 5 requests per second.\nThe rate limiting mechanism for the '/api/' location is configured to use the 'api' zone, allowing a burst of 10 requests without delay.\nThe HTTP status code returned when the rate limit is exceeded is set to 429.\nThe shared memory zone is noted to be approximately 160KB for 10MB.",
+    "index": "Configuration for setting up an nginx rate limit using a shared memory zone and applying it to a specific location.\nA rate limiting zone named 'api' is defined with a size of 10MB and a rate of 5 requests per second.\nThe rate limiting mechanism for the '/api/' location is configured to use the 'api' zone, allowing a burst of 10 requests without delay.\nThe HTTP status code returned when the rate limit is exceeded is set to 429.\nThe shared memory zone is noted to be approximately 160KB for 10MB. api api api api api",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.14,
+   "critical_missing": [
+    "limit_req_zone",
+    "rate=5r/s",
+    "zone=api:10m",
+    "burst=10",
+    "nodelay"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 91,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 15.3,
+   "calls": 1
+  },
+  {
+   "id": "paper_results",
+   "output": {
+    "note": "WindowSparse is a sparse attention pattern introduced for long documents, which improves performance and significantly reduces memory usage compared to full attention, though it shows weaknesses in tasks requiring long-range exact copying.\nWindowSparse achieves better performance and memory efficiency than full attention on the LongDocQA benchmark.\nWindowSparse consists of local windows and global tokens.\nWindowSparse performs poorly on tasks that require exact copying.",
+    "index": "WindowSparse is a sparse attention pattern introduced for long documents, which improves performance and significantly reduces memory usage compared to full attention, though it shows weaknesses in tasks requiring long-range exact copying.\nWindowSparse achieves better performance and memory efficiency than full attention on the LongDocQA benchmark.\nWindowSparse consists of local windows and global tokens.\nWindowSparse performs poorly on tasks that require exact copying. WindowSparse LongDocQA SyntheticCopy WindowSparse LongDocQA SyntheticCopy WindowSparse LongDocQA SyntheticCopy WindowSparse LongDocQA SyntheticCopy",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.09,
+   "critical_missing": [
+    "512",
+    "71.4",
+    "68.9",
+    "3.1x",
+    "one standard deviation",
+    "41.0",
+    "88.5"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 63,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 18.4,
+   "calls": 1
+  },
+  {
+   "id": "correction_in_talk",
+   "output": {
+    "note": "The team initially used customer-based sharding for their search cluster, which failed due to one 'hot' customer, leading them to switch to document ID hash sharding. This change, along with an increase in nodes, significantly improved latency. The key lesson learned is to avoid sharding on keys with uncontrolled distribution.\nThe initial configuration with customer sharding resulted in poor performance for P99 latency.\nSwitching to document ID hash sharding improved P99 latency.\nA critical operational lesson was derived: sharding keys should have controlled distribution.",
+    "index": "The team initially used customer-based sharding for their search cluster, which failed due to one 'hot' customer, leading them to switch to document ID hash sharding. This change, along with an increase in nodes, significantly improved latency. The key lesson learned is to avoid sharding on keys with uncontrolled distribution.\nThe initial configuration with customer sharding resulted in poor performance for P99 latency.\nSwitching to document ID hash sharding improved P99 latency.\nA critical operational lesson was derived: sharding keys should have controlled distribution. customer document id hash customer document id hash customer document id hash customer document id hash",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.29,
+   "critical_missing": [
+    "8 nodes",
+    "900 ms",
+    "120 ms",
+    "12 nodes"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 84,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 18.9,
+   "calls": 1
+  }
+ ]
+}

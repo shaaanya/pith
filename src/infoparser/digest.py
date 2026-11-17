@@ -66,7 +66,8 @@ def data(
     c = s.conn
     new = c.execute(
         "SELECT id,title,kind,provenance,created_at FROM knowledge_items"
-        " WHERE deleted_at IS NULL AND created_at>=? ORDER BY created_at DESC, id",
+        " WHERE deleted_at IS NULL AND created_at>=? AND kind NOT IN ('unit','mentions')"
+        " ORDER BY created_at DESC, id",
         (cutoff,),
     ).fetchall()
     topics = {}
@@ -91,7 +92,8 @@ def data(
         _item(r)
         for r in c.execute(
             "SELECT id,title,kind,provenance,created_at FROM knowledge_items"
-            " WHERE deleted_at IS NULL AND created_at<? ORDER BY id",
+            " WHERE deleted_at IS NULL AND created_at<? AND kind NOT IN ('unit','mentions')"
+            " ORDER BY id",
             (cutoff,),
         )
     ]
@@ -114,6 +116,7 @@ def data(
     ]
     total_items = c.execute(
         "SELECT count(*) FROM knowledge_items WHERE deleted_at IS NULL"
+        " AND kind NOT IN ('unit','mentions')"
     ).fetchone()[0]
     by_topic = {
         k or "(no topic)": v

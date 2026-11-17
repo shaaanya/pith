@@ -10,7 +10,7 @@ from infoparser.ids import utcnow
 from infoparser.jobs import require_lease
 from infoparser.pipeline.chunk import chunk_text, chunk_timed
 from infoparser.pipeline.detect import detect
-from infoparser.pipeline import dedupe, entities, provenance
+from infoparser.pipeline import dedupe, entities, note, provenance
 from infoparser.providers import egress
 from infoparser.pipeline.distill import distill
 from infoparser.pipeline.schemas import profile_for
@@ -60,6 +60,26 @@ def profile_of(ct, hints):
     """Distillation profile for a content type (code/pdf default to their own profiles)."""
     p = profile_for(ct, hints)
     return {"code": "programming", "pdf": "paper"}.get(ct, p) if p == "generic" else p
+
+
+_SYSTEM_ADAPTERS = {"fs", "telegram_export"}  # their user_context is machine-written provenance
+
+
+def intent_of(row):
+    """The user's own reason for saving, or None (unknown). Adapter-written context such as
+    "from file.txt" or "Telegram message ..." is provenance, never a reason."""
+    ctx = (row["user_context"] or "").strip()
+    return ctx if ctx and row["adapter"] not in _SYSTEM_ADAPTERS else None
+
+
+def _limits(ex, ct):
+    """What this extraction could not read, stated in the note instead of hidden."""
+    out = []
+    if ex.metadata.get("frames_error"):
+        out.append("Video frames could not be analysed")
+    elif ct == "video" and not any("[visual]" in t.text for t in ex.timed or []):
+        out.append("Only speech and the caption were read; on-screen content was not analysed")
+    return out
 
 
 def process(services, inbox_id: str):
@@ -114,10 +134,13 @@ def _share_twin(s, row, ex, ct, t0):
 def _pieces(ex):
     """Chunk the extracted content, keeping timestamp/page/post-level locators."""
     if ex.timed:
-        return chunk_timed(ex.timed)
-    if ex.sections:
-        return [(t, loc) for loc, body in ex.sections for t, _ in chunk_text(body)]
-    return chunk_text(ex.text)
+        out = chunk_timed(ex.timed)
+    elif ex.sections:
+        out = [(t, loc) for loc, body in ex.sections for t, _ in chunk_text(body)]
+    else:
+        out = chunk_text(ex.text)
+    desc = (ex.metadata.get("description") or "").strip()  # author's caption: often the densest part
+    return [(desc, "description"), *out] if desc else out
 
 
 def _save(s, row, ex, ct, distilled):
@@ -196,8 +219,10 @@ def _process(services, inbox_id: str):
         segs = [SegmentIn(i, t, loc) for i, (t, loc) in enumerate(_pieces(ex))]
         _stage(s.conn, inbox_id, "chunk", t0, f"{len(segs)} segments")
         t0 = time.monotonic()
-        cands, by = distill(s.registry, segs, profile=profile_of(ct, row["user_context"]),
-                            title=ex.title or "", user_context=row["user_context"])
+        made = note.build(s.registry, segs, title=ex.title or "", intent=intent_of(row),
+                          limits=_limits(ex, ct), kind=ct)
+        cands, by = made or distill(s.registry, segs, profile=profile_of(ct, row["user_context"]),
+                                    title=ex.title or "", user_context=intent_of(row))
         _stage(s.conn, inbox_id, "distill", t0, f"{len(cands)} items", model=by)
         t0 = time.monotonic()
         sid, item_ids = _save(s, row, ex, ct, (segs, cands, by))

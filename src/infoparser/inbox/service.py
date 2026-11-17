@@ -169,6 +169,12 @@ class Inbox:
             f"SELECT * FROM inbox_items {where} ORDER BY id DESC LIMIT ?", (*args, limit)
         ).fetchall()
 
+    def add_context(self, item_id: str, text: str) -> None:
+        """Append the user's reason/focus to an item (the original text is kept)."""
+        with self._tx():
+            self.get(item_id)
+            self._append_context(item_id, text, utcnow())
+
     def retry(self, item_id: str) -> None:
         """Requeue an item (resets attempts and error)."""
         with self._tx():

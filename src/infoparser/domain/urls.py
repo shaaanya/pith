@@ -3,6 +3,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 _TRACKING = ("utm_",)
 _TRACKING_EXACT = {"fbclid", "igshid", "si", "gclid"}
+_PATH_ONLY = {"instagram.com", "tiktok.com", "x.com", "twitter.com", "reddit.com"}
 _YT = {"youtube.com", "youtu.be", "youtube-nocookie.com"}
 _PLATFORMS = {
     "youtube.com": "youtube", "youtu.be": "youtube",
@@ -32,6 +33,8 @@ def canonicalize_url(url: str) -> str:
         for k, v in parse_qsl(s.query, keep_blank_values=True)
         if not k.lower().startswith(_TRACKING) and k.lower() not in _TRACKING_EXACT
     ]
+    if host in _PATH_ONLY:  # the path alone names the content; every query param is share tracking
+        q = []
     if host == "youtu.be" and path:
         host, q, path = "youtube.com", [("v", path.lstrip("/"))] + q, "/watch"
     elif host in _YT:

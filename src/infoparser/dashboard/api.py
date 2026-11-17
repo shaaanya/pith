@@ -114,11 +114,24 @@ def _inbox_row(r) -> dict:
     }
 
 
+def _preview(s, source_id, n=240) -> str | None:
+    """First lines of the source's note (knowledge, not commentary), for the inbox row."""
+    r = s.conn.execute("SELECT body FROM knowledge_items WHERE source_id=? AND kind='note'"
+                       " AND deleted_at IS NULL LIMIT 1", (source_id,)).fetchone() \
+        if source_id else None
+    if r is None:
+        return None
+    lines = [x.strip("-* 0123456789.") for x in r["body"].splitlines()
+             if x.strip() and not x.startswith(("#", "**Why saved"))]
+    return " · ".join(lines)[:n] or None
+
+
 def inbox_list(s, status: str | None, limit: int = 200) -> list[dict]:
     """Inbox rows, optionally filtered by status."""
     if status and status not in _STATUSES:
         raise ValueError("unknown status")
-    return [_inbox_row(r) for r in s.inbox.list(status or None, limit)]
+    return [{**_inbox_row(r), "preview": _preview(s, r["source_id"])}
+            for r in s.inbox.list(status or None, limit)]
 
 
 def inbox_submit(s, body) -> dict:
@@ -216,6 +229,7 @@ def item_detail(s, item_id: str) -> dict:
     )
     data = it["data"]
     return {
+        "note": _note_extra(c, it) if it["kind"] == "note" else None,
         "id": it["id"],
         "kind": it["kind"],
         "title": it["title"],
@@ -259,6 +273,22 @@ def item_detail(s, item_id: str) -> dict:
             )
         ],
     }
+
+
+def _note_extra(c, it) -> dict:
+    """What a note rests on: each unit with the locator of the source segment that supports it,
+    plus the honest processing record (limits, gaps, dropped units, repaired terms)."""
+    d, locs = it["data"], {}
+    if it["source_id"]:
+        locs = {r["idx"]: r["locator"] for r in c.execute(
+            "SELECT idx, locator FROM segments WHERE source_id=?", (it["source_id"],))}
+    units = [{"type": u.get("type"), "text": u.get("text"), "support": u.get("support"),
+              "focus": bool(u.get("focus")), "locator": locs.get(u.get("segment_idx"))}
+             for u in d.get("units", [])]
+    return {"units": units, "intent": d.get("intent"), "limits": d.get("limits", []),
+            "gaps": d.get("gaps", []), "dropped": d.get("dropped", {}),
+            "repairs": d.get("repairs", []), "stats": d.get("stats", {}),
+            "version": d.get("version")}
 
 
 def item_update(s, item_id: str, body) -> dict:

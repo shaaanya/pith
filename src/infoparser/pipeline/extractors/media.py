@@ -309,10 +309,14 @@ def _streams(cfg, path: Path) -> tuple[bool, bool, float | None]:
 
 
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments  # Extracted fields
-def _result(title, author, url, ctype, timed, sha=None, frames_error=None) -> Extracted:
+def _result(title, author, url, ctype, timed, sha=None, frames_error=None,
+            description=None) -> Extracted:
     timed = [t for t in timed if t.text.strip()]
     if not timed:
         raise NeedsClarificationError("no speech or text could be extracted from the media")
+    meta = {"frames_error": frames_error} if frames_error else {}
+    if description:
+        meta["description"] = description
     return Extracted(
         title,
         author,
@@ -321,7 +325,7 @@ def _result(title, author, url, ctype, timed, sha=None, frames_error=None) -> Ex
         " ".join(t.text for t in timed),
         timed=timed,
         original_sha=sha,
-        metadata={"frames_error": frames_error} if frames_error else {},
+        metadata=meta,
     )
 
 
@@ -359,4 +363,5 @@ def _from_url(ctx: ExtractCtx, url: str, tmp: Path) -> Extracted:
         raise RuntimeError(f"yt-dlp: {e}") from e
     ctype = "audio" if info.get("vcodec") == "none" else "video"
     cited = info.get("webpage_url") or url  # what yt-dlp says served it, else as submitted
-    return _result(info.get("title"), info.get("uploader"), cited, ctype, timed, frames_error=ferr)
+    return _result(info.get("title"), info.get("uploader"), cited, ctype, timed, frames_error=ferr,
+                   description=info.get("description"))

@@ -23,8 +23,21 @@ _SUMMARY_SCHEMA = {"type": "object", "required": ["summary"],
 
 def system_prompt(profile, title, user_context):
     """System prompt telling a model how to distil one source."""
-    return (f"You distill a source titled {title!r} into knowledge items (profile: {profile}). "
-            f"User context: {user_context or 'none'}. Only state what the text says; quotes "
+    why = user_context or "not stated: infer the most likely reason from the source"
+    return (f"You distill a saved source titled {title!r} (profile: {profile}). The user will read "
+            "your notes INSTEAD of watching, reading or listening to it, so they must contain the "
+            f"content itself. Why the user saved it: {why}. "
+            "The text may start with the author's own description or caption, then a transcript or "
+            "body. Summary: one or two plain sentences with the headline facts (who, what, key numbers) "
+            "and the conclusion. Start with the subject itself; never start with 'The text', "
+            "'The video', 'This source' or 'provides/discusses'. Insights: 3 to 7 "
+            "takeaways, each one self-contained and specific enough to act on without the source: "
+            "facts, recommendations (who recommends what, and to achieve what), steps, numbers. "
+            "Name every specific tool, skill, library, book, person, company, number and resource "
+            "mentioned, even briefly, in the insights and in entities; never write vague phrases "
+            "like 'some resources' or 'an expert'. Weight what matters for the user's reason. "
+            "Skip filler, self-promotion, greetings and calls to action (follow, comment, "
+            "subscribe). Only state what the text says; quotes "
             "must be copied verbatim from the text. "
             "Reply with ONLY JSON matching the given schema.")
 

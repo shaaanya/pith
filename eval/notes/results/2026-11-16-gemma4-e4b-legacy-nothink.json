@@ -1,0 +1,315 @@
+{
+ "summary": {
+  "variant": "legacy-nothink",
+  "model": "gemma4:e4b",
+  "cases": 14,
+  "mean_recall": 0.876,
+  "blocking": 7,
+  "commentary_total": 0,
+  "invented_number_cases": 1,
+  "mean_words": 138,
+  "total_calls": 15,
+  "total_seconds": 370.3
+ },
+ "rows": [
+  {
+   "id": "twitch_reel",
+   "output": {
+    "note": "A 30-day preparation plan for an entry-level Twitch Payments Software Engineer role focuses on mastering the Go/DynamoDB/AWS Serverless stack, learning payment fundamentals, and practicing system design.\nIdentify the relevant tech stack, which includes Go, DynamoDB, Lambda, SQS, and Step Functions, by examining previous Twitch job postings and engineering blog articles.\nStudy the fundamentals of payments, specifically idempotency and database transactions, using Chapter 7 of the book Designing Data-Intensive Applications.\nFamiliarize oneself with the Go language by completing 'The Tour of Go' and reading material by Marc Brooker concerning DynamoDB and Aurora DSQL.\nDedicate daily mornings to system design practice on Devmaxx, with a specific focus on database-related questions.\nApply learned concepts by building a practical project, such as a fishing tournament manager, utilizing Lambda, DynamoDB, SQS, and Step Functions.",
+    "index": "A 30-day preparation plan for an entry-level Twitch Payments Software Engineer role focuses on mastering the Go/DynamoDB/AWS Serverless stack, learning payment fundamentals, and practicing system design.\nIdentify the relevant tech stack, which includes Go, DynamoDB, Lambda, SQS, and Step Functions, by examining previous Twitch job postings and engineering blog articles.\nStudy the fundamentals of payments, specifically idempotency and database transactions, using Chapter 7 of the book Designing Data-Intensive Applications.\nFamiliarize oneself with the Go language by completing 'The Tour of Go' and reading material by Marc Brooker concerning DynamoDB and Aurora DSQL.\nDedicate daily mornings to system design practice on Devmaxx, with a specific focus on database-related questions.\nApply learned concepts by building a practical project, such as a fishing tournament manager, utilizing Lambda, DynamoDB, SQS, and Step Functions. Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx Twitch Go DynamoDB Lambda SQS Step Functions Designing Data-Intensive Applications Marc Brooker Aurora DSQL Devmaxx",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.92,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 129,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 19.8,
+   "calls": 1
+  },
+  {
+   "id": "postgres_noisy_transcript",
+   "output": {
+    "note": "Three key performance tips for Postgres are: using `CREATE INDEX CONCURRENTLY` to avoid write locks, always running `EXPLAIN (ANALYZE, BUFFERS)` to measure changes, and switching from slow `OFFSET` pagination to faster keyset pagination.\nUse `CREATE INDEX CONCURRENTLY` when creating an index to prevent locking the table for writes.\nAlways execute `EXPLAIN (ANALYZE, BUFFERS)` both before and after making changes to accurately view performance numbers.\nReplace standard `OFFSET` pagination with keyset pagination for better performance, specifically using a query format like `WHERE id > $last_id ORDER BY id LIMIT 50`.",
+    "index": "Three key performance tips for Postgres are: using `CREATE INDEX CONCURRENTLY` to avoid write locks, always running `EXPLAIN (ANALYZE, BUFFERS)` to measure changes, and switching from slow `OFFSET` pagination to faster keyset pagination.\nUse `CREATE INDEX CONCURRENTLY` when creating an index to prevent locking the table for writes.\nAlways execute `EXPLAIN (ANALYZE, BUFFERS)` both before and after making changes to accurately view performance numbers.\nReplace standard `OFFSET` pagination with keyset pagination for better performance, specifically using a query format like `WHERE id > $last_id ORDER BY id LIMIT 50`. Postgres CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) OFFSET pagination keyset pagination Postgres CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) OFFSET pagination keyset pagination Postgres CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) OFFSET pagination keyset pagination Postgres CREATE INDEX CONCURRENTLY EXPLAIN (ANALYZE, BUFFERS) OFFSET pagination keyset pagination",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 89,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 15.7,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_intent",
+   "output": {
+    "note": "The discussion focuses on 'shipping faster with coding agents,' where Dana emphasizes reducing context switches, and Marcus questions if agent-written code invalidates the need for small pull requests, while a specific skill, 'systematic-debugging' in Claude Code, is highlighted as a key debugging tool.\nThe Claude Code skill called 'systematic-debugging' forces an agent to reproduce a bug and write down a hypothesis before making any code changes.\nDana maintains that small pull requests are still relevant because 'reviewers still read linearly,' even when an agent writes the code.\nTo manage workload, the participants agreed to cap the work in progress at three tasks.\nMarcus recommends the book Four Thousand Weeks by Oliver Burkeman for those needing guidance on thinking about personal limits.",
+    "index": "The discussion focuses on 'shipping faster with coding agents,' where Dana emphasizes reducing context switches, and Marcus questions if agent-written code invalidates the need for small pull requests, while a specific skill, 'systematic-debugging' in Claude Code, is highlighted as a key debugging tool.\nThe Claude Code skill called 'systematic-debugging' forces an agent to reproduce a bug and write down a hypothesis before making any code changes.\nDana maintains that small pull requests are still relevant because 'reviewers still read linearly,' even when an agent writes the code.\nTo manage workload, the participants agreed to cap the work in progress at three tasks.\nMarcus recommends the book Four Thousand Weeks by Oliver Burkeman for those needing guidance on thinking about personal limits. Dana Marcus Claude Code systematic-debugging Four Thousand Weeks Oliver Burkeman Dana Marcus Claude Code systematic-debugging Four Thousand Weeks Oliver Burkeman Dana Marcus Claude Code systematic-debugging Four Thousand Weeks Oliver Burkeman Dana Marcus Claude Code systematic-debugging Four Thousand Weeks Oliver Burkeman Dana Marcus Claude Code systematic-debugging Four Thousand Weeks Oliver Burkeman",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 121,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 21.3,
+   "calls": 1
+  },
+  {
+   "id": "podcast_brief_mention_no_intent",
+   "output": {
+    "note": "The discussion on shipping faster with coding agents centers on whether the primary benefit is reducing context switches, which Dana argues, or whether the review time simply shifts, as Marcus claims. They also covered practices like systematic-debugging using Claude Code skills and managing burnout, referencing Oliver Burkeman's Four Thousand Weeks.\nSmall pull requests are still relevant because reviewers read linearly, even when an agent is involved in code creation.\nThe Claude Code skill named systematic-debugging forces the coding agent to first reproduce a bug and write a hypothesis before attempting any code fixes.\nTo mitigate burnout risks associated with coding agents, a constraint to cap work in progress at three tasks was agreed upon.\nMarcus advises blocking mornings for deep work and avoiding any meetings before noon to maintain focused work time.\nThe concept of on call rotations must be re-evaluated to account for the possibility of agents shipping code during nighttime hours.\nOliver Burkeman's book, Four Thousand Weeks, is recommended for assistance in contemplating and managing personal limits.",
+    "index": "The discussion on shipping faster with coding agents centers on whether the primary benefit is reducing context switches, which Dana argues, or whether the review time simply shifts, as Marcus claims. They also covered practices like systematic-debugging using Claude Code skills and managing burnout, referencing Oliver Burkeman's Four Thousand Weeks.\nSmall pull requests are still relevant because reviewers read linearly, even when an agent is involved in code creation.\nThe Claude Code skill named systematic-debugging forces the coding agent to first reproduce a bug and write a hypothesis before attempting any code fixes.\nTo mitigate burnout risks associated with coding agents, a constraint to cap work in progress at three tasks was agreed upon.\nMarcus advises blocking mornings for deep work and avoiding any meetings before noon to maintain focused work time.\nThe concept of on call rotations must be re-evaluated to account for the possibility of agents shipping code during nighttime hours.\nOliver Burkeman's book, Four Thousand Weeks, is recommended for assistance in contemplating and managing personal limits. Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks Dana Marcus Claude Code systematic-debugging Oliver Burkeman Four Thousand Weeks",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 169,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 24.2,
+   "calls": 1
+  },
+  {
+   "id": "docker_tutorial",
+   "output": {
+    "note": "Deploying a Flask application with Docker involves creating a Dockerfile, building the image, and running it, with optional setup for HTTPS using Caddy.\nThe Dockerfile must start from the 'python 3.12 slim' base image.\nThe final command in the Dockerfile should execute 'gunicorn' binding to '0.0.0.0' on port 8000, using 'app:app'.\nTo run the container, the command is 'docker run dash d dash p 80 colon 8000 dash dash env file dot env dash dash restart unless stopped flaskapp'.\nThe '.env' file must contain 'DATABASE_URL' and 'SECRET_KEY' and should be added to '.gitignore' to prevent committing sensitive data.\nIf a container exits, check the status using 'docker logs flaskapp'.\nFor HTTPS setup, 'Caddy' should be placed in front of the service, and its 'Caddyfile' should configure a reverse proxy pointing to 'localhost:8000' using only the domain name.",
+    "index": "Deploying a Flask application with Docker involves creating a Dockerfile, building the image, and running it, with optional setup for HTTPS using Caddy.\nThe Dockerfile must start from the 'python 3.12 slim' base image.\nThe final command in the Dockerfile should execute 'gunicorn' binding to '0.0.0.0' on port 8000, using 'app:app'.\nTo run the container, the command is 'docker run dash d dash p 80 colon 8000 dash dash env file dot env dash dash restart unless stopped flaskapp'.\nThe '.env' file must contain 'DATABASE_URL' and 'SECRET_KEY' and should be added to '.gitignore' to prevent committing sensitive data.\nIf a container exits, check the status using 'docker logs flaskapp'.\nFor HTTPS setup, 'Caddy' should be placed in front of the service, and its 'Caddyfile' should configure a reverse proxy pointing to 'localhost:8000' using only the domain name. Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy Python 3.12 slim Dockerfile requirements.txt gunicorn docker build docker run Caddy",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.64,
+   "critical_missing": [
+    "docker build -t flaskapp .",
+    "-p 80:8000",
+    "--env-file .env"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 137,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 32.7,
+   "calls": 1
+  },
+  {
+   "id": "opinion_essay",
+   "output": {
+    "note": "Measuring developer productivity by commit counts is flawed because it measures activity over value, penalizes collaboration, and obscures real bottlenecks like waiting time. The author recommends DORA metrics as a superior alternative, which should be tracked at the team level.\nCommit counts rose 40% in one company after dashboard implementation, but shipped features per quarter dropped from 11 to 8, demonstrating a decoupling of the metric from actual value.\nThe metric's behavior was observed to encourage developers to create small, tactical changes rather than undertaking necessary large refactors.\nCommits inherently fail to capture value, as a small fix (e.g., a one-line payment bug fix) can be more impactful than a large, drawn-out piece of work.\nThe metric punishes collaborative activities such as pairing and code review because these activities do not typically result in commit activity from the reviewer.\nA primary constraint often hidden by commit counting is the waiting time between code review and deployment, which the author cited as a median of 3 days in one case.\nTo gain a quantitative signal, the author suggests implementing DORA metrics, which include deployment frequency, lead time for changes, change failure rate, and time to restore service.\nStop using commit counts to measure developer productivity due to Goodhart's law.\nFocus measurement on team-level metrics like DORA metrics (deployment frequency, lead time for changes, change failure rate, time to restore service).\nRecognize that activities like pairing and review contribute no measurable commits.",
+    "index": "Measuring developer productivity by commit counts is flawed because it measures activity over value, penalizes collaboration, and obscures real bottlenecks like waiting time. The author recommends DORA metrics as a superior alternative, which should be tracked at the team level.\nCommit counts rose 40% in one company after dashboard implementation, but shipped features per quarter dropped from 11 to 8, demonstrating a decoupling of the metric from actual value.\nThe metric's behavior was observed to encourage developers to create small, tactical changes rather than undertaking necessary large refactors.\nCommits inherently fail to capture value, as a small fix (e.g., a one-line payment bug fix) can be more impactful than a large, drawn-out piece of work.\nThe metric punishes collaborative activities such as pairing and code review because these activities do not typically result in commit activity from the reviewer.\nA primary constraint often hidden by commit counting is the waiting time between code review and deployment, which the author cited as a median of 3 days in one case.\nTo gain a quantitative signal, the author suggests implementing DORA metrics, which include deployment frequency, lead time for changes, change failure rate, and time to restore service.\nStop using commit counts to measure developer productivity due to Goodhart's law.\nFocus measurement on team-level metrics like DORA metrics (deployment frequency, lead time for changes, change failure rate, time to restore service).\nRecognize that activities like pairing and review contribute no measurable commits. Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics Goodhart's law DORA metrics",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.8,
+   "critical_missing": [
+    "activity, not value",
+    "per team"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 240,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 36.2,
+   "calls": 1
+  },
+  {
+   "id": "news_numbers",
+   "output": {
+    "note": "Harbour Ferries suspended all sailings on the Kestrel route after cracks were found in the hull of the MV Linnet, with the suspension expected to last at least 3 weeks and replacement buses costing 4.50 pounds.\nThe MV Linnet, which was built in 1998, can carry up to 340 passengers.\nWhen the cracks were reported on 9 October, 212 passengers were on board, and no injuries were reported.\nTransport minister Priya Anand stated that the ferry operator would receive no compensation for lost fares.\nReplacement buses, which will run every 20 minutes starting from Wednesday, cost 4.50 pounds per trip, matching the ferry fare.\nUnion representative Tom Reyes alleged that two earlier inspection reports from 2023 flagged corrosion which Harbour Ferries denies, stating the 2023 reports showed only 'cosmetic wear'.\nService suspension began on Tuesday, October 14th, for the Kestrel route.\nThe fault was traced to cracks found in the hull of the MV Linnet.\nThe suspension duration is stated to be 'at least 3 weeks' by Transport minister Priya Anand.\nReplacement buses are operational starting Wednesday at 4.50 pounds per trip.",
+    "index": "Harbour Ferries suspended all sailings on the Kestrel route after cracks were found in the hull of the MV Linnet, with the suspension expected to last at least 3 weeks and replacement buses costing 4.50 pounds.\nThe MV Linnet, which was built in 1998, can carry up to 340 passengers.\nWhen the cracks were reported on 9 October, 212 passengers were on board, and no injuries were reported.\nTransport minister Priya Anand stated that the ferry operator would receive no compensation for lost fares.\nReplacement buses, which will run every 20 minutes starting from Wednesday, cost 4.50 pounds per trip, matching the ferry fare.\nUnion representative Tom Reyes alleged that two earlier inspection reports from 2023 flagged corrosion which Harbour Ferries denies, stating the 2023 reports showed only 'cosmetic wear'.\nService suspension began on Tuesday, October 14th, for the Kestrel route.\nThe fault was traced to cracks found in the hull of the MV Linnet.\nThe suspension duration is stated to be 'at least 3 weeks' by Transport minister Priya Anand.\nReplacement buses are operational starting Wednesday at 4.50 pounds per trip. Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023 Harbour Ferries MV Linnet Kestrel route Priya Anand Tom Reyes 2023",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.85,
+   "critical_missing": [
+    "not been verified"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 182,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 23.6,
+   "calls": 1
+  },
+  {
+   "id": "web_table_article",
+   "output": {
+    "note": "Message queue selection depends on ordering guarantees and operational cost; teams are advised to start with a managed queue unless message replay is required, with specific uses defined for Amazon SQS Standard, Amazon SQS FIFO, Apache Kafka, and RabbitMQ.\nAmazon SQS Standard offers 'best effort' ordering and has no replay capability, with a max message size of 256 KB and no operational cost.\nAmazon SQS FIFO guarantees 'strict per group' ordering and lacks replay functionality, supporting up to 256 KB message sizes with no operational cost.\nApache Kafka provides 'strict per partition' ordering and replay capability, with a default maximum message size of 1 MB but incurs high operational costs.\nRabbitMQ offers 'per queue' ordering, no replay, a max message size of 128 MB, and a medium operational cost.\nApache Kafka should only be selected when consumers need to re-read history or when throughput exceeds 100,000 messages per second.\nIf order matters on a per-customer basis, Amazon SQS FIFO is the recommended choice.\nTeams should avoid using RabbitMQ lazy queues if their message payloads approach the 128 MB limit due to potential memory pressure causing stalls.\nStart with a managed queue unless replay is needed.\nOperational cost is a key differentiator among the queue types.\nKafka is recommended for high throughput (>100,000 messages/sec) or history replay.\nSQS FIFO is suitable when strict ordering is required per customer.",
+    "index": "Message queue selection depends on ordering guarantees and operational cost; teams are advised to start with a managed queue unless message replay is required, with specific uses defined for Amazon SQS Standard, Amazon SQS FIFO, Apache Kafka, and RabbitMQ.\nAmazon SQS Standard offers 'best effort' ordering and has no replay capability, with a max message size of 256 KB and no operational cost.\nAmazon SQS FIFO guarantees 'strict per group' ordering and lacks replay functionality, supporting up to 256 KB message sizes with no operational cost.\nApache Kafka provides 'strict per partition' ordering and replay capability, with a default maximum message size of 1 MB but incurs high operational costs.\nRabbitMQ offers 'per queue' ordering, no replay, a max message size of 128 MB, and a medium operational cost.\nApache Kafka should only be selected when consumers need to re-read history or when throughput exceeds 100,000 messages per second.\nIf order matters on a per-customer basis, Amazon SQS FIFO is the recommended choice.\nTeams should avoid using RabbitMQ lazy queues if their message payloads approach the 128 MB limit due to potential memory pressure causing stalls.\nStart with a managed queue unless replay is needed.\nOperational cost is a key differentiator among the queue types.\nKafka is recommended for high throughput (>100,000 messages/sec) or history replay.\nSQS FIFO is suitable when strict ordering is required per customer. Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ Amazon SQS Standard Amazon SQS FIFO Apache Kafka RabbitMQ",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 227,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 26.9,
+   "calls": 1
+  },
+  {
+   "id": "plain_note",
+   "output": {
+    "note": "A to-do list includes a dentist appointment on Thursday at 3 pm requiring an insurance card, a request regarding a night guard, and picking up Mira's inhaler refill before 6 pm.\nAttend the dentist appointment on Thursday at 3 pm and bring the insurance card.\nInquire about the night guard during the dentist visit.\nComplete the pickup of Mira's inhaler refill before 6 pm.",
+    "index": "A to-do list includes a dentist appointment on Thursday at 3 pm requiring an insurance card, a request regarding a night guard, and picking up Mira's inhaler refill before 6 pm.\nAttend the dentist appointment on Thursday at 3 pm and bring the insurance card.\nInquire about the night guard during the dentist visit.\nComplete the pickup of Mira's inhaler refill before 6 pm. Dentist Thursday 3pm insurance card night guard Mira inhaler Dentist Thursday 3pm insurance card night guard Mira inhaler Dentist Thursday 3pm insurance card night guard Mira inhaler Dentist Thursday 3pm insurance card night guard Mira inhaler",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 64,
+   "gap_flagged": true,
+   "too_long": true,
+   "blocking": true,
+   "seconds": 19.9,
+   "calls": 1
+  },
+  {
+   "id": "promo_filler_reel",
+   "output": {
+    "note": "The author adheres to a strict 5 am morning routine which involves avoiding phones for one hour, drinking 500 ml of water, 10 minutes of mobility, and 45 minutes of writing. The routine concludes by making a promotion for a course.\nDo not use a phone for the first hour after waking up.\nDrink 500 ml of water upon waking.\nPerform 10 minutes of mobility exercises.\nDedicate 45 minutes to writing before engaging in other activities.\nA cold shower is listed as optional because the research on it is considered 'weak'.",
+    "index": "The author adheres to a strict 5 am morning routine which involves avoiding phones for one hour, drinking 500 ml of water, 10 minutes of mobility, and 45 minutes of writing. The routine concludes by making a promotion for a course.\nDo not use a phone for the first hour after waking up.\nDrink 500 ml of water upon waking.\nPerform 10 minutes of mobility exercises.\nDedicate 45 minutes to writing before engaging in other activities.\nA cold shower is listed as optional because the research on it is considered 'weak'. 5am 5am 5am 5am 5am 5am",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.83,
+   "critical_missing": [
+    "no phone"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 91,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 18.0,
+   "calls": 1
+  },
+  {
+   "id": "incomplete_list",
+   "output": {
+    "note": "Great engineers exhibit several key habits, including documenting designs before coding, reading tool code, being willing to delete code, and prioritizing problem definition over solution implementation.\nWrite design documents before writing code.\nRead the source code of the tools you use.\nBe prepared to delete code happily.\nAlways ask 'what problem are we solving' prior to asking 'how'.",
+    "index": "Great engineers exhibit several key habits, including documenting designs before coding, reading tool code, being willing to delete code, and prioritizing problem definition over solution implementation.\nWrite design documents before writing code.\nRead the source code of the tools you use.\nBe prepared to delete code happily.\nAlways ask 'what problem are we solving' prior to asking 'how'. design docs design docs design docs design docs design docs",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.75,
+   "critical_missing": [
+    "read the code"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 58,
+   "gap_flagged": false,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 10.2,
+   "calls": 1
+  },
+  {
+   "id": "ocr_config_screenshot",
+   "output": {
+    "note": "Nginx configuration is provided to implement request rate limiting using `limit_req_zone` at the `http` level and `limit_req` within a specific `/api/` location, setting the rate to 5 requests per second with a burst limit of 10.\nA rate limiting zone named 'api' is defined, consuming 10 megabytes, tracking IP addresses, and setting a base rate of 5 requests per second.\nThe '/api/' location uses the 'api' zone and employs 'nodelay', meaning requests exceeding the limit will be immediately rejected rather than being queued.\nWhen the rate limit is exceeded in the '/api/' location, Nginx is configured to return an HTTP status code of 429 (Too Many Requests).\nThe configuration suggests that the 'api' zone size (10m) is roughly equivalent to 160,000 IP addresses.\nAfter making configuration changes, the service can be reloaded using the command 'sudo nginx -s reload' to apply the new settings.",
+    "index": "Nginx configuration is provided to implement request rate limiting using `limit_req_zone` at the `http` level and `limit_req` within a specific `/api/` location, setting the rate to 5 requests per second with a burst limit of 10.\nA rate limiting zone named 'api' is defined, consuming 10 megabytes, tracking IP addresses, and setting a base rate of 5 requests per second.\nThe '/api/' location uses the 'api' zone and employs 'nodelay', meaning requests exceeding the limit will be immediately rejected rather than being queued.\nWhen the rate limit is exceeded in the '/api/' location, Nginx is configured to return an HTTP status code of 429 (Too Many Requests).\nThe configuration suggests that the 'api' zone size (10m) is roughly equivalent to 160,000 IP addresses.\nAfter making configuration changes, the service can be reloaded using the command 'sudo nginx -s reload' to apply the new settings. nginx http api 429 nginx http api 429 nginx http api 429 nginx http api 429 nginx http api 429 nginx http api 429",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.57,
+   "critical_missing": [
+    "rate=5r/s",
+    "zone=api:10m",
+    "burst=10"
+   ],
+   "forbidden_hit": [],
+   "invented_numbers": [
+    "160000"
+   ],
+   "commentary": 0,
+   "words": 144,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": true,
+   "seconds": 19.2,
+   "calls": 1
+  },
+  {
+   "id": "paper_results",
+   "output": {
+    "note": "WindowSparse, which combines 512 local tokens with 8 global tokens per layer, reached 71.4 F1 on LongDocQA while using 3.1x less memory at 16k tokens, though it struggles with tasks requiring long-range exact copy.\nThe WindowSparse pattern utilizes local windows of 512 tokens combined with 8 global tokens per layer.\nWindowSparse achieved 71.4 F1 on LongDocQA, exceeding the 68.9 F1 score of full attention.\nMemory usage at 16k tokens decreased to 12.3 GB using WindowSparse, compared to 38.2 GB with full attention.\nThe performance gains of WindowSparse over full attention were within one standard deviation for three of the five evaluated tasks.\nFor tasks needing long-range exact copy, WindowSparse achieved only 41.0 F1 on the SyntheticCopy task, compared to 88.5 F1 with full attention.\nWindowSparse required 3.1x less memory at 16k tokens than full attention.\nThe training process utilized 64 A100 GPUs over a period of 9 days.",
+    "index": "WindowSparse, which combines 512 local tokens with 8 global tokens per layer, reached 71.4 F1 on LongDocQA while using 3.1x less memory at 16k tokens, though it struggles with tasks requiring long-range exact copy.\nThe WindowSparse pattern utilizes local windows of 512 tokens combined with 8 global tokens per layer.\nWindowSparse achieved 71.4 F1 on LongDocQA, exceeding the 68.9 F1 score of full attention.\nMemory usage at 16k tokens decreased to 12.3 GB using WindowSparse, compared to 38.2 GB with full attention.\nThe performance gains of WindowSparse over full attention were within one standard deviation for three of the five evaluated tasks.\nFor tasks needing long-range exact copy, WindowSparse achieved only 41.0 F1 on the SyntheticCopy task, compared to 88.5 F1 with full attention.\nWindowSparse required 3.1x less memory at 16k tokens than full attention.\nThe training process utilized 64 A100 GPUs over a period of 9 days. WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100 WindowSparse LongDocQA SyntheticCopy 16k tokens 512 tokens 8 global tokens A100",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 0.91,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 148,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 67.5,
+   "calls": 2
+  },
+  {
+   "id": "correction_in_talk",
+   "output": {
+    "note": "A search cluster initially using 6 nodes and sharding by customer handled 2,000 queries per second until one hot shard caused p99 latency to reach 900 ms, leading to a switch to sharding by document ID hash on 8 nodes, which reduced p99 latency to 120 ms with 12 nodes.\nSharding by customer proved problematic because one large customer created a 'hot shard', leading to p99 latency reaching 900 ms.\nThe search cluster scaled from an initial configuration (originally thought to be 6 nodes, but actually 8 nodes) to 12 nodes after switching sharding strategies.\nSharding by document ID hash successfully improved performance, dropping p99 latency to 120 ms.\nThe fundamental lesson derived from this process is that one should avoid sharding on a key whose distribution cannot be controlled.",
+    "index": "A search cluster initially using 6 nodes and sharding by customer handled 2,000 queries per second until one hot shard caused p99 latency to reach 900 ms, leading to a switch to sharding by document ID hash on 8 nodes, which reduced p99 latency to 120 ms with 12 nodes.\nSharding by customer proved problematic because one large customer created a 'hot shard', leading to p99 latency reaching 900 ms.\nThe search cluster scaled from an initial configuration (originally thought to be 6 nodes, but actually 8 nodes) to 12 nodes after switching sharding strategies.\nSharding by document ID hash successfully improved performance, dropping p99 latency to 120 ms.\nThe fundamental lesson derived from this process is that one should avoid sharding on a key whose distribution cannot be controlled. customer document id hash 900 ms 120 ms 6 nodes 8 nodes 12 nodes customer document id hash 900 ms 120 ms 6 nodes 8 nodes 12 nodes customer document id hash 900 ms 120 ms 6 nodes 8 nodes 12 nodes customer document id hash 900 ms 120 ms 6 nodes 8 nodes 12 nodes customer document id hash 900 ms 120 ms 6 nodes 8 nodes 12 nodes",
+    "by": "ollama:gemma4:e4b",
+    "gaps": []
+   },
+   "recall": 1.0,
+   "critical_missing": [],
+   "forbidden_hit": [],
+   "invented_numbers": [],
+   "commentary": 0,
+   "words": 130,
+   "gap_flagged": true,
+   "too_long": false,
+   "blocking": false,
+   "seconds": 35.1,
+   "calls": 1
+  }
+ ]
+}

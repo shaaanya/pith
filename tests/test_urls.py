@@ -52,3 +52,11 @@ def test_detect_platform():
     assert detect_platform("https://example.com") == "web"
     assert detect_platform(None) == "unknown"
     assert detect_platform("not a url") == "unknown"
+
+
+def test_share_tracking_params_do_not_split_social_posts():
+    base = "https://instagram.com/reel/Dfxp9--iVS_"
+    for u in ("https://www.instagram.com/reel/Dfxp9--iVS_/",
+              "https://www.instagram.com/reel/Dfxp9--iVS_/?cplk=MTNvaWFyaHEyZ28zYQ%3D%3D",
+              "https://www.instagram.com/reel/Dfxp9--iVS_/?dlrf=MTNvaWFyaHEyZ28zYQ==&igsh=abc"):
+        assert canonicalize_url(u) == base

@@ -162,7 +162,7 @@ def test_runner_end_to_end_url_captions(env, svc, monkeypatch):
     iid = svc.inbox.submit(adapter="t", text="https://www.youtube.com/watch?v=vid123").id
     assert isinstance(runner.process(svc, iid), Processed)
     assert svc.inbox.get(iid)["content_type"] == "video"
-    assert [r["locator"] for r in svc.conn.execute("SELECT locator FROM segments")] == ["t=0-6"]
+    assert [r["locator"] for r in svc.conn.execute("SELECT locator FROM segments")] == ["description", "t=0-6"]
 
 
 # ---- local files (real ffmpeg) ----

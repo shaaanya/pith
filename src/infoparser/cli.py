@@ -77,6 +77,23 @@ def _submit(a):
     print(f"submitted {r.id}")
 
 
+@_in_use
+def _reprocess(a):
+    """Re-run the pipeline for saved items (new model, new prompts, a new focus).
+
+    Non-destructive: items you edited are kept, replaced ones are snapshotted in
+    knowledge_versions, and the original sources and blobs are never touched."""
+    s = _services(a)
+    ids = a.ids or [r["id"] for r in s.conn.execute(
+        "SELECT id FROM inbox_items WHERE status='processed' AND source_id IS NOT NULL"
+        " AND duplicate_of IS NULL ORDER BY submitted_at")]
+    for i in ids:
+        if a.why:
+            s.inbox.add_context(i, a.why)
+        s.inbox.retry(i)
+    print(f"requeued {len(ids)} item(s); run `infoparser worker` to process them")
+
+
 def _inbox(a):
     for r in _services(a).inbox.list(a.status):
         what = inbox_label(r, 50)
@@ -404,9 +421,11 @@ _JSON = _arg("--json", action="store_true")
 # subcommand -> (handler, arguments)
 COMMANDS = {
     "init": (_init, []),
-    "submit": (_submit, [_arg("text", nargs="?"), _arg("--context"), _arg("--file")]),
+    "submit": (_submit, [_arg("text", nargs="?"), _arg("--context", "--why"), _arg("--file")]),
     "inbox": (_inbox, [_arg("--status")]),
     "retry": (_retry, [_arg("id")]),
+    "reprocess": (_reprocess, [_arg("ids", nargs="*", help="inbox ids (default: every processed item)"),
+                               _arg("--why", help="a reason/focus to add before re-running")]),
     "clarify": (_clarify, [_arg("id"), _arg("text", nargs="+")]),
     "worker": (_worker, [_ONCE]),
     "search": (_search, [_arg("query", nargs="+"), _arg("--limit", type=int, default=10),

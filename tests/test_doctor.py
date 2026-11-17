@@ -142,8 +142,8 @@ def test_egress_event_logged_for_remote_backend(tmp_path):
                                           "locality": "remote"}},
                       tasks={"distill": ["cloud"]})
         s = build(cfg)
-        iid = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia.").id
-        runner.process(s, iid)
+        iid = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia. " * 12).id
+        runner.process(s, iid)  # short notes are kept verbatim without a model call
         rows = s.conn.execute("SELECT * FROM processing_events WHERE stage='egress' AND inbox_id=?", (iid,)).fetchall()
         assert rows and all(r["backend"] == "cloud" and r["egress"] == 1 for r in rows)
         assert json.loads(rows[0]["detail"])["bytes_sent"] > 20
@@ -152,7 +152,7 @@ def test_egress_event_logged_for_remote_backend(tmp_path):
         cfg2 = cfg_for(tmp_path / "b", backends={"l": {"type": "openai_compat", "base_url": stub.base_url, "model": "m"}},
                        tasks={"distill": ["l"]})
         s2 = build(cfg2)
-        i2 = s2.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia.").id
+        i2 = s2.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia. " * 12).id
         runner.process(s2, i2)
         assert s2.conn.execute("SELECT count(*) FROM processing_events WHERE stage='egress'").fetchone()[0] == 0
 
@@ -163,7 +163,7 @@ def test_egress_blocked_remote_leaves_no_event(tmp_path):
                       backends={"cloud": {"type": "openai_compat", "base_url": stub.base_url, "model": "m", "locality": "remote"}},
                       tasks={"distill": ["cloud"]})
         s = build(cfg)
-        iid = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia.").id
+        iid = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia. " * 12).id
         runner.process(s, iid)
         assert not stub.requests
         assert s.conn.execute("SELECT count(*) FROM processing_events WHERE stage='egress'").fetchone()[0] == 0
@@ -236,7 +236,7 @@ def test_egress_sink_failure_is_fail_open_and_wrap_is_single(tmp_path, capsys):
         s.conn.execute("CREATE TRIGGER no_egress BEFORE INSERT ON processing_events WHEN NEW.stage='egress'"
                        " BEGIN SELECT RAISE(ABORT, 'audit disk full'); END")  # only the audit insert fails
         egress._warned = False
-        iid_row = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia.")
+        iid_row = s.inbox.submit(adapter="t", text="Quokkas are small marsupials from Australia. " * 12)
         runner.process(s, iid_row.id)
         assert stub.requests  # the backend call still went out
         assert capsys.readouterr().err.count("egress audit write failed") == 1
