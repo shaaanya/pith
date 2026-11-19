@@ -1,0 +1,290 @@
+[
+ {
+  "expected": "watch",
+  "title": "Five films for a rainy weekend",
+  "body": "- Paper Moon Harbor (2019), a quiet drama about a ferry crew\n- The Long Dissolve (2021)\n- Night Trains to Vessel (2018)\n- Orchard Court (2022)\n- Lanterns on the Weir (2017)",
+  "intent": null,
+  "host": "instagram.com",
+  "note": "a reel naming films: content type must not matter"
+ },
+ {
+  "expected": "watch",
+  "title": "Why the miniseries Salt Road is worth your time",
+  "body": "Salt Road is a six-episode series about salt traders. The cinematography is praised; episode 4 is the best.",
+  "intent": "to watch this weekend",
+  "host": "youtube.com",
+  "note": ""
+ },
+ {
+  "expected": "watch",
+  "title": "Harbor Lights (2020)",
+  "body": "A film directed by Ines Varga about two sisters running a lighthouse. Runtime 104 minutes.",
+  "intent": null,
+  "host": "letterboxd.com",
+  "note": ""
+ },
+ {
+  "expected": "watch",
+  "title": "Documentary on bee decline",
+  "body": "A 90 minute documentary tracing hive collapse across three countries; streaming on a public broadcaster.",
+  "intent": "watch with Sam on Friday",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "listen",
+  "title": "Songs from the reel",
+  "body": "- Blue Hour by The Kettles\n- Slow Orbit by Mara Lind\n- Paper Boats by Tomo\n",
+  "intent": "only the music from this reel",
+  "host": "instagram.com",
+  "note": "scoped music reel"
+ },
+ {
+  "expected": "listen",
+  "title": "Podcast: The Maintenance Hour",
+  "body": "An interview show about repairing old appliances. Episode 12 covers soldering irons.",
+  "intent": "for the commute",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "listen",
+  "title": "Album Tidewater",
+  "body": "A 2024 ambient album with 9 tracks, recommended for focus work.",
+  "intent": null,
+  "host": "bandcamp.com",
+  "note": ""
+ },
+ {
+  "expected": "listen",
+  "title": "Playlist for long drives",
+  "body": "Highway Static, Neon Rain and Quiet Fields appear most often.",
+  "intent": "playlist ideas",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "read",
+  "title": "Essay on slow software",
+  "body": "A long essay arguing that teams should ship fewer features and polish more. Argues for a quarterly freeze.",
+  "intent": "read this later",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "read",
+  "title": "The Cartographer's Apprentice",
+  "body": "A novel about a mapmaker. 380 pages; reviewers compare it to older adventure stories.",
+  "intent": null,
+  "host": "goodreads.com",
+  "note": ""
+ },
+ {
+  "expected": "read",
+  "title": "Paper: sparse attention at scale",
+  "body": "The paper proposes block-sparse attention and reports a 2x speedup on long sequences.",
+  "intent": "read the paper properly",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "read",
+  "title": "Newsletter issue on sleep",
+  "body": "Three claims about sleep timing, each with a study. Long form.",
+  "intent": "read when I have time",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "play",
+  "title": "Review of Lantern Keep",
+  "body": "A cooperative puzzle game for two players on Steam. Roughly 8 hours. Controller recommended.",
+  "intent": null,
+  "host": "store.steampowered.com",
+  "note": ""
+ },
+ {
+  "expected": "play",
+  "title": "Games for a game night",
+  "body": "Cascade, Ticket to Orbit and Heist Deck work for 4 to 6 players.",
+  "intent": "games to play with friends",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "play",
+  "title": "Pixel farm roguelike",
+  "body": "A small roguelike where you farm between dungeon runs. Free demo available.",
+  "intent": "play the demo",
+  "host": null,
+  "note": "itch"
+ },
+ {
+  "expected": "try",
+  "title": "A fast terminal file manager",
+  "body": "fm-lite is a Rust terminal file manager. Install with cargo install fm-lite. Supports previews and bulk rename.",
+  "intent": "try this",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "try",
+  "title": "pgbouncer pools connections",
+  "body": "The tool called pgbouncer pools connections and cut idle sessions from 400 to 60 in the staging test.",
+  "intent": "the connection pooling tool",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "try",
+  "title": "tidy-notes",
+  "body": "A small CLI that sorts markdown notes by tag. MIT licensed.",
+  "intent": null,
+  "host": "github.com",
+  "note": ""
+ },
+ {
+  "expected": "try",
+  "title": "Self-hosted photo library",
+  "body": "Describes an app you can self host with a docker compose file, with face grouping.",
+  "intent": "try self hosting this",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "visit",
+  "title": "Ramen place on Alder Street",
+  "body": "A tiny ramen shop, closed Mondays, cash only, the shio ramen is the one to order.",
+  "intent": "next time in the city",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "visit",
+  "title": "Weekend hike to Larch Ridge",
+  "body": "A 12 km loop with a view over the valley. Best in September. Trailhead parking fills by 9.",
+  "intent": "hike this autumn",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "visit",
+  "title": "Museum of Small Machines",
+  "body": "Open Tuesday to Sunday. The clockwork room is the highlight.",
+  "intent": null,
+  "host": "tripadvisor.com",
+  "note": ""
+ },
+ {
+  "expected": "visit",
+  "title": "Three towns for a cheap trip",
+  "body": "Corvin, Halsey and Pike Harbor each have hostels under 30 euros.",
+  "intent": "trip ideas",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "reference",
+  "title": "How indexes work in Postgres",
+  "body": "B-tree indexes keep keys sorted. A partial index covers only rows matching a predicate. Index-only scans need visibility map data.",
+  "intent": null,
+  "host": "example.com",
+  "note": ""
+ },
+ {
+  "expected": "reference",
+  "title": "Tax residency rules summary",
+  "body": "A person is resident after 183 days. Treaties break ties by permanent home, then centre of vital interests.",
+  "intent": null,
+  "host": "example.com",
+  "note": ""
+ },
+ {
+  "expected": "reference",
+  "title": "Sourdough hydration cheat sheet",
+  "body": "70% hydration for open crumb; 65% for sandwich loaves; rest dough 30 minutes before folding.",
+  "intent": "keep the ratios",
+  "host": null,
+  "note": "recipe-ish facts, not an action shelf"
+ },
+ {
+  "expected": "reference",
+  "title": "Git rebase cheat sheet",
+  "body": "git rebase -i HEAD~3 rewrites the last three commits. Use fixup to squash silently.",
+  "intent": "for looking up later",
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "reference",
+  "title": "Notes on DNS record types",
+  "body": "A maps a name to IPv4, AAAA to IPv6, CNAME aliases, MX routes mail, TXT holds free text.",
+  "intent": null,
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "reference",
+  "title": "How the 2008 crisis unfolded",
+  "body": "A timeline of mortgage-backed securities, rating agency failures and the Lehman collapse in September 2008.",
+  "intent": null,
+  "host": "example.com",
+  "note": ""
+ },
+ {
+  "expected": "other",
+  "title": "Dentist Thursday",
+  "body": "Dentist Thu 3pm, bring insurance card.",
+  "intent": null,
+  "host": null,
+  "note": "a short personal note"
+ },
+ {
+  "expected": "other",
+  "title": "Untitled",
+  "body": "hmm",
+  "intent": null,
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "other",
+  "title": "Random thought",
+  "body": "What if clocks showed time left in the day instead of the current time?",
+  "intent": null,
+  "host": null,
+  "note": ""
+ },
+ {
+  "expected": "read",
+  "title": "Great post about a library",
+  "body": "A long post comparing parsing libraries, with benchmarks and opinions.",
+  "intent": "read this properly before choosing",
+  "host": "github.com",
+  "note": "reason says read, host says try: reason wins"
+ },
+ {
+  "expected": "reference",
+  "title": "Tutorial video: how to bleed brakes",
+  "body": "Steps: open the bleed nipple, pump the pedal, close, repeat per wheel. Torque specs given.",
+  "intent": null,
+  "host": "youtube.com",
+  "note": "video is not a signal"
+ },
+ {
+  "expected": "watch",
+  "title": "Trailer roundup",
+  "body": "Six upcoming films with release dates: Dark Orchard in March, Tin Season in May.",
+  "intent": null,
+  "host": "youtube.com",
+  "note": ""
+ },
+ {
+  "expected": "listen",
+  "title": "Talk: how compilers optimize loops",
+  "body": "A conference talk transcript on loop unrolling and vectorisation with several examples.",
+  "intent": "listen while cooking",
+  "host": null,
+  "note": "a talk as audio intent"
+ }
+]

@@ -40,6 +40,30 @@ export function useLibrary(filter: { type?: string; topic?: string }, polling: b
   });
 }
 
+/**
+ * Every note, light fields only, paged in the background (the API caps a page at 100). Shelves, counts and
+ * resurfacing are derived from this in the browser. Capped at 3,000 notes; `truncated` says so honestly.
+ */
+const INDEX_PAGES = 30;
+export const useNotesIndex = () =>
+  useQuery({
+    queryKey: ["library", "index"] as const,
+    staleTime: 60_000,
+    queryFn: async ({ signal }) => {
+      const items: S.LibraryItem[] = [];
+      let before = "";
+      let total = 0;
+      for (let i = 0; i < INDEX_PAGES; i++) {
+        const p = await request(S.LibraryPage, "GET", `/api/library${qs({ before, limit: 100 })}`, undefined, signal);
+        total = p.total;
+        items.push(...p.items);
+        if (!p.next) return { items, total, truncated: false };
+        before = p.next;
+      }
+      return { items, total, truncated: true };
+    },
+  });
+
 export const useTopics = () =>
   useQuery({
     queryKey: keys.topics,
@@ -160,3 +184,33 @@ export const useSaveConfig = () =>
 
 export const detectProviders = () => request(S.Providers, "GET", "/api/providers/detect");
 export const detectModels = (baseUrl: string) => request(S.Models, "GET", `/api/models${qs({ base_url: baseUrl })}`);
+
+// ---- shelves, resurfacing, entries, recently opened
+export const useShelves = () =>
+  useQuery({
+    queryKey: ["shelves"] as const,
+    queryFn: ({ signal }) => request(S.Shelves, "GET", "/api/shelves", undefined, signal),
+    staleTime: 10_000,
+  });
+
+export const useResurface = () =>
+  useQuery({
+    queryKey: ["resurface"] as const,
+    queryFn: ({ signal }) => request(S.Resurfaced, "GET", "/api/resurface", undefined, signal),
+    staleTime: 30_000,
+  });
+
+export const useEntries = (filter: { shelf?: string; done?: "0" | "1" }) =>
+  useQuery({
+    queryKey: ["entries", filter] as const,
+    queryFn: ({ signal }) => request(S.EntryRows, "GET", `/api/entries${qs(filter)}`, undefined, signal),
+    staleTime: 10_000,
+  });
+
+/** Notes you opened most recently, newest first. */
+export const useRecentlyOpened = (limit = 6) =>
+  useQuery({
+    queryKey: ["library", "viewed", limit] as const,
+    queryFn: ({ signal }) => request(S.LibraryPage, "GET", `/api/library${qs({ viewed: "1", limit })}`, undefined, signal),
+    staleTime: 10_000,
+  });

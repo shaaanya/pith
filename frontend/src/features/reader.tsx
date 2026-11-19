@@ -6,13 +6,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Confirm } from "@/components/overlay";
 import { useToast } from "@/components/toast";
-import { Button, Chip, EmptyState, ErrorState, Input, Label, Skeleton, Textarea } from "@/components/ui";
+import { DoneToggle, MoveMenu, ShelfIcon } from "@/components/shelf-bits";
+import { Button, Checkbox, Chip, EmptyState, ErrorState, Input, Label, Skeleton, Textarea } from "@/components/ui";
 import { ApiError, blobUrl } from "@/lib/api";
 import { cleanTitle, fullDate, hostOf, when } from "@/lib/format";
 import { useHotkeys } from "@/lib/hotkeys";
 import { asMarkdown, Markdown } from "@/lib/markdown";
+import { useShelfData } from "@/lib/shelf-data";
+import { mind, shelfById, type Placed } from "@/lib/shelves";
 import { useDeleteItem, useInboxDetail, useItem, useReprocess, useUpdateItem } from "@/lib/queries";
-import type { ItemDetail, NoteUnit } from "@/lib/schemas";
+import type { Entry, ItemDetail, LibraryItem, NoteUnit } from "@/lib/schemas";
 import { cn, safeHref } from "@/lib/utils";
 
 /** Same rule the backend uses for cited excerpts: YouTube time, PDF page, else the plain URL. */
@@ -52,6 +55,9 @@ export function Reader() {
   const del = useDeleteItem();
   const re = useReprocess();
 
+  useEffect(() => {
+    if (id) mind.opened(id);
+  }, [id]);
   const back = () => (history.length > 1 ? nav(-1) : nav("/library"));
   const d = q.data;
   const copy = async () => {
@@ -243,6 +249,8 @@ function NoteBody({ item }: { item: ItemDetail }) {
         {item.flagged && <Chip tone="warn">Flagged</Chip>}
       </p>
 
+      <ShelfBar detail={item} />
+
       {intent?.text && (
         <aside className="mt-5 max-w-[68ch] rounded-lg border border-acc/30 bg-acc-tint/60 px-4 py-3" aria-label="Why you saved this">
           <p className="text-[12px] font-semibold tracking-[0.06em] text-acc uppercase">
@@ -276,7 +284,7 @@ function NoteBody({ item }: { item: ItemDetail }) {
 
       <div className="mt-5">
         {mode === "structured" && structured ? (
-          <Units units={units} platform={item.source?.platform} url={sourceUrl} />
+          <Units units={units} platform={item.source?.platform} url={sourceUrl} entries={item.entries} />
         ) : (
           <Markdown source={item.body} />
         )}
@@ -286,7 +294,21 @@ function NoteBody({ item }: { item: ItemDetail }) {
   );
 }
 
-function Units({ units, platform, url }: { units: NoteUnit[]; platform?: string | null; url?: string | null }) {
+/** Units are plain text with `code` spans: render the spans as code instead of showing the backticks. */
+function Inline({ text }: { text?: string | null }) {
+  return (
+    <>
+      {(text ?? "").split(/(`[^`]+`)/g).map((t, i) =>
+        t.startsWith("`") && t.endsWith("`") && t.length > 2 ? <code key={i}>{t.slice(1, -1)}</code> : <span key={i}>{t}</span>,
+      )}
+    </>
+  );
+}
+
+const normText = (t: string | null | undefined) => (t ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+function Units({ units, platform, url, entries }: { units: NoteUnit[]; platform?: string | null; url?: string | null; entries: Entry[] }) {
+  const entryOf = useMemo(() => new Map(entries.map((e) => [normText(e.text), e])), [entries]);
   const groups = useMemo(() => {
     const g = new Map<string, NoteUnit[]>();
     for (const u of units) {
@@ -324,11 +346,41 @@ function Units({ units, platform, url }: { units: NoteUnit[]; platform?: string 
       {groups.map(([kind, list]) => (
         <section key={kind} aria-label={UNIT_TITLE[kind]}>
           {groups.length > 1 && <h2 className={cn("!mt-0 mb-2", kind === "warning" && "text-bad")}>{UNIT_TITLE[kind]}</h2>}
-          {kind === "step" ? (
+          {kind === "resource" ? (
+            <ul className="!list-none !pl-0">
+              {list.length > 1 && (
+                <li className="!mt-0 mb-2 font-sans text-[12.5px] text-mut">
+                  {list.filter((u) => entryOf.get(normText(u.text))?.done_at).length} of {list.length} done · each one is tracked on its own
+                </li>
+              )}
+              {list.map((u, i) => {
+                const entry = entryOf.get(normText(u.text));
+                const done = !!entry?.done_at;
+                return (
+                  <li key={i} className="flex items-start gap-3 !mt-1.5 rounded-md py-1">
+                    <Checkbox
+                      className="mt-[7px]"
+                      checked={done}
+                      disabled={!entry}
+                      onCheckedChange={(c) => entry && mind.entry(entry.id, c === true)}
+                      aria-label={`${done ? "Mark as to do" : "Mark as done"}: ${u.text}`}
+                    />
+                    <span className={cn(done && "text-mut line-through decoration-mut/50")}>
+                      <Inline text={u.text} />{" "}
+                      <span className="ml-1 inline-flex items-center gap-1.5 align-middle">
+                        {loc(u)}
+                        {weak(u)}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : kind === "step" ? (
             <ol>
               {list.map((u, i) => (
                 <li key={i} className="pl-1">
-                  {u.text}{" "}
+                  <Inline text={u.text} />{" "}
                   <span className="ml-1 inline-flex items-center gap-1.5 align-middle">
                     {loc(u)}
                     {weak(u)}
@@ -342,7 +394,7 @@ function Units({ units, platform, url }: { units: NoteUnit[]; platform?: string 
                 <li key={i} className="flex gap-2.5 rounded-lg border border-bad/30 bg-bad-tint px-3 py-2 !font-serif">
                   <AlertTriangle className="mt-1.5 size-4 shrink-0 text-bad" aria-hidden />
                   <span>
-                    {u.text}{" "}
+                    <Inline text={u.text} />{" "}
                     <span className="ml-1 inline-flex items-center gap-1.5 align-middle">
                       {loc(u)}
                       {weak(u)}
@@ -360,7 +412,7 @@ function Units({ units, platform, url }: { units: NoteUnit[]; platform?: string 
                       your focus
                     </span>
                   )}
-                  {u.text}{" "}
+                  <Inline text={u.text} />{" "}
                   <span className="ml-1 inline-flex items-center gap-1.5 align-middle">
                     {loc(u)}
                     {weak(u)}
@@ -371,6 +423,35 @@ function Units({ units, platform, url }: { units: NoteUnit[]; platform?: string 
           )}
         </section>
       ))}
+    </div>
+  );
+}
+
+/** Where this note lives and its to-do state. Placement is automatic; this is where it is corrected. */
+function ShelfBar({ detail }: { detail: ItemDetail }) {
+  const data = useShelfData();
+  // the note index is capped, so an older note comes from its own detail
+  const p: Placed = data.byId.get(detail.id) ?? {
+    item: { id: detail.id } as LibraryItem,
+    placement: { shelf: detail.shelf, by: detail.placement.by, why: detail.placement.why },
+    state: { done: detail.state.done_at ?? undefined, snooze: detail.state.snooze_until ?? undefined, hide: detail.state.hidden || undefined },
+  };
+  const shelf = shelfById(data.shelves, p.placement.shelf);
+  return (
+    <div
+      className="mt-4 flex max-w-[68ch] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-hair bg-panel/50 px-3 py-1.5 text-[13px]"
+      role="group"
+      aria-label="Shelf"
+    >
+      <span className="inline-flex items-center gap-1.5 font-medium">
+        <ShelfIcon id={p.placement.shelf} className="size-4 text-acc" />
+        {shelf?.name ?? "Other"} shelf
+      </span>
+      <span className="text-mut">{p.placement.why}</span>
+      <span className="ml-auto flex items-center gap-1">
+        {shelf?.todo && <DoneToggle placed={p} doneLabel={shelf.doneLabel} />}
+        <MoveMenu placed={p} label="Move" />
+      </span>
     </div>
   );
 }

@@ -1,56 +1,58 @@
-# Capabilities and task routing
+# What Pith can do
 
-A backend declares what it can do with a `Capabilities` record (`providers/ports.py`). The registry uses
-it so an unsupported use is detected up front instead of failing at call time.
+## Capture: ways to send it something
 
-| Field | Meaning | Set by |
+| Way | What it is | Good for |
 |---|---|---|
-| `text` | Can generate text (chat/completion) | always for `openai_compat`, `anthropic`, `heuristic`, `cli` |
-| `json_mode` | Server supports schema-constrained JSON output | declared in config (`capabilities = ["json_mode"]`); the heuristic backend reports it |
-| `vision` | Can describe images | declared in config on `openai_compat` (chat message with base64 `image_url` parts; UNVERIFIED against a real vision model). No other backend implements it |
-| `embeddings` | Can embed text | `openai_compat` when `embed_model` is set |
-| `rerank` | Can rerank documents | declared in config on `openai_compat` (Jina/Cohere-style `POST /rerank`; UNVERIFIED against a real server). No other backend implements it |
-| `transcribe` | Speech to text | `whisper_cpp`; `openai_compat` when declared |
-| `ocr` | Image to text | `tesseract` only; declaring `ocr` on `openai_compat` or `cli` is a config error (use `vision` to describe images) |
-| `context_window` | Tokens (default 8192) used to size prompts and decide on map-reduce. Match the server's real context: Ollama's `/v1` endpoint truncated a default-sized batch to 4096 prompt tokens without an error, so an Ollama backend should set `context_window = 4096` (or raise the server's context) | `context_window` in config |
+| Telegram bot | A bot you create yourself; share a link or file to it from any device | Saving from your phone, away from your computer |
+| Drop folder | Put a file, `.url`, `.webloc` or a text file of links in `<home>/inbox` | Files, iCloud/Dropbox-synced folders |
+| Dashboard | Paste, drop or attach anywhere on the page (press `n`) | Saving from the laptop |
+| CLI | `pith submit "<url or text>" --why "..."` or `--file PATH` | Scripts and terminals |
+| HTTP endpoint | `POST /v1/inbox` with a token (`pith serve-http`) | iOS Shortcut, bookmarklet, your own tools |
+| Telegram export | `pith import-telegram result.json` | Backfilling an old chat |
 
-## Tasks
+Every way goes through the same single entry point, the inbox, so they all behave alike: the same item is
+never saved twice, and a failed item keeps its original. Details in [inbox-contract.md](inbox-contract.md).
+Channels only receive: they never reply to what you send.
 
-A task name selects a chain of backends. The task names are exactly:
+## Read: what it understands
 
-| Task | Needs capability | Used by |
-|---|---|---|
-| `distill` | `text` | distillation |
-| `classify` | `text` | accepted and routed like any text task and listed by `doctor`/`egress`, but no pipeline stage calls it yet |
-| `embed` | `embeddings` | embedding index, hybrid search, near-duplicate detection |
-| `rerank` | `rerank` | optional search rerank |
-| `transcribe` | `transcribe` | media extractor |
-| `describe` | `vision` | image and video-frame description |
-| `ocr` | `ocr` | image extractor |
-| `answer` | `text` | `ask` |
+| Input | How |
+|---|---|
+| Web pages, articles, Reddit threads | Fetched and reduced to the main text (no JavaScript rendering) |
+| PDF | Text per page (scanned PDFs need clarification: no PDF OCR yet) |
+| Word, PowerPoint, Excel | Text extraction |
+| Images, screenshots | OCR (tesseract), or a vision model if you configure one |
+| YouTube and other video | Existing English captions first; transcription (whisper.cpp) only if there are none |
+| Audio and voice notes | Transcription (whisper.cpp) |
+| Instagram, TikTok | Usually login-walled. Optional: reuse a throwaway account's browser cookies ([configuration.md](configuration.md#instagram-and-tiktok-login-walled-links)) |
+| Plain text, code, notes | Stored as written |
 
-## Resolution rules (`providers/registry.py`)
+When Pith cannot read something it says so in plain words and asks you for help (paste the transcript,
+attach the file) instead of guessing.
 
-- `[tasks] <task> = ["a", "b:model"]` is an ordered fallback list. `name:model` overrides the `model` key
-  of backend `name` for that route.
-- A task with no `[tasks]` entry uses every configured backend in config order.
-- A backend is in a task's chain only if it declares the capability the task needs AND really has the
-  method that serves it (`generate`, `embed`, `rerank`, `transcribe`, `read` for `ocr`, `describe`).
-- A declared capability that the backend type cannot serve fails when the config is loaded (for example
-  `ocr` or `embeddings` without `embed_model` on `openai_compat`, anything but `text`/`json_mode` on `cli`).
-- For text tasks the `heuristic` backend is always appended last (and moved there if configured earlier),
-  and one is created automatically if none is configured.
-- Remote backends (`locality = "remote"`) are filtered out of every chain unless `[privacy] allow_remote =
-  true`; each skip is recorded and shown by `doctor`. Asking for a remote backend explicitly while blocked
-  raises `RemoteBlocked`.
-- Unknown backend names in `[tasks]` or unknown `type` values fail when the config is loaded.
-- `ask` uses the `answer` chain minus `heuristic`.
+## Understand: one note per source
 
-## Detection
+Each source becomes one note that holds the actual information (steps, numbers, names, resources, warnings),
+not a description of it. Every statement points back to the part of the source it came from. A fact the
+source does not support is dropped; your reason for saving is used only if you wrote one. Topics and entities
+are assigned automatically; you can edit, reprocess or delete a note, and edits are versioned. How it works:
+[pipeline.md](pipeline.md).
 
-`pith doctor` reports each backend's declared capabilities and, for local `openai_compat` servers,
-probes reachability and the embeddings endpoint with canned strings (3 s timeout). It does not probe JSON
-mode, does not contact remote backends, and never executes `cli` backends (it only checks the command is on
-PATH). Capabilities are declared in config and only embeddings are probed; a declaration that the server
-does not honour (a model without vision, a server without `/rerank`) is found at call time: a failed
-`rerank` is skipped with a warning, a failed `describe` fails the item.
+## Use: find and recall
+
+- **Search**: full-text, plus meaning-based search when an embedding model is configured.
+- **Ask**: `pith ask "..."` or the Ask box answers from your notes only, with numbered citations; with no
+  answer model it shows the matching excerpts instead.
+- **Library and Today**: browse by date and topic; near-duplicates are linked, never merged or deleted.
+- **Digest**: `pith digest` writes a daily summary of what arrived.
+- **Export**: `pith export` writes a plain Markdown vault (frontmatter plus body) you can open anywhere.
+
+## Run it your way
+
+- **Models are optional.** With none, a deterministic fallback still stores and searches. Local models
+  (Ollama, whisper.cpp, tesseract) and API-key cloud models plug in per task; see [backends.md](backends.md).
+- **Local by default.** Text leaves your machine only if you allow remote models, and `pith egress` shows
+  exactly what was sent.
+- **Yours.** One folder, SQLite plus plain files. `pith backup`, `pith verify` and `pith restore` protect it;
+  `pith doctor` checks health.

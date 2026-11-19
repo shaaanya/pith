@@ -1,7 +1,8 @@
 # Data model
 
-SQLite, schema version 3 (`PRAGMA user_version = 3`). Migrations are numbered SQL files in
-`src/pith/store/migrations/`: `001_init.sql`, `002_external_id.sql`, `003_external_ids.sql`. The
+SQLite, schema version 7 (`PRAGMA user_version = 7`). Migrations are numbered SQL files in
+`src/pith/store/migrations/`: `001_init.sql`, `002_external_id.sql`, `003_external_ids.sql`,
+`004_channel_state.sql`, `005_user_note.sql`, `006_shelves.sql`, `007_state_entries.sql`. The
 migration splitter is simple: no triggers in migration SQL. Ids are 26-character, time-sortable strings
 (`ids.new_id()`); timestamps are UTC ISO-8601 `YYYY-MM-DDTHH:MM:SSZ`.
 
@@ -9,13 +10,17 @@ migration splitter is simple: no triggers in migration SQL. Ids are 26-character
 
 | Table | Purpose |
 |---|---|
-| `inbox_items` | One row per submission: `id`, `adapter`, `platform`, `submitted_at`, `kind_hint`, `content_type`, `payload_text` (URL or note text), `blob_sha256`, `original_filename`, `mime`, `canonical_url`, `user_context`, `status` (CHECK: new, pending, processing, processed, failed, needs_clarification), `error`, `attempts`, `duplicate_of`, `source_id`, `updated_at`, `external_id`. Unique index on `canonical_url` (where `duplicate_of` is null) and on `(adapter, external_id)`. |
+| `inbox_items` | One row per submission: `id`, `adapter`, `platform`, `submitted_at`, `kind_hint`, `content_type`, `payload_text` (URL or note text), `blob_sha256`, `original_filename`, `mime`, `canonical_url`, `user_context`, `status` (CHECK: new, pending, processing, processed, failed, needs_clarification), `error`, `attempts`, `duplicate_of`, `source_id`, `updated_at`, `external_id`, `user_note` (words you added after saving; migration 005). Unique index on `canonical_url` (where `duplicate_of` is null) and on `(adapter, external_id)`. |
 | `external_ids` | `(adapter, external_id) -> inbox_id`, the idempotency record for adapters (migration 003). |
+| `channel_state` | `(channel, key) -> value`: per-channel cursors and status (Telegram `offset`, `paired`, `pairing_code`; every channel's `last_ok_at`, `last_error`, `submitted`). Migration 004. |
 | `jobs` | Queue: `inbox_id`, `kind`, `state` (pending, running, done, failed), `attempts`, `run_after`, `lease_expires_at`, `worker_id`, `last_error`. |
 | `processing_events` | History: `inbox_id`, `at`, `stage`, `status`, `detail`, `duration_ms`, `backend`, `model`, `egress` (1 when text was sent to a remote backend). Also stores `clarified` and `duplicate` events. |
 | `sources` | One per extracted origin: `url`, `title`, `author`, `platform`, `content_type`, `fetched_at`, `blob_sha256` (original), `text_sha256` (normalised extracted text), `extractor`. Several inbox items can map to one source. |
 | `segments` | Chunks of a source: `source_id`, `idx`, `text`, `locator` (`char=a-b`, `page=N`, `t=start-end`). Unique `(source_id, idx)`. |
-| `knowledge_items` | The distilled items: `kind` (summary, insight, claim, snippet, collection...), `title`, `body`, `data_json` (kind-specific data, evidence quote, flags), `provenance` (CHECK: stated, inferred, external), `confidence`, `source_id`, `segment_refs`, `extracted_by`, `user_edited`, `version`, `flagged`, timestamps, `last_viewed_at`, `deleted_at` (soft delete). Index on `source_id`. |
+| `knowledge_items` | The distilled items: `kind` (summary, insight, claim, snippet, collection...), `title`, `body`, `data_json` (kind-specific data, evidence quote, flags), `provenance` (CHECK: stated, inferred, external), `confidence`, `source_id`, `segment_refs`, `extracted_by`, `user_edited`, `version`, `flagged`, timestamps, `last_viewed_at`, `deleted_at` (soft delete), and for notes the shelf: `shelf_id` (null until placed, read as `other`), `placement_by` (`user`, `model`, `rule`, `default`), `placement_why`, `placement_model`, `placed_at` (migration 006). Index on `source_id`, `shelf_id`. |
+| `note_state` | `owner` (the note's source id, else its id: reprocess replaces the note row), `done_at`, `snooze_until`, `hidden`, `updated_at`. `knowledge_items.last_viewed_at` is set by `POST /api/items/:id/viewed`. |
+| `entries` | The individual things a note names (each `resource` unit): `id`, `owner`, `item_id` (the live note), `text`, `norm`, `position`, `done_at`. Reprocess keeps an entry, and its done mark, when its normalised text matches. |
+| `shelves` | `id` (slug), `name` (unique), `blurb` (read by the placement model), `todo`, `done_label`, `builtin`, `position`. Seeded with watch, listen, read, play, try, visit, reference, other (`other` cannot be deleted); deleting a custom shelf moves its notes to `other`. |
 | `knowledge_versions` | Previous title/body/data on edit or reprocess, with a reason. |
 | `topics`, `entities`, `item_topics`, `item_entities` | Normalised names and their links to items. These tables are the source of truth for topics/entities. |
 | `relations` | `(item_a, item_b, type, score)`, type `duplicate` or `related`. |

@@ -378,12 +378,20 @@ def code_blocks(segments, cap=3000):
     return out
 
 
+def _is_focus(u, kw, need):
+    """A unit the user's reason points at (matched by the focus pass or by shared keywords)."""
+    return bool(u.get("focus") or (kw and len(kw & _stems(u["text"])) >= need))
+
+
+def _need(kw):
+    return 2 if len(kw) >= 3 else 1
+
+
 def compose(context, units, intent, gaps, limits, code=()):
     """Markdown note from verified units. Only non-empty groups get a heading; the layout follows
     what the units are (numbered steps, facts, claims...), not the source's file type."""
     kw = intent_keywords(intent)
-    need = 2 if len(kw) >= 3 else 1
-    focus = [u for u in units if kw and len(kw & _stems(u["text"])) >= need]
+    focus = [u for u in units if _is_focus(u, kw, _need(kw))]
     rest = [u for u in units if u not in focus]
     lines = []
     if intent:
@@ -484,11 +492,18 @@ def _extract_all(run, backend, system, segs):
     return objs or None
 
 
+_FOCUS_CHARS = 12_000  # ponytail: beyond this the pass sees only the two best keyword-matching segments
+
+
 def _focus_pass(run, backend, segs, intent, kw):
-    """Intent present but no unit touches it: re-extract from the best-matching segments only."""
-    scored = sorted(((len(kw & _stems(s.text)), s) for s in segs if s.locator != "description"),
-                    key=lambda p: -p[0])
-    top = [s for n, s in scored[:2] if n]
+    """Extract only what the user's reason points at, judged by the model, not by word overlap
+    ("just the music" matches no song title). Long sources fall back to the best-matching segments."""
+    body = [s for s in segs if s.locator != "description"]
+    if sum(len(s.text) for s in body) <= _FOCUS_CHARS:
+        top = body
+    else:
+        scored = sorted(((len(kw & _stems(s.text)), s) for s in body), key=lambda p: -p[0])
+        top = [s for n, s in scored[:2] if n]
     if not top:
         return []
     obj = run.ask(backend, PROMPT.format(intent=_INTENT_ONLY.format(intent)), _labelled(top))
@@ -521,17 +536,30 @@ def build(registry, segments, *, title="", intent=None, limits=(), kind=""):
                 continue
             raw = [_norm_unit(u) for o in objs for u in o.get("units", [])]
             kept, dropped = verify([u for u in raw if u["text"]], segs)
-            if kw and not any(kw & _stems(u["text"]) for u in kept):
-                extra, _ = verify(_focus_pass(run, backend, segs, intent, kw), segs)
+            if kw:
+                try:
+                    extra, _ = verify(_focus_pass(run, backend, segs, intent, kw), segs)
+                except ProviderError:  # keep the note, just unscoped
+                    extra = []
+                marked = {u["text"].casefold() for u in extra}
+                kept = [{**u, "focus": True} if u["text"].casefold() in marked else u
+                        for u in kept]
                 have = {k["text"].casefold() for k in kept}
                 kept += [{**u, "focus": True} for u in extra if u["text"].casefold() not in have]
-                if not extra:
+                if not any(_is_focus(u, kw, _need(kw)) for u in kept):
                     lim.append(f"Nothing in the source matched your reason for saving "
                                f"({intent.strip()})")
         except ProviderError:
             continue
         if not kept:
             continue
+        scope = "full"
+        if kw:
+            # the user's reason scopes the note: keep what it points at, drop the rest (the source
+            # and its link stay). Nothing matching keeps everything, flagged, never an empty note.
+            focus = [u for u in kept if _is_focus(u, kw, _need(kw))]
+            scope = "scoped" if focus else "unscoped"
+            kept = focus or kept
         ctx = _clean_context(objs[0].get("context") or "")
         # a gap is believable only when the source itself promises a counted list ("10 habits");
         # models invent "not provided" noise otherwise
@@ -539,24 +567,43 @@ def build(registry, segments, *, title="", intent=None, limits=(), kind=""):
         gaps = [g.strip() for o in objs for g in o.get("gaps", []) if isinstance(g, str)
                 and g.strip()] if promised else []
         names = [n for o in objs for n in o.get("entities", [])]
+        seen = "\n".join(u["text"] for u in kept) if scope == "scoped" else "\n".join(
+            s.text for s in segments)
         stats = {"calls": run.calls, "prompt_chars": run.chars, "raw_units": len(raw),
                  "seconds": round(time.monotonic() - run.t0, 1)}
         return _candidates(title, compose(ctx, kept, intent, gaps, lim, code_blocks(segments)),
                            kept, intent, gaps, lim,
                            dropped, repairs, stats, f"{run.res.backend}:{run.res.model}",
-                           mentions("\n".join(s.text for s in segments), names), ctx)
+                           mentions(seen, names), ctx, scope)
     return None
 
 
+# platform placeholder titles ("Video by ml.swe"): carry no information, author lives in sources.author
+_PLACEHOLDER = re.compile(r"^(video|photo|reel|post|clip)s? by\b", re.I)
+
+
+def real_title(title):
+    """The title, or "" when it is only a platform placeholder."""
+    return "" if _PLACEHOLDER.match((title or "").strip()) else (title or "")
+
+
+def _headline(units, cap=80):
+    text = next((u["text"].strip() for u in units if u.get("text", "").strip()), "")
+    if len(text) <= cap:
+        return text
+    return text[:cap].rsplit(" ", 1)[0].rstrip(",;:- ") + "\u2026"
+
+
 def _candidates(title, md, units, intent, gaps, limits, dropped, repairs, stats, by,
-                names=(), context=""):
-    data = {"version": VERSION, "context": context,
+                names=(), context="", scope="full"):
+    data = {"version": VERSION, "context": context, "scope": scope,
             "intent": {"state": "explicit" if intent else "unknown", "text": intent or None},
             "units": [{k: u.get(k) for k in ("type", "text", "support", "segment_idx", "focus")}
                       for u in units],
             "gaps": gaps, "limits": limits, "dropped": dropped,
             "repairs": [{"heard": a, "term": b} for a, b in repairs], "stats": stats}
-    out = [Candidate(kind="note", title=title or "", body=md, data=data, entities=list(names))]
+    title = real_title(title) or _headline(units)
+    out = [Candidate(kind="note", title=title, body=md, data=data, entities=list(names))]
     if names:
         out.append(Candidate(kind="mentions", title=f"Mentioned in {title or 'this source'}",
                              body=", ".join(names), entities=list(names)))

@@ -17,3 +17,12 @@ docs/*
 !docs/inbox-contract.md
 !docs/roadmap.md
 !docs/configuration.md
+!docs/getting-started.md
+!docs/backends.md
+# local-only: superseded eval runs (kept on disk)
+eval/results/*.json
+eval/notes/results/*
+!eval/notes/results/2026-11-17-gemma4-e4b-note-nothink-v5.*
+.mypy_cache/
+.ruff_cache/
+.claude/

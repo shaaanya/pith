@@ -93,3 +93,21 @@ export function AttentionCard({
     </div>
   );
 }
+
+/** One dense line for Home: what failed, why in plain words, and the one-click retry. Paste/inspect live in the Inbox. */
+export function AttentionLine({ row }: { row: Pick<InboxRow, "id" | "status" | "error" | "what" | "submitted_at"> }) {
+  const why = explainError(row.status, row.error);
+  const rec = useRecover();
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
+      <Chip tone={row.status === "failed" ? "bad" : "warn"}>{row.status === "failed" ? "Failed" : "Needs you"}</Chip>
+      <div className="min-w-0 flex-1 basis-56">
+        <p className="truncate font-medium">{row.what}</p>
+        <p className="text-[13px] text-mut">{why.title}</p>
+      </div>
+      <Button size="sm" onClick={() => rec.retry(row.id)} disabled={rec.busy}>
+        <RotateCcw className="size-3.5" aria-hidden /> Try again
+      </Button>
+    </li>
+  );
+}

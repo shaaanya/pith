@@ -23,7 +23,7 @@ const button = cva(
         ghost: "text-soft hover:bg-panel hover:text-ink",
         danger: "bg-bad-tint text-bad border border-transparent hover:border-bad",
       },
-      size: { sm: "h-7 px-2.5 text-[13px]", md: "h-9 px-3.5 text-[13.5px]", icon: "h-9 w-9", iconSm: "h-7 w-7" },
+      size: { sm: "h-8 px-2.5 text-[13px] pointer-coarse:h-10", md: "h-9 px-3.5 text-[13.5px]", icon: "h-9 w-9", iconSm: "h-8 w-8 pointer-coarse:h-10 pointer-coarse:w-10" },
     },
     defaultVariants: { variant: "secondary", size: "md" },
   },
@@ -132,12 +132,12 @@ export function Spinner({ label = "Loading" }: { label?: string }) {
   );
 }
 
-export function PageHeader({ title, sub, actions }: { title: string; sub?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, sub, actions }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-4">
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-5">
       <div className="min-w-0">
-        <h1 className="text-[22px] leading-tight font-semibold tracking-[-0.01em]">{title}</h1>
-        {sub && <p className="mt-0.5 text-[13.5px] text-mut">{sub}</p>}
+        <h1 className="font-serif text-[28px] leading-tight font-semibold tracking-[-0.01em] text-balance">{title}</h1>
+        {sub && <p className="mt-1 max-w-[62ch] text-[14px] text-mut">{sub}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </header>

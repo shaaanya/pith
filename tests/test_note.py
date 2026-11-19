@@ -5,7 +5,7 @@ from pith.domain.models import SegmentIn
 from pith.pipeline import note
 from pith.pipeline.runner import intent_of
 from pith.providers.heuristic import HeuristicBackend
-from pith.providers.ports import Capabilities, GenResult
+from pith.providers.ports import Capabilities, GenResult, ProviderError
 from pith.providers.registry import Registry
 
 DESC = ("Prep plan: learn idempotency and DynamoDB. Read Marc Brooker. Practice on Devmaxx. "
@@ -115,6 +115,7 @@ def test_build_returns_note_mentions_and_units_with_stats():
     assert by == "f:m"
     assert "DynamoDB" in fake.calls[0][1]["content"]  # the model read the repaired transcript
     assert any(r["term"] == "idempotency" for r in n.data["repairs"])
+    assert n.data["scope"] == "full"
 
 
 def test_build_with_intent_runs_a_focus_pass_when_nothing_matches():
@@ -137,8 +138,10 @@ def test_build_flags_intent_that_matches_nothing():
             SegmentIn(1, "more words about the dog", "t=5-9")]
     reply = {"context": "", "units": [{"type": "fact", "text": "Chat about weather and cats"}],
              "entities": [], "gaps": []}
-    cands, _ = note.build(reg(Fake([reply])), segs, intent="kubernetes operators")
+    none = {"context": "", "units": [], "entities": [], "gaps": []}
+    cands, _ = note.build(reg(Fake([reply, none])), segs, intent="kubernetes operators")
     assert any("Nothing in the source matched" in x for x in cands[0].data["limits"])
+    assert cands[0].data["scope"] == "unscoped" and "Chat about weather and cats" in cands[0].body
 
 
 def test_short_plain_note_is_kept_verbatim_without_a_model_call():
@@ -232,3 +235,67 @@ def test_a_correction_worded_with_original_retires_the_earlier_value():
              {"type": "fact", "text": "The original cluster had 8 nodes, not 6"}]
     d = {}
     assert [u["text"] for u in note._supersede(units, d)] == ["The original cluster had 8 nodes, not 6"]
+
+
+def test_placeholder_platform_title_is_replaced_by_a_headline_from_the_content():
+    assert note.real_title("Video by ml.swe") == ""
+    assert note.real_title("Reel by x") == "" and note.real_title("Video bytes explained") != ""
+    units = [{"type": "fact", "text": "Idempotency keys make retries safe " * 4}]
+    out, _ = note._candidates("Video by ml.swe", "body", units, None, [], [], {}, [], {}, "m")
+    assert not out[0].title.startswith("Video by") and 0 < len(out[0].title) <= 81
+    assert note._candidates("Real", "b", units, None, [], [], {}, [], {}, "m")[0][0].title == "Real"
+
+
+SCOPE_SEGS = [SegmentIn(0, "intro chat about weather with Zed Quill and cats", "t=0-5"),
+              SegmentIn(1, "the tool called pgbouncer pools connections for postgres", "t=5-9")]
+SCOPE_FOCUS = {"context": "", "entities": [], "gaps": [],
+               "units": [{"type": "resource", "text": "pgbouncer pools connections"}]}
+SCOPE_REPLY = {"context": "", "entities": ["Zed Quill", "pgbouncer"], "gaps": [],
+               "units": [{"type": "fact", "text": "They chat about weather with Zed Quill"},
+                         {"type": "resource", "text": "pgbouncer pools connections"}]}
+
+
+def test_build_with_intent_keeps_only_matching_units():
+    cands, _ = note.build(reg(Fake([SCOPE_REPLY, SCOPE_FOCUS])), SCOPE_SEGS, intent="the connection pooling tool")
+    n = cands[0]
+    assert "pgbouncer pools connections" in n.body and "weather" not in n.body
+    assert "Also in the source" not in n.body and n.data["scope"] == "scoped"
+    assert [u["text"] for u in n.data["units"]] == ["pgbouncer pools connections"]
+    assert [c.title for c in cands if c.kind == "unit"] == ["pgbouncer pools connections"]
+
+
+def test_build_scoped_mentions_only_from_kept_units():
+    cands, _ = note.build(reg(Fake([SCOPE_REPLY, SCOPE_FOCUS])), SCOPE_SEGS, intent="the connection pooling tool")
+    body = next(c.body for c in cands if c.kind == "mentions")
+    assert "pgbouncer" in body and "Zed Quill" not in body
+
+
+def test_scoping_trusts_the_model_not_word_overlap_for_category_reasons():
+    segs = [SegmentIn(0, "calm music helps you focus. Blinding Lights by The Weeknd, "
+                         "then Levitating by Dua Lipa. also my cat is asleep", "t=0-20")]
+    first = {"context": "", "entities": [], "gaps": [],
+             "units": [{"type": "fact", "text": "Calm music helps you focus"},
+                       {"type": "fact", "text": "my cat is asleep"}]}
+    focus = {"context": "", "entities": [], "gaps": [],
+             "units": [{"type": "resource", "text": "Blinding Lights by The Weeknd"},
+                       {"type": "resource", "text": "Levitating by Dua Lipa"}]}
+    fake = Fake([first, focus])
+    cands, _ = note.build(reg(fake), segs, intent="just the music")
+    body = cands[0].body
+    assert len(fake.calls) == 2  # a stray "music" in one unit no longer skips the model
+    assert "Blinding Lights" in body and "Levitating" in body and "cat is asleep" not in body
+    assert cands[0].data["scope"] == "scoped"
+
+
+def test_focus_pass_failure_keeps_the_note_unscoped():
+    class Boom(Fake):
+        def generate(self, messages, *, json_schema=None, max_tokens=None):
+            if self.calls:
+                raise ProviderError("down")
+            return super().generate(messages)
+
+    segs = [SegmentIn(0, "intro chat about weather and cats today", "t=0-5")]
+    reply = {"context": "", "units": [{"type": "fact", "text": "Chat about weather and cats"}],
+             "entities": [], "gaps": []}
+    cands, _ = note.build(reg(Boom([reply])), segs, intent="the music")
+    assert cands[0].data["scope"] == "unscoped" and "weather and cats" in cands[0].body

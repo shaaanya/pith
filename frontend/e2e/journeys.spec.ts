@@ -19,15 +19,19 @@ test.beforeEach(({ page }) => {
 });
 test.afterEach(() => expect(errors, "console errors / CSP violations").toEqual([]));
 
-test("1 · Today after several items were captured shows what happened and what needs me", async ({ page }) => {
+test("1 · Home after several items were captured shows what happened and what needs me", async ({ page }) => {
   await open(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Good (morning|afternoon|evening)|Late night/);
   // The reel without a transcriber is a real "needs you" state, named in plain language.
-  const needs = page.getByRole("region", { name: "Needs you" });
+  const needs = page.getByRole("region", { name: "Needs attention" });
   await expect(needs).toContainText("pasta-reel.mp4");
+  await expect(needs).toContainText("instagram.com/reel/C9failed");
   await expect(needs.getByRole("button", { name: "Try again" }).first()).toBeVisible();
-  await expect(page.getByRole("region", { name: "New notes" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Capture sources" })).toContainText("Drop folder");
+  await expect(page.getByRole("region", { name: "Recently saved" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Up next" })).toBeVisible();
+  // Shelves are navigation, not content: Home must not repeat them, nor carry a second save form.
+  await expect(page.getByRole("region", { name: "Browse" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Save", exact: true })).toHaveCount(0);
   await expect(page.getByLabel(/\d+ need you/).first()).toBeVisible();
 });
 
@@ -122,6 +126,9 @@ test("7 · Ask a question: answer is visibly separate from search results, with 
 test("8 · Keyboard only: go-to sequences, search focus, help, capture, escape", async ({ page }) => {
   await open(page);
   await page.keyboard.press("g");
+  await page.keyboard.press("s");
+  await expect(page).toHaveURL(/#\/shelves/);
+  await page.keyboard.press("g");
   await page.keyboard.press("l");
   await expect(page).toHaveURL(/#\/library/);
   await page.keyboard.press("g");
@@ -161,7 +168,7 @@ test("9 · Settings: theme switch applies instantly; model settings load from th
 });
 
 test("10 · Accessibility: no serious or critical axe violations on the main screens", async ({ page }) => {
-  for (const hash of ["/", "/inbox", "/library", "/search?q=pgbadger", "/settings"]) {
+  for (const hash of ["/", "/shelves", "/shelf/try", "/shelf/watch", "/shelf/reference", "/shelf/other", "/inbox", "/library", "/search?q=pgbadger", "/settings"]) {
     await open(page, hash);
     await page.waitForTimeout(400);
     const res = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
@@ -177,16 +184,17 @@ test("11 · @mobile narrow viewport: tab bar, no horizontal scroll, reader usabl
   await open(page);
   await expect(page.getByRole("navigation", { name: "Primary" }).last()).toBeVisible();
   for (const [name, hash] of [
-    ["Library", "/library"],
-    ["Inbox", "/inbox"],
+    ["Shelves", "/shelves"],
     ["Search", "/search"],
+    ["All", "/library"],
+    ["Inbox", "/inbox"],
     ["Settings", "/settings"],
   ] as const) {
-    await page
-      .getByRole("navigation", { name: "Primary" })
-      .last()
-      .getByRole("link", { name: new RegExp(name) })
-      .click();
+    // Four places to find things live in the tab bar; Inbox and Settings are icons in the top bar.
+    const link = ["Inbox", "Settings"].includes(name)
+      ? page.getByRole("link", { name: new RegExp(`^${name}`) }).first()
+      : page.getByRole("navigation", { name: "Primary" }).last().getByRole("link", { name: new RegExp(name) });
+    await link.click();
     await expect(page).toHaveURL(new RegExp(`#${hash}`));
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow, `horizontal overflow on ${hash}`).toBeLessThanOrEqual(0);
@@ -195,4 +203,115 @@ test("11 · @mobile narrow viewport: tab bar, no horizontal scroll, reader usabl
   await page.getByTestId("note-row").first().getByRole("link").click();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
+
+test("12 · Shelves: a saved tool sits on Try with its reason, can be moved, ticked off and restored", async ({ page }) => {
+  await open(page, "/shelf/try");
+  const row = page.getByTestId("shelf-row").filter({ hasText: "uv: a fast Python" });
+  await expect(row).toContainText("try this for my python projects");
+  // Correct the placement in one click: move to Reference, then it leaves Try.
+  await row.getByRole("button", { name: "Move to another shelf" }).click();
+  await page.getByRole("menuitem", { name: "Reference" }).click();
+  await expect(row).toHaveCount(0);
+  await open(page, "/shelf/reference");
+  await page.getByLabel("Filter Reference").fill("uv: a fast"); // Reference now holds every bulk note too
+  const moved = page.getByTestId("shelf-row").filter({ hasText: "uv: a fast Python" });
+  await expect(moved).toContainText("You put it here");
+  await moved.getByRole("button", { name: "Move to another shelf" }).click();
+  await page.getByRole("menuitem", { name: "Let Pith decide again" }).click();
+  await open(page, "/shelf/try");
+  // Done state: ticking removes it from To do and lists it under the done tab, never deleting it.
+  await page
+    .getByTestId("shelf-row")
+    .filter({ hasText: "uv: a fast Python" })
+    .getByRole("button", { name: /Mark as tried/ })
+    .click();
+  await expect(page.getByTestId("shelf-row").filter({ hasText: "uv: a fast Python" })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Tried/ }).click();
+  await expect(page.getByTestId("shelf-row").filter({ hasText: "uv: a fast Python" })).toBeVisible();
+});
+
+test("13 · A reel that names five films keeps its note and five independently tickable entries", async ({ page }) => {
+  await open(page, "/search?q=thrillers");
+  await page.getByRole("region", { name: "Search results" }).getByRole("link").first().click();
+  await expect(page.getByRole("group", { name: "Shelf" })).toContainText("Watch");
+  const boxes = page.getByRole("checkbox", { name: /Mark as done/ });
+  await expect(boxes).toHaveCount(5);
+  await boxes.first().click();
+  await expect(page.getByText("1 of 5 done")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("1 of 5 done")).toBeVisible(); // saved by the backend
+});
+
+test("14 · An old unfinished intention shows in Up next as waiting, and is not repeated under Worth revisiting", async ({ page }) => {
+  await open(page);
+  const up = page.getByRole("region", { name: "Up next" });
+  await expect(up).toContainText("ripgrep");
+  await expect(up).toContainText(/Waiting \d+ weeks?/);
+  await expect(page.getByRole("region", { name: "Worth revisiting" }).filter({ hasText: "ripgrep" })).toHaveCount(0);
+});
+
+test("15 · A custom shelf can be made, filled by hand, and deleted without deleting notes", async ({ page }) => {
+  await open(page, "/shelves");
+  await page.getByLabel("Shelf name").fill("Recipes to cook");
+  await page.getByRole("button", { name: "Add shelf" }).click();
+  await open(page, "/shelf/other");
+  const row = page.getByTestId("shelf-row").first();
+  await row.getByRole("button", { name: "Move to another shelf" }).click();
+  await page.getByRole("menuitem", { name: "Recipes to cook" }).click();
+  await page
+    .getByRole("link", { name: /Recipes to cook/ })
+    .first()
+    .click();
+  await expect(page.getByTestId("shelf-row")).toHaveCount(1);
+  await page.getByRole("button", { name: "Delete shelf" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete shelf" }).click();
+  await expect(page).toHaveURL(/#\/shelves/);
+});
+
+test("16 · State kept in this browser by older versions is imported once, then the old key is gone", async ({ page, request }) => {
+  const headers = { "X-Token": "e2e-token-0123456789" };
+  const lib = await (await request.get("/api/library?shelf=try&limit=100", { headers })).json();
+  const uv = lib.items.find((i: { title: string }) => i.title.includes("uv: a fast Python"));
+  await page.addInitScript((id: string) => {
+    if (sessionStorage.getItem("seeded")) return;
+    sessionStorage.setItem("seeded", "1");
+    localStorage.setItem(
+      "pith.mind.v1",
+      JSON.stringify({ notes: { [id]: { shelf: "reference", done: new Date().toISOString() } }, entries: {}, opened: [id], shelves: [], hidden: ["play"], collapsed: false }),
+    );
+  }, uv.id);
+  await open(page);
+  await expect.poll(async () => (await (await request.get(`/api/items/${uv.id}`, { headers })).json()).shelf).toBe("reference");
+  const d = await (await request.get(`/api/items/${uv.id}`, { headers })).json();
+  expect(d.state.done_at).toBeTruthy();
+  expect(await page.evaluate(() => localStorage.getItem("pith.mind.v1"))).toBeNull();
+  // restore so later journeys see the seeded placement
+  await request.patch(`/api/items/${uv.id}`, { headers, data: { shelf: null, done: false } });
+});
+
+test("17 · Shelves are workspaces: Watch lists each film to pick from, Reference has no to-do state, the sidebar lists only shelves with notes", async ({ page }) => {
+  await open(page, "/shelf/watch");
+  // The five films in one reel are five separate cards (not a checklist buried in one row), each tickable.
+  await expect(page.getByTestId("shelf-row").filter({ hasText: "Zodiac (2007)" })).toBeVisible();
+  await page.getByRole("button", { name: /Pick something to watch/ }).click();
+  await expect(page.getByText("Your pick")).toBeVisible();
+  await page.getByRole("button", { name: "Another", exact: true }).click();
+  await expect(page.getByText("Your pick")).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Mark watched: Zodiac (2007)" }).click();
+  await expect(page.getByTestId("shelf-row").filter({ hasText: "Zodiac (2007)" })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Watched/ }).click();
+  await expect(page.getByText("Zodiac (2007)")).toBeVisible();
+  await page.getByRole("button", { name: "Put back: Zodiac (2007): David Fincher's procedural about the Zodiac killer" }).click();
+  // Reference is knowledge to keep: nothing to complete.
+  await open(page, "/shelf/reference");
+  await expect(page.getByRole("button", { name: /^Mark as/ })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Topics in Reference" })).toBeVisible();
+  // Empty shelves (Read, Play) are not in the sidebar; they are one click away on the shelves page.
+  const side = page.getByRole("navigation", { name: "Shelves" });
+  await expect(side.getByRole("link", { name: /^Watch/ })).toBeVisible();
+  await expect(side.getByRole("link", { name: /^Play/ })).toHaveCount(0);
+  await open(page, "/shelves");
+  await expect(page.getByRole("list", { name: "Shelves" }).getByRole("link", { name: "Play" })).toBeVisible();
 });

@@ -226,6 +226,8 @@ class TelegramChannel:
         if not isinstance(text, str) or not text.strip():
             return 0
         urls = self._urls(msg, text)
+        if not urls and self._note_on_reply(msg, chat, text):
+            return 1
         if len(urls) == 1 and text.strip() == urls[0]:
             self.inbox.submit(adapter=NAME, text=urls[0], external_id=ext)
             return 1
@@ -236,6 +238,19 @@ class TelegramChannel:
             return len(urls)
         self.inbox.submit(adapter=NAME, text=text, external_id=ext)
         return 1
+
+    def _note_on_reply(self, msg: dict, chat, text: str) -> bool:
+        """A plain-text reply to a message already saved adds your words to that item (what to
+        keep, why) instead of becoming a new item. False when it replies to nothing we saved."""
+        mid = (msg.get("reply_to_message") or {}).get("message_id")
+        if mid is None:
+            return False
+        for ext in (f"{chat}:{mid}", f"{chat}:{mid}:0"):
+            if iid := self.inbox.find_by_external(NAME, ext):
+                self.inbox.add_note(iid, text)
+                self.inbox.retry(iid)
+                return True
+        return False
 
     @staticmethod
     def _urls(msg: dict, text: str) -> list[str]:

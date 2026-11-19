@@ -246,3 +246,17 @@ def test_inbox_clarify_and_retry_over_http(client, svc):
     svc.inbox.set_status(out["id"], "failed", "boom")
     assert client.req("POST", f"/api/inbox/{out['id']}/retry", {})[0] == 200
     assert client.req("POST", "/api/inbox/nope/retry", {})[0] == 404
+
+
+def test_shelves_routes_over_http(client):
+    st, out, _ = client.req("GET", "/api/shelves")
+    assert st == 200 and out["shelves"][0]["id"] == "watch"
+    st, made, _ = client.req("POST", "/api/shelves", {"name": "Recipes", "blurb": "to cook"})
+    assert st == 200 and made["id"] == "recipes"
+    assert client.req("POST", "/api/shelves", {"name": "Recipes"})[0] == 400  # duplicate
+    assert client.req("PATCH", "/api/shelves/recipes", {"blurb": "x"})[1]["blurb"] == "x"
+    assert client.req("PATCH", "/api/shelves/nope", {"name": "x"})[0] == 404
+    assert client.req("DELETE", "/api/shelves/other")[0] == 400
+    assert client.req("DELETE", "/api/shelves/recipes")[0] == 200
+    assert client.req("PUT", "/api/shelves")[0] == 405
+

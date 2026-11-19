@@ -36,6 +36,7 @@ from pith.store.db import connect
 
 MAX_JSON = 1_000_000
 _ID = r"([0-9A-Za-z]{1,64})"
+_SHELF = r"([0-9a-z-]{1,64})"
 _LOOP_NAMES = {"127.0.0.1", "localhost", "::1"}
 
 
@@ -280,6 +281,15 @@ def _reprocess(h, svc, x, _q):
     return api.item_reprocess(svc, x[1])
 
 
+def _viewed(h, svc, x, _q):
+    h.json_body()  # drain the request body so the connection stays in sync
+    return api.item_viewed(svc, x[1])
+
+
+def _note(h, svc, x, _q):
+    return api.item_note(svc, x[1], h.json_body())
+
+
 def _config_save(h, svc, _x, _q):
     new = settings.save(svc.cfg, h.json_body())
     h.server.apply_config(new)
@@ -307,10 +317,20 @@ _ROUTES = (
     ("/api/library", {"GET": lambda h, s, x, q: api.library(
         s, q, int(q["limit"]) if q.get("limit", "").isdigit() else 40)}, False),
     ("/api/ask", {"POST": _ask}, False),
+    ("/api/shelves", {"GET": lambda h, s, x, q: api.shelves(s),
+                      "POST": lambda h, s, x, q: api.shelf_create(s, h.json_body())}, True),
+    (rf"/api/shelves/{_SHELF}", {"PATCH": lambda h, s, x, q: api.shelf_update(s, x[1], h.json_body()),
+                                 "DELETE": lambda h, s, x, q: api.shelf_delete(s, x[1])}, True),
     (rf"/api/items/{_ID}", {"GET": lambda h, s, x, q: api.item_detail(s, x[1]),
                             "PATCH": lambda h, s, x, q: api.item_update(s, x[1], h.json_body()),
                             "DELETE": lambda h, s, x, q: api.item_delete(s, x[1])}, True),
     (rf"/api/items/{_ID}/reprocess", {"POST": _reprocess}, True),
+    (rf"/api/items/{_ID}/note", {"POST": _note}, True),
+    (rf"/api/items/{_ID}/viewed", {"POST": _viewed}, True),
+    ("/api/resurface", {"GET": lambda h, s, x, q: api.resurface(s)}, False),
+    ("/api/entries", {"GET": lambda h, s, x, q: api.entries(s, q)}, False),
+    (rf"/api/entries/{_ID}", {"PATCH": lambda h, s, x, q: api.entry_update(s, x[1], h.json_body())},
+     True),
     ("/api/(topics|duplicates|digest|privacy|state)",
      {"GET": lambda h, s, x, q: getattr(api, x[1])(s)}, False),
     ("/api/blob/([^/]+)", {"GET": _blob}, True),

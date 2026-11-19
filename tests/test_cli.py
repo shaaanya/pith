@@ -87,3 +87,26 @@ def test_cli_export_backup_verify_restore_digest(tmp_path):
     bad = tmp_path / "bad.tar.gz"
     bad.write_bytes(b"not a tar")
     assert run(home, "verify", str(bad)).returncode != 0
+
+
+def test_cli_note_appends_context_and_requeues(tmp_path):
+    """`pith note ID TEXT...` adds the words as the saving reason and queues a re-run."""
+    home = tmp_path / "h"
+    assert run(home, "init").returncode == 0
+    iid = run(home, "submit", QUOKKA).stdout.split()[-1]
+    assert run(home, "worker", "--once").returncode == 0
+    r = run(home, "note", iid, "only", "the", "habitat")
+    assert r.returncode == 0 and "requeued" in r.stdout
+    assert "only the habitat" in run(home, "show", iid).stdout
+    assert run(home, "note", "nope", "x").returncode != 0
+
+
+def test_cli_place_places_notes_by_rules_without_a_model(tmp_path):
+    """`pith place` fills in a shelf for notes that have none (no model configured -> rules)."""
+    home = tmp_path / "h"
+    assert run(home, "init").returncode == 0
+    iid = run(home, "submit", QUOKKA, "--context", "a film to watch").stdout.split()[-1]
+    assert run(home, "worker", "--once").returncode == 0
+    r = run(home, "place")
+    assert r.returncode == 0 and "placed" in r.stdout
+    assert run(home, "place", iid).returncode == 0

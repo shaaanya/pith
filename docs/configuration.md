@@ -151,7 +151,7 @@ is honoured (a LAN server you trust), and `pith doctor` warns about it.
 | `PITH_HTTP_TOKEN` | Overrides `[http] token` |
 | `PITH_YT_DLP`, `PITH_FFMPEG` | Override `[media]` executables |
 | the variable named by a backend's `api_key_env` | API key for that backend |
-| `PITH_LIVE_CHAT_MODEL`, `PITH_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only, see testing.md |
+| `PITH_LIVE_CHAT_MODEL`, `PITH_LIVE_EMBED_MODEL`, `OLLAMA_HOST` | Tests only |
 
 ## Command-line flags that are not in the file
 

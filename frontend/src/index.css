@@ -1,23 +1,25 @@
 @import "tailwindcss";
 
 /* ───────── Design tokens ─────────
-   Warm paper + ink with one rust accent (carried over from the previous Pith design).
-   Light by default, dark under prefers-color-scheme, either forced with data-theme. */
+   Editorial reading room: warm graphite + paper, one amber/rust accent, serif for knowledge,
+   sans for chrome. Light and dark are both first-class (system by default, forced with data-theme).
+   System font stacks only: the CSP forbids web fonts. */
 :root {
   --paper: oklch(98% 0.006 85);
-  --panel: oklch(95.8% 0.009 85);
+  --side: oklch(95.6% 0.009 85);
+  --panel: oklch(96% 0.008 85);
   --raise: oklch(100% 0 0);
-  --ink: oklch(24% 0.02 60);
+  --ink: oklch(23% 0.02 60);
   --soft: oklch(40% 0.02 65);
-  --mut: oklch(48% 0.018 70);
-  --line: oklch(88% 0.012 80);
-  --hair: oklch(92% 0.01 80);
-  --acc: oklch(50% 0.135 42);
+  --mut: oklch(47% 0.018 70);
+  --line: oklch(87% 0.012 80);
+  --hair: oklch(91.5% 0.01 80);
+  --acc: oklch(49% 0.14 45);
   --acc-ink: oklch(98% 0.01 70);
-  --acc-tint: oklch(93% 0.04 60);
-  --ok: oklch(44% 0.11 150);
+  --acc-tint: oklch(93% 0.04 62);
+  --ok: oklch(43% 0.11 150);
   --ok-tint: oklch(94% 0.04 150);
-  --warn: oklch(48% 0.11 70);
+  --warn: oklch(47% 0.11 70);
   --warn-tint: oklch(94% 0.045 80);
   --bad: oklch(48% 0.16 28);
   --bad-tint: oklch(94% 0.035 25);
@@ -26,51 +28,54 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: oklch(19% 0.012 70);
-    --panel: oklch(22.5% 0.012 70);
-    --raise: oklch(26% 0.012 70);
-    --ink: oklch(93% 0.012 85);
-    --soft: oklch(80% 0.014 82);
-    --mut: oklch(70% 0.016 80);
-    --line: oklch(33% 0.012 70);
-    --hair: oklch(28% 0.012 70);
-    --acc: oklch(75% 0.12 55);
-    --acc-ink: oklch(20% 0.02 60);
-    --acc-tint: oklch(30% 0.05 55);
-    --ok: oklch(75% 0.12 150);
-    --ok-tint: oklch(28% 0.04 150);
-    --warn: oklch(78% 0.11 80);
-    --warn-tint: oklch(28% 0.04 80);
-    --bad: oklch(74% 0.14 28);
-    --bad-tint: oklch(27% 0.05 25);
-    --hit: oklch(40% 0.08 90);
-    color-scheme: dark;
+  --paper: oklch(17.5% 0.010 72);
+  --side: oklch(14.5% 0.010 72);
+  --panel: oklch(21% 0.011 72);
+  --raise: oklch(24% 0.011 72);
+  --ink: oklch(94% 0.010 85);
+  --soft: oklch(81% 0.012 82);
+  --mut: oklch(69% 0.014 80);
+  --line: oklch(32% 0.012 72);
+  --hair: oklch(26.5% 0.011 72);
+  --acc: oklch(77% 0.125 68);
+  --acc-ink: oklch(19% 0.02 60);
+  --acc-tint: oklch(29% 0.045 65);
+  --ok: oklch(76% 0.12 150);
+  --ok-tint: oklch(27% 0.04 150);
+  --warn: oklch(79% 0.11 85);
+  --warn-tint: oklch(28% 0.04 85);
+  --bad: oklch(75% 0.14 28);
+  --bad-tint: oklch(27% 0.05 25);
+  --hit: oklch(42% 0.08 90);
+  color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: oklch(19% 0.012 70);
-  --panel: oklch(22.5% 0.012 70);
-  --raise: oklch(26% 0.012 70);
-  --ink: oklch(93% 0.012 85);
-  --soft: oklch(80% 0.014 82);
-  --mut: oklch(70% 0.016 80);
-  --line: oklch(33% 0.012 70);
-  --hair: oklch(28% 0.012 70);
-  --acc: oklch(75% 0.12 55);
-  --acc-ink: oklch(20% 0.02 60);
-  --acc-tint: oklch(30% 0.05 55);
-  --ok: oklch(75% 0.12 150);
-  --ok-tint: oklch(28% 0.04 150);
-  --warn: oklch(78% 0.11 80);
-  --warn-tint: oklch(28% 0.04 80);
-  --bad: oklch(74% 0.14 28);
+  --paper: oklch(17.5% 0.010 72);
+  --side: oklch(14.5% 0.010 72);
+  --panel: oklch(21% 0.011 72);
+  --raise: oklch(24% 0.011 72);
+  --ink: oklch(94% 0.010 85);
+  --soft: oklch(81% 0.012 82);
+  --mut: oklch(69% 0.014 80);
+  --line: oklch(32% 0.012 72);
+  --hair: oklch(26.5% 0.011 72);
+  --acc: oklch(77% 0.125 68);
+  --acc-ink: oklch(19% 0.02 60);
+  --acc-tint: oklch(29% 0.045 65);
+  --ok: oklch(76% 0.12 150);
+  --ok-tint: oklch(27% 0.04 150);
+  --warn: oklch(79% 0.11 85);
+  --warn-tint: oklch(28% 0.04 85);
+  --bad: oklch(75% 0.14 28);
   --bad-tint: oklch(27% 0.05 25);
-  --hit: oklch(40% 0.08 90);
+  --hit: oklch(42% 0.08 90);
   color-scheme: dark;
 }
 
 @theme inline {
   --color-paper: var(--paper);
+  --color-side: var(--side);
   --color-panel: var(--panel);
   --color-raise: var(--raise);
   --color-ink: var(--ink);

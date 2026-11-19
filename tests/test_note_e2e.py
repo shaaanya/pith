@@ -62,10 +62,12 @@ def test_note_pipeline_end_to_end(svc):
     assert data["dropped"] == {"unsupported_number": 1}
     assert "triple revenue" not in note["body"] and "12 March" in note["body"]
     assert note["body"].startswith("**Why saved:** saved for the pgbouncer tool")
-    # a brief named thing is findable even though it is not the headline
-    assert any(h.kind in ("unit", "note", "mentions") for h in search(svc, "patroni"))
+    # the reason scopes the note: what it does not point at (patroni) is out of the note, though the
+    # source text stays searchable
+    assert data["scope"] == "scoped"
+    assert not any(h.kind in ("unit", "note", "mentions") for h in search(svc, "patroni"))
     names = {r[0] for r in svc.conn.execute("SELECT name FROM entities")}
-    assert "patroni" in names and "invented inc" not in names
+    assert "pgbouncer" in names and "patroni" not in names and "invented inc" not in names
     # units point at the supporting segment; the digest lists notes, not index rows
     unit = svc.conn.execute("SELECT segment_refs FROM knowledge_items WHERE kind='unit'").fetchone()
     assert json.loads(unit["segment_refs"])
@@ -83,7 +85,7 @@ def test_reprocess_replaces_the_note_without_duplicates(svc):
     runner.process(svc, iid)
     runner.process(svc, iid)
     sid = svc.inbox.get(iid)["source_id"]
-    assert kinds(svc, sid).count("note") == 1 and fake.calls == 2
+    assert kinds(svc, sid).count("note") == 1 and fake.calls == 4  # extraction + placement, twice
     assert svc.conn.execute("SELECT count(*) FROM knowledge_versions").fetchone()[0] >= 4
 
 

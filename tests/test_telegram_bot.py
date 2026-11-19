@@ -166,3 +166,36 @@ def test_token_loading(tmp_path):
     (cfg.home / "telegram_token").write_text("  111:file-token\n")
     assert load_token(cfg, env={}) == "111:file-token"
     assert load_token(cfg, env={"PITH_TELEGRAM_TOKEN": "222:env-token"}) == "222:env-token"
+
+
+def test_reply_to_a_saved_message_adds_a_note_not_a_new_item(svc, fake):
+    mid = fake.message(CHAT, "https://example.com/reel")
+    channel(svc, fake).poll()
+    fake.message(CHAT, "just the music", reply_to_message={"message_id": mid})
+    assert channel(svc, fake).poll() == 1
+    (r,) = rows(svc)
+    assert r["user_note"] == "just the music" and r["status"] == "pending"
+
+
+def test_reply_to_an_unknown_message_is_saved_as_a_normal_note(svc, fake):
+    fake.message(CHAT, "remember this", reply_to_message={"message_id": 999})
+    assert channel(svc, fake).poll() == 1
+    (r,) = rows(svc)
+    assert r["payload_text"] == "remember this" and r["kind_hint"] != "url"
+
+
+def test_reply_with_a_url_is_a_new_save(svc, fake):
+    mid = fake.message(CHAT, "https://example.com/a")
+    channel(svc, fake).poll()
+    fake.message(CHAT, "https://example.com/b", reply_to_message={"message_id": mid})
+    channel(svc, fake).poll()
+    assert len(rows(svc)) == 2
+
+
+def test_reply_to_text_with_url_and_context_finds_the_item(svc, fake):
+    mid = fake.message(CHAT, "watch https://example.com/c later")
+    channel(svc, fake).poll()
+    fake.message(CHAT, "the soundtrack", reply_to_message={"message_id": mid})
+    channel(svc, fake).poll()
+    (r,) = rows(svc)
+    assert r["user_note"] == "the soundtrack"

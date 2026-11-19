@@ -39,7 +39,8 @@ export const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocal
 export function cleanTitle(t: string | null | undefined, fallback?: string | null): string {
   const s = (t ?? "").trim();
   // Link notes without a model arrive titled just "Summary": show what they are about instead.
-  if ((!s || /^summary$/i.test(s)) && fallback?.trim()) return cleanTitle(fallback.trim().slice(0, 90));
+  if ((!s || /^summary$/i.test(s) || /^(video|photo|reel|post|clip)s? by\b/i.test(s)) && fallback?.trim())
+    return cleanTitle(fallback.trim().slice(0, 90));
   if (!s) return "Untitled";
   if (s.startsWith("/") && s.includes("/")) return s.split("/").filter(Boolean).pop() ?? s;
   // Derived titles are the first ~80 characters of the text, cut mid-word: end them at a sentence break.

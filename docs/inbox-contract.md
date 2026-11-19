@@ -56,6 +56,13 @@ events.
   original reason is kept. The submit-time `--context` is never treated as pasted content.
 - CLI: `pith clarify <inbox id> <text...>` does the same as the dashboard box.
 
+## Adding a note later
+
+Your own words can be added to a saved item at any time (what to keep, why you saved it); they are stored as `user_note` (always your reason, even on adapters whose `user_context` is machine-written) and become its
+reason, the item is re-queued, and the note is rebuilt scoped to it (edits you made are kept). `pith note
+<inbox id> <text...>`, `POST /api/items/<id>/note` with `{"text": "..."}`, or, in Telegram, a plain-text reply
+to the message you sent.
+
 ## Duplicates
 
 - Same canonical URL: URLs are canonicalised (scheme forced to `https`, `www.`/`m.` prefix removed, host
@@ -72,8 +79,7 @@ events.
   `SELECT inbox_id, url, added_at FROM provenance_log WHERE source_id = ? ORDER BY id`.
 - Near-duplicate knowledge items (similar but not identical text) are linked in `relations` with type
   `duplicate` or `related`; nothing is merged or deleted. Thresholds: cosine 0.92 / 0.75 with embeddings,
-  shingle Jaccard 0.8 without (the cosine thresholds are UNVERIFIED against real models, see
-  limitations).
+  shingle Jaccard 0.8 without (the cosine thresholds are UNVERIFIED against real models).
 - Plain notes are never deduplicated.
 
 ## Adapters
@@ -94,6 +100,16 @@ and unchanged in size across two polls. After `submit()` returns the file is mov
 `.url`, `.webloc`, and `.txt`/`.md` files whose every non-empty line is a URL become one URL submission per
 URL. It does not recurse into subfolders. `watch --once` polls twice; files modified in the last 2 seconds
 are skipped, so run it again if a file was just written.
+
+### Telegram bot (channel)
+
+A bot you create yourself with @BotFather; Pith long-polls it, so nothing is exposed to the internet. Set up with
+`pith setup` (see [configuration.md](configuration.md#channelsname)). Chats join by sending a one-time pairing
+code; messages from other chats are ignored. Links, notes, documents, photos, voice, audio and video become one
+submission each (`adapter = telegram`, external id `<chat>:<message>`), so a redelivered update is a no-op. The
+bot never replies to content, only to the pairing handshake. A plain-text reply (no link) to a message you
+already sent adds that text as a note on the saved item instead of creating a new one. Files over the Telegram bot download limit (20 MB)
+or `max_fetch_bytes` are skipped.
 
 ### Telegram Desktop export
 
@@ -121,8 +137,7 @@ required and bodies over `max_fetch_bytes` get 413. Other methods get 405.
 Authentication is always required: `Authorization: Bearer <token>` or `X-Token: <token>`. The token is
 `[http] token` / `PITH_HTTP_TOKEN` if set, otherwise it is generated into `<home>/http_token`
 (mode 0600) the first time the server (or dashboard) starts. A non-loopback `bind` is refused unless a token
-is set explicitly. There is no TLS. See deployment.md for the security model and
-recipes for clients.
+is set explicitly. There is no TLS, so keep it on loopback or behind your own tunnel.
 
 ### Dashboard
 

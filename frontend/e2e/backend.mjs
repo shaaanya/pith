@@ -3,7 +3,7 @@
 //  - heuristic backend only: deterministic, no model needed
 //  - the watch folder lives inside the temp home, so nothing outside it is read or created
 //  - a .mp4 with no transcriber configured lands in "needs you" (a real attention state)
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -80,5 +80,9 @@ for (let i = 0; i < 200; i++) {
   if ((s.counts.pending ?? 0) + (s.counts.processing ?? 0) + (s.counts.new ?? 0) === 0) break;
   await new Promise((r) => setTimeout(r, 500));
 }
+// Realistic fixtures the heuristic backend cannot produce (typed units, source hosts, ages, a failed reel).
+// E2E_VOLUME=3000 adds that many bulk notes for volume checks.
+const seeded = spawnSync("uv", ["run", "python", "frontend/e2e/seed.py", home, process.env.E2E_VOLUME ?? "0"], { cwd: repo, stdio: "inherit" });
+if (seeded.status !== 0) throw new Error("seed.py failed");
 console.log(`e2e backend ready on ${base} (home ${home})`);
 await new Promise(() => {});

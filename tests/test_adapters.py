@@ -475,7 +475,7 @@ def test_migrate_v1_db_with_rows_keeps_data(tmp_path):
     conn.execute("INSERT INTO inbox_items(id,adapter,submitted_at,status,payload_text,"
                  "canonical_url,updated_at)"
                  " VALUES ('a','cli','t','pending','hi','http://x','t')")
-    assert db.migrate(conn) == 4
+    assert db.migrate(conn) == 7
     r = conn.execute("SELECT * FROM inbox_items WHERE id='a'").fetchone()
     assert r["payload_text"] == "hi" and r["external_id"] is None
     conn.execute("INSERT INTO external_ids(adapter, external_id, inbox_id) VALUES ('x','1','a')")

@@ -106,6 +106,39 @@ def _reprocess(a):
     print(f"requeued {len(ids)} item(s); run `pith worker` to process them")
 
 
+@_in_use
+def _note(a):
+    """Add your own words to a saved item (why you kept it, what to keep) and re-run it."""
+    s = _services(a)
+    s.inbox.add_note(a.id, " ".join(a.text))
+    s.inbox.retry(a.id)
+    print(f"requeued {a.id}; run `pith worker` to process it")
+
+
+@_in_use
+def _place(a):
+    """(Re)place notes on shelves with the model, then rules. Skips notes you moved yourself.
+
+    Default: notes with no shelf yet or only a rule/default one; or name inbox ids."""
+    from pith.pipeline import runner
+    s = _services(a)
+    ids = a.ids or [r["id"] for r in s.conn.execute(
+        "SELECT id FROM inbox_items WHERE status='processed' AND source_id IS NOT NULL"
+        " AND duplicate_of IS NULL ORDER BY submitted_at")]
+    n = 0
+    for iid in ids:
+        row = s.inbox.get(iid)
+        items = [r["id"] for r in s.conn.execute(
+            "SELECT id FROM knowledge_items WHERE source_id=? AND deleted_at IS NULL"
+            " AND (? OR placement_by IS NULL OR placement_by IN ('rule','default')"
+            " OR shelf_id='other')",
+            (row["source_id"], bool(a.ids)))] if row["source_id"] else []
+        if items:
+            with runner.audited(s, iid):
+                n += runner.place_items(s, iid, items)
+    print(f"placed {n} note(s)")
+
+
 def _inbox(a):
     for r in _services(a).inbox.list(a.status):
         what = inbox_label(r, 50)
@@ -226,6 +259,8 @@ def _show(a):
         print(f"error: {r['error']}")
     if r["user_context"]:
         print(f"context: {r['user_context']}")
+    if r["user_note"]:
+        print(f"note: {r['user_note']}")
     conn = cast(sqlite3.Connection, vars(s)["conn"])  # Services.conn is annotated `object`
     for k in conn.execute("SELECT id FROM knowledge_items WHERE source_id=? AND deleted_at IS NULL",
                           (r["source_id"],)):
@@ -472,6 +507,8 @@ COMMANDS = {
     "retry": (_retry, [_arg("id")]),
     "reprocess": (_reprocess, [_arg("ids", nargs="*", help="inbox ids (default: every processed item)"),
                                _arg("--why", help="a reason/focus to add before re-running")]),
+    "note": (_note, [_arg("id"), _arg("text", nargs="+")]),
+    "place": (_place, [_arg("ids", nargs="*", help="inbox ids (default: unplaced and rule-placed)")]),
     "clarify": (_clarify, [_arg("id"), _arg("text", nargs="+")]),
     "worker": (_worker, [_ONCE]),
     "search": (_search, [_arg("query", nargs="+"), _arg("--limit", type=int, default=10),

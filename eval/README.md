@@ -1,7 +1,7 @@
 # Evaluation harness
 
-Reproducible measurement of retrieval, dedupe and extraction against REAL local models. Methodology,
-results and verdicts: [`docs/evaluation.md`](../docs/evaluation.md). Not collected by pytest
+Reproducible measurement of retrieval, dedupe and extraction against REAL local models. Results are
+written next to the harness. Not collected by pytest
 (`tests/test_eval_metrics.py` only tests the helpers and the dataset's sanity).
 
     uv run python eval/run_eval.py            # needs Ollama + qwen2.5:0.5b + nomic-embed-text already pulled
@@ -32,3 +32,12 @@ places, organisations and products are fictional.
   release notes, e-mail, lecture notes, trip report, policy memo, FAQ, product review, incident report),
   each with 5-7 facts that must appear (names, numbers, dates; each is a verbatim phrase of the
   document, asserted by a test).
+
+## Shelf placement (`eval/notes/run_placement_eval.py`)
+
+`uv run python eval/notes/run_placement_eval.py --model gemma4:e4b` scores shelf placement on the 36 labelled
+notes in `eval/notes/placement_cases.json` (every shelf, no-reason notes, reason vs site disagreements, and
+cases where the content type would mislead). Strategies: rules only, model only, model with the rule's
+suggestion, and that with a rule overriding the model's "other". On gemma4:e4b: rules 81%, all model
+strategies 94%, so `place.decide` uses the model with rules as the fallback. Results are in
+`eval/notes/results/`.

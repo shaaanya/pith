@@ -37,6 +37,11 @@ export const InboxDetail = InboxRow.extend({
 });
 export type InboxDetail = z.infer<typeof InboxDetail>;
 
+const PlacementBy = z.enum(["you", "model", "reason", "site", "default", "none"]).catch("none");
+export const ItemPlacement = z.object({ by: PlacementBy, why: z.string().default("") });
+export const ItemState = z.object({ done_at: optStr, snooze_until: optStr, hidden: z.boolean().default(false) });
+const NO_STATE = { done_at: null, snooze_until: null, hidden: false };
+
 export const LibraryItem = z.object({
   id: str,
   title: str,
@@ -52,6 +57,10 @@ export const LibraryItem = z.object({
   platform: optStr,
   type: optStr,
   topics: z.array(str).default([]),
+  shelf: z.string().default("other"),
+  placement: ItemPlacement.default({ by: "none", why: "" }),
+  state: ItemState.default(NO_STATE),
+  last_viewed_at: optStr,
 });
 export type LibraryItem = z.infer<typeof LibraryItem>;
 
@@ -95,10 +104,18 @@ const NoteUnit = z.object({
 });
 export type NoteUnit = z.infer<typeof NoteUnit>;
 
+export const Entry = z.object({ id: str, text: str, done_at: optStr, position: z.number().optional() });
+export type Entry = z.infer<typeof Entry>;
+
 export const ItemDetail = z.object({
   id: str,
   kind: str,
   title: str,
+  shelf: z.string().default("other"),
+  placement: ItemPlacement.default({ by: "none", why: "" }),
+  state: ItemState.default(NO_STATE),
+  last_viewed_at: optStr,
+  entries: z.array(Entry).default([]),
   body: z.string().default(""),
   provenance: optStr,
   confidence: z.number().nullish(),
@@ -223,3 +240,26 @@ export type Config = z.infer<typeof Config>;
 
 export const Providers = z.object({ providers: z.array(z.unknown()) });
 export const Models = z.object({ models: z.array(str) });
+
+export const Shelf = z.object({
+  id: str,
+  name: str,
+  blurb: z.string().default(""),
+  todo: z.boolean().default(false),
+  done_label: optStr,
+  builtin: z.boolean().default(false),
+  position: z.number().default(0),
+  count: z.number().default(0),
+  todo_count: z.number().default(0),
+});
+export type Shelf = z.infer<typeof Shelf>;
+export const Shelves = z.object({ shelves: z.array(Shelf) });
+
+export const Resurfaced = z.object({
+  items: z.array(z.object({ id: str, title: str, why: str, kind: str, shelf: str, score: z.number() }).loose()),
+});
+export type Resurfaced = z.infer<typeof Resurfaced>;
+
+export const EntryRows = z.object({
+  entries: z.array(Entry.extend({ note: z.object({ id: str, title: str, shelf: str }) })),
+});

@@ -2,18 +2,18 @@
 
 Delivery is file + stdout only (<home>/digests/YYYY-MM-DD.md). At most one per interval;
 `--dry-run` writes nothing. Sections: new items since the last digest (grouped by topic, capped),
-inbox items failed/needs_clarification, resurfaced older items (seeded RNG, at most
-RESURFACE_MAX), duplicate relations touching a new item
+inbox items failed/needs_clarification, older notes worth revisiting (each with the reason it is
+offered, see resurface.py; at most RESURFACE_MAX), duplicate relations touching a new item
 (relations carry no timestamp, so "found" means "involves an item created since the cutoff")."""
 
 from __future__ import annotations
 
 import datetime as dt
-import random
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from pith import resurface
 from pith.domain.display import inbox_label
 
 RESURFACE_MAX = 5
@@ -88,17 +88,7 @@ def data(
             "SELECT * FROM inbox_items WHERE status IN ('failed','needs_clarification') ORDER BY id"
         )
     ][:cap]
-    old = [
-        _item(r)
-        for r in c.execute(
-            "SELECT id,title,kind,provenance,created_at FROM knowledge_items"
-            " WHERE deleted_at IS NULL AND created_at<? AND kind NOT IN ('unit','mentions')"
-            " ORDER BY id",
-            (cutoff,),
-        )
-    ]
-    rng = random.Random(str(seed if seed is not None else now.date()))
-    resurfaced = sorted(rng.sample(old, min(RESURFACE_MAX, cap, len(old))), key=lambda i: i["id"])
+    resurfaced = resurface.resurface(c, now, min(RESURFACE_MAX, cap))
     dups = [
         {
             "score": r["score"],
@@ -164,7 +154,8 @@ def render(d: dict) -> str:
     ] or ["Nothing is stuck."]
     out += ["", "## Worth revisiting"]
     out += [
-        f"- {_line(i['title'])} ({i['created_at'][:10]}) `{i['id']}`" for i in d["resurfaced"]
+        f"- {_line(i['title'])} ({i['created_at'][:10]}) `{i['id']}`: {_line(i['why'])}"
+        for i in d["resurfaced"]
     ] or ["Nothing older to resurface yet."]
     out += ["", "## Possible duplicates"]
     out += [

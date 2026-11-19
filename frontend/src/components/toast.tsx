@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type Toast = { id: number; text: string; bad?: boolean };
@@ -15,6 +15,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts?.bad ? 7000 : 3800);
   }, []);
   const value = useMemo(() => push, [push]);
+  // non-React code (the note actions in lib/shelves) reports failures with a window event
+  useEffect(() => {
+    const on = (e: Event) => push(String((e as CustomEvent).detail || "That did not save."), { bad: true });
+    window.addEventListener("pith:error", on);
+    return () => window.removeEventListener("pith:error", on);
+  }, [push]);
   return (
     <Ctx.Provider value={value}>
       {children}

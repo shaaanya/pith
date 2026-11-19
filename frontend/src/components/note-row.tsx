@@ -48,7 +48,7 @@ export function NoteRow({
       )}
     >
       {onSelect && (
-        <div className={cn("pt-0.5", !selecting && "md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100")}>
+        <div className={cn("pt-0.5 pointer-coarse:-m-2.5 pointer-coarse:p-2.5", !selecting && "md:absolute md:top-3.5 md:left-1 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100")}>
           <Checkbox checked={!!selected} onCheckedChange={(c) => onSelect(item.id, c === true)} aria-label={`Select ${title}`} />
         </div>
       )}

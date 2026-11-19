@@ -139,6 +139,9 @@ def save_items(  # pylint: disable=too-many-locals  # one transaction, one pass
             " AND deleted_at IS NULL",
             (source_id,),
         ).fetchall()
+        # a shelf the user chose belongs to the note, not to the row that is being replaced
+        carry = next((r for r in old if r["placement_by"] == "user"
+                      and r["kind"] in ("note", "summary")), None)
         for r in old:
             _snapshot(conn, r, "reprocess", now)
             conn.execute(
@@ -174,6 +177,15 @@ def save_items(  # pylint: disable=too-many-locals  # one transaction, one pass
             )
             _fts_set(conn, cur.lastrowid, c.title, c.body)
             ids.append(iid)
+        if carry:
+            kinds = [c.kind for c in candidates]
+            pick = next((k for k in ("note", "summary") if k in kinds), None)
+            if pick:
+                conn.execute(
+                    "UPDATE knowledge_items SET shelf_id=?, placement_by='user', placement_why=?,"
+                    " placed_at=? WHERE id=?",
+                    (carry["shelf_id"], carry["placement_why"], carry["placed_at"],
+                     ids[kinds.index(pick)]))
     return ids
 
 

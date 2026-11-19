@@ -1,16 +1,18 @@
 """detect -> extract -> chunk -> distill -> save source/segments/items. Idempotent per inbox_id."""
+import contextlib
 import hashlib
 import importlib
 import json
 import sqlite3
 import time
+from urllib.parse import urlparse
 
 from pith.domain.models import SegmentIn
 from pith.ids import utcnow
 from pith.jobs import require_lease
 from pith.pipeline.chunk import chunk_text, chunk_timed
 from pith.pipeline.detect import detect
-from pith.pipeline import dedupe, entities, note, provenance
+from pith.pipeline import dedupe, entities, note, place, provenance
 from pith.providers import egress
 from pith.pipeline.distill import distill
 from pith.pipeline.schemas import profile_for
@@ -21,7 +23,7 @@ from pith.pipeline.extractors.base import (
     NeedsClarificationError,
 )
 from pith.retrieval import index
-from pith.store import knowledge
+from pith.store import entries as entry_store, knowledge, shelves
 from pith.store.db import transaction
 from pith.worker import Failed, NeedsClarification, Processed
 
@@ -67,9 +69,11 @@ _SYSTEM_ADAPTERS = {"fs", "telegram_export"}  # their user_context is machine-wr
 
 def intent_of(row):
     """The user's own reason for saving, or None (unknown). Adapter-written context such as
-    "from file.txt" or "Telegram message ..." is provenance, never a reason."""
+    "from file.txt" or "Telegram message ..." is provenance, never a reason; notes added later
+    (`user_note`) always are."""
     ctx = (row["user_context"] or "").strip()
-    return ctx if ctx and row["adapter"] not in _SYSTEM_ADAPTERS else None
+    ctx = ctx if row["adapter"] not in _SYSTEM_ADAPTERS else ""
+    return "\n\n".join(x for x in (ctx, ((row["user_note"] if "user_note" in row.keys() else "") or "").strip()) if x) or None
 
 
 def _limits(ex, ct):
@@ -82,10 +86,9 @@ def _limits(ex, ct):
     return out
 
 
-def process(services, inbox_id: str):
-    """Run one inbox item through the pipeline, auditing remote calls against it."""
-    s = services
-
+@contextlib.contextmanager
+def audited(s, inbox_id: str):
+    """Audit remote model calls against this inbox item while the block runs."""
     def sink(backend, nbytes):
         """Audit row per remote call, attributed to THIS inbox item (incl. embed_pending).
 
@@ -101,9 +104,104 @@ def process(services, inbox_id: str):
             egress.warn_once(f"egress audit write failed: {e}")
     tok = egress.sink.set(sink)
     try:
-        return _process(services, inbox_id)
+        yield
     finally:
         egress.sink.reset(tok)
+
+
+def process(services, inbox_id: str):
+    """Run one inbox item through the pipeline, auditing remote calls against it."""
+    with audited(services, inbox_id):
+        return _process(services, inbox_id)
+
+
+def sync_entries(s, inbox_id: str, item_ids) -> None:
+    """Each `resource` unit of a note (a film, a song, a tool it names) becomes an entry of its own
+    that can be ticked off. Never raises: a failure is logged."""
+    t0 = time.monotonic()
+    try:
+        q = ",".join("?" * len(item_ids))
+        notes = s.conn.execute(
+            f"SELECT id, source_id, data_json FROM knowledge_items WHERE id IN ({q})"
+            " AND kind='note' AND deleted_at IS NULL", list(item_ids)).fetchall()
+        n = 0
+        with transaction(s.conn):
+            require_lease(s.conn)
+            for r in notes:
+                units = json.loads(r["data_json"] or "{}").get("units", [])
+                texts = [u["text"] for u in units if u.get("type") == "resource" and u.get("text")]
+                n += len(entry_store.sync(s.conn, r["source_id"] or r["id"], r["id"], texts))
+        if n:
+            _stage(s.conn, inbox_id, "entries", t0, f"{n} entries")
+    except Exception as e:  # pylint: disable=broad-exception-caught  # entries are optional
+        try:
+            _stage(s.conn, inbox_id, "entries", t0, f"{type(e).__name__}: {e}", level="error")
+        except Exception:  # pylint: disable=broad-exception-caught  # item already saved
+            pass
+
+
+def backfill(s) -> int:
+    """Notes saved before placement existed (placement_by NULL) get a rule-based shelf and their
+    entries. No model, nothing leaves the machine; idempotent. Returns how many notes were placed."""
+    rows = s.conn.execute(
+        "SELECT k.id, k.source_id, k.body, k.data_json, src.url FROM knowledge_items k"
+        " LEFT JOIN sources src ON src.id=k.source_id"
+        " WHERE k.kind='note' AND k.deleted_at IS NULL AND k.placement_by IS NULL").fetchall()
+    for r in rows:
+        ib = s.conn.execute("SELECT * FROM inbox_items WHERE source_id=? ORDER BY submitted_at LIMIT 1",
+                            (r["source_id"],)).fetchone() if r["source_id"] else None
+        host = urlparse(r["url"]).netloc if r["url"] else None
+        shelf, by, why = place.rules(intent_of(ib) if ib else None, host, bool((r["body"] or "").strip()))
+        units = json.loads(r["data_json"] or "{}").get("units", [])
+        with transaction(s.conn):
+            shelves.set_placement(s.conn, r["id"], shelf, by, why)
+            entry_store.sync(s.conn, r["source_id"] or r["id"], r["id"],
+                             [u["text"] for u in units if u.get("type") == "resource" and u.get("text")])
+    return len(rows)
+
+
+def place_items(s, inbox_id: str, item_ids) -> int:
+    """Put the notes among `item_ids` on a shelf (model, then rules). Never raises: a failure is
+    logged and the note keeps its rule/default placement. A shelf the user chose is left alone.
+    Returns how many notes were placed."""
+    t0 = time.monotonic()
+    try:
+        q = ",".join("?" * len(item_ids))
+        rows = s.conn.execute(
+            "SELECT k.id, k.kind, k.title, k.body, k.placement_by, k.extracted_by, src.url"
+            " FROM knowledge_items k"
+            f" LEFT JOIN sources src ON src.id=k.source_id WHERE k.id IN ({q})"
+            " AND k.kind IN ('note','summary') AND k.deleted_at IS NULL", list(item_ids)).fetchall()
+        if any(r["kind"] == "note" for r in rows):
+            rows = [r for r in rows if r["kind"] == "note"]
+        rows = [r for r in rows if r["placement_by"] != "user"]
+        if not rows:
+            return 0
+        intent = intent_of(s.inbox.get(inbox_id))
+        backend = next((b for b in s.registry.chain("distill")
+                        if getattr(b, "type", "") != "heuristic"), None)
+        shelf_list = shelves.list_shelves(s.conn)
+        local = getattr(backend, "locality", "local") == "local"
+        decided = []  # model calls happen here, outside any write transaction
+        for r in rows:
+            # a short note was kept verbatim so nothing left the machine: keep it that way
+            b = None if r["extracted_by"] == "verbatim" and not local else backend
+            host = urlparse(r["url"]).netloc if r["url"] else None
+            decided.append((r["id"], *place.decide(b, r["title"], r["body"], intent, host,
+                                                   shelf_list)))
+        with transaction(s.conn):
+            require_lease(s.conn)
+            for item_id, shelf, by, why, model in decided:
+                shelves.set_placement(s.conn, item_id, shelf, by, why, model)
+        _stage(s.conn, inbox_id, "place", t0,
+               f"{len(rows)} on {decided[-1][1]} by {decided[-1][2]}", model=decided[-1][4])
+        return len(rows)
+    except Exception as e:  # pylint: disable=broad-exception-caught  # placement is optional
+        try:
+            _stage(s.conn, inbox_id, "place", t0, f"{type(e).__name__}: {e}", level="error")
+        except Exception:  # pylint: disable=broad-exception-caught  # item already saved
+            pass
+        return 0
 
 
 def _text_sha(ex):
@@ -219,14 +317,17 @@ def _process(services, inbox_id: str):
         segs = [SegmentIn(i, t, loc) for i, (t, loc) in enumerate(_pieces(ex))]
         _stage(s.conn, inbox_id, "chunk", t0, f"{len(segs)} segments")
         t0 = time.monotonic()
-        made = note.build(s.registry, segs, title=ex.title or "", intent=intent_of(row),
+        title = note.real_title(ex.title)
+        made = note.build(s.registry, segs, title=title, intent=intent_of(row),
                           limits=_limits(ex, ct), kind=ct)
         cands, by = made or distill(s.registry, segs, profile=profile_of(ct, row["user_context"]),
-                                    title=ex.title or "", user_context=intent_of(row))
+                                    title=title, user_context=intent_of(row))
         _stage(s.conn, inbox_id, "distill", t0, f"{len(cands)} items", model=by)
         t0 = time.monotonic()
         sid, item_ids = _save(s, row, ex, ct, (segs, cands, by))
         _stage(s.conn, inbox_id, "save", t0, sid)
+        place_items(s, inbox_id, item_ids)
+        sync_entries(s, inbox_id, item_ids)
         enrich(s, inbox_id, item_ids, cands)
         return Processed()
     except NeedsClarificationError as e:

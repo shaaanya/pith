@@ -1,11 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { z } from "zod";
 import { router } from "./app/router";
 import { ToastProvider } from "./components/toast";
-import { ApiError } from "./lib/api";
+import { queryClient } from "./lib/client";
+import { migrateLocal } from "./lib/migrate-local";
 import { applyTheme, getTheme } from "./lib/local";
 import "./index.css";
 
@@ -15,20 +16,10 @@ z.config({ jitless: true }); // the page CSP forbids dynamic code generation
   document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce || undefined;
 applyTheme(getTheme());
 
-// React Query's styles-free runtime; one cache for the whole app.
-const client = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5_000,
-      refetchOnWindowFocus: true,
-      retry: (n, e) => !(e instanceof ApiError && e.status >= 400 && e.status < 500) && n < 2,
-    },
-  },
-});
-
+void migrateLocal().then(() => queryClient.invalidateQueries());
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <RouterProvider router={router} />
       </ToastProvider>

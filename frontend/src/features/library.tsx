@@ -49,13 +49,13 @@ export function Library() {
   const types = first?.types ?? {};
 
   useEffect(() => {
-    document.title = "Library · Pith";
+    document.title = "All knowledge · Pith";
   }, []);
 
   return (
     <div className="enter">
       <PageHeader
-        title="Library"
+        title="All knowledge"
         sub={lib.isSuccess ? `${plural(total, "note")}${type || topic ? " match" : ""} · newest first` : "Everything Pith has read for you"}
         actions={
           <div role="group" aria-label="View" className="flex rounded-md border border-line p-0.5">

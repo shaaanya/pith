@@ -6,6 +6,13 @@ export function read(key: string): string | null {
     return null;
   }
 }
+export function remove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* storage unavailable */
+  }
+}
 export function write(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);

@@ -34,5 +34,8 @@ def build(cfg: Config) -> Services:
         cfg.db_path.chmod(0o600)
     migrate(conn)
     blobs = BlobStore(cfg.blobs_dir)
-    return Services(cfg, conn, blobs, Inbox(conn, blobs, cfg), JobQueue(conn, cfg),
-                    Registry.from_config(cfg))
+    svc = Services(cfg, conn, blobs, Inbox(conn, blobs, cfg), JobQueue(conn, cfg),
+                   Registry.from_config(cfg))
+    from pith.pipeline import runner  # pylint: disable=import-outside-toplevel  # runner imports services
+    runner.backfill(svc)  # notes saved before shelves existed get a shelf and entries
+    return svc

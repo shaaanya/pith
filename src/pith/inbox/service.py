@@ -75,6 +75,10 @@ class Inbox:
             return "url", None, canonicalize_url(text)
         return "text", None, None
 
+    def find_by_external(self, adapter: str, external_id: str) -> str | None:
+        """The inbox id an adapter already submitted under this external id, else None."""
+        return self._seen_external(adapter, external_id)
+
     def _seen_external(self, adapter: str, external_id: str | None) -> str | None:
         """The inbox id already recorded for (adapter, external_id), if any."""
         if not external_id:
@@ -128,15 +132,16 @@ class Inbox:
                 "INSERT OR IGNORE INTO external_ids(adapter, external_id, inbox_id)"
                 " VALUES (?,?,?)", (adapter, external_id, iid))
 
-    def _append_context(self, iid: str, ctx: str | None, now: str) -> None:
-        cur = self.conn.execute("SELECT user_context FROM inbox_items WHERE id=?",
-                                (iid,)).fetchone()
+    def _append_context(self, iid: str, ctx: str | None, now: str,
+                        col: str = "user_context") -> None:
+        assert col in ("user_context", "user_note")  # interpolated below
+        cur = self.conn.execute(f"SELECT {col} FROM inbox_items WHERE id=?", (iid,)).fetchone()
         # block-wise match; ctx may itself hold blank lines
-        have = "\n\n" + (cur["user_context"] or "") + "\n\n"
+        have = "\n\n" + (cur[col] or "") + "\n\n"
         if ctx and "\n\n" + ctx + "\n\n" not in have:
             self.conn.execute(
-                "UPDATE inbox_items SET user_context = CASE WHEN user_context IS NULL"
-                " OR user_context='' THEN ? ELSE user_context || char(10,10) || ? END,"
+                f"UPDATE inbox_items SET {col} = CASE WHEN {col} IS NULL"
+                f" OR {col}='' THEN ? ELSE {col} || char(10,10) || ? END,"
                 " updated_at=? WHERE id=?",
                 (ctx, ctx, now, iid),
             )
@@ -174,6 +179,13 @@ class Inbox:
         with self._tx():
             self.get(item_id)
             self._append_context(item_id, text, utcnow())
+
+    def add_note(self, item_id: str, text: str) -> None:
+        """Add the user's own words after saving (what to keep, why). Unlike add_context this is
+        always the user's reason, even on adapters whose user_context is machine-written."""
+        with self._tx():
+            self.get(item_id)
+            self._append_context(item_id, text.strip(), utcnow(), "user_note")
 
     def retry(self, item_id: str) -> None:
         """Requeue an item (resets attempts and error)."""

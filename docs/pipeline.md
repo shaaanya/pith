@@ -1,7 +1,11 @@
 # Processing pipeline
 
-The distill stage builds one knowledge note per source (`pipeline/note.py`); see
-[note-pipeline.md](note-pipeline.md) for its spec, design and benchmark. The legacy summary and insights
+The distill stage builds one knowledge note per source (`pipeline/note.py`, "note-v1"). A small model only
+extracts typed units (step, fact, claim, resource, warning) from the source; code does the rest: it fixes
+mishearings using your description, converts dictated symbols and number words to code and digits, drops any
+unit whose numbers or words are not in the source, drops commentary and promo, links each kept unit to its
+source segment, and uses your reason for saving only if you wrote one. A reason also scopes the note: only the units it points at are kept (`data.scope = "scoped"`), the rest is left out and the original link and stored text stay. If nothing matches the reason the note keeps everything and says so (`"unscoped"`); with no reason the note is `"full"`. It is tuned for `gemma4:e4b` (thinking
+off, no structured-output mode); the benchmark and cases are in `eval/notes`. The legacy summary and insights
 distiller below remains as the fallback when only the heuristic backend exists.
 
 A worker claims a job and calls `pipeline/runner.py:process(services, inbox_id)`. The stages, each recorded
@@ -25,7 +29,7 @@ with no registered extractor ends in `needs_clarification`.
 | Type | How | Limits |
 |---|---|---|
 | `web` | `urllib` fetch with a User-Agent, 20 s timeout, byte cap `max_fetch_bytes`; main-content extraction with the stdlib `html.parser` (no `trafilatura`); headings, title and author kept. Reddit thread URLs use the public `.json` endpoint. | Canonical URLs are `https`; if the TLS connection fails the URL is retried exactly as submitted (this is how a local `http://` server works). Paywall/login pages, HTTP errors that look like walls, PDFs and other non-page content types go to `needs_clarification`. No JavaScript rendering. Robots rules are not consulted. |
-| `pdf` | `pypdf` if installed, else `pdftotext`; one section per page, locator `page=N`. | Scanned PDFs (no text layer) go to `needs_clarification`; there is no PDF OCR. The `pypdf` path is not exercised by the verification here (only `pdftotext`); see limitations. |
+| `pdf` | `pypdf` if installed, else `pdftotext`; one section per page, locator `page=N`. | Scanned PDFs (no text layer) go to `needs_clarification`; there is no PDF OCR. The `pypdf` path is not exercised by the verification here (only `pdftotext`). |
 | `document` | docx, pptx, xlsx via `zipfile` + `ElementTree`. | Text only. docx sections share one locator, xlsx ignores cell references. |
 | `image` | Text from the first `ocr` backend (a `tesseract` backend), else from a `describe` (vision) backend that transcribes and describes the image. | Neither backend configured, or no text found, goes to `needs_clarification`. |
 | `video` / `audio` | `yt-dlp` metadata and existing captions first (VTT to timed text, nothing downloaded). Only when there are no captions AND a `transcribe` backend exists is audio downloaded and transcribed. Local audio/video files go to the transcriber after `ffmpeg` converts to 16 kHz mono wav. Frames (`ffmpeg`, 1 per 3 s) go to a `describe` backend only if one is configured and the transcript is under 200 characters. Segments carry `t=start-end` locators. Temporary media is deleted. | Captions are English only (`en`, `en.*` tracks). Instagram and TikTok usually need cookies and fail into `needs_clarification` carrying the page caption when reachable. Real transcription and real Instagram/TikTok behaviour are UNVERIFIED. |
@@ -81,6 +85,22 @@ have no quote and are `inferred`.
 What this does and does not guarantee: a stored `stated` item's quote does occur in the cited segment.
 It does not guarantee the item's wording is a faithful reading of the quote.
 
+## place
+
+After `save`, a separate, non-fatal stage puts each note on a shelf (`pipeline/place.py`). The model reads the
+note (which already carries your reason), the host and the closed list of shelves (name plus one-line
+description, so custom shelves work) and answers one shelf id; an answer that is not a shelf, a failed call
+or no model backend falls back to rules (keywords in your reason, then a known site, then Reference, then
+Other). Content type is never a signal. Each placement records who decided (`user`, `model`, `rule`,
+`default`), a short why, and the model. A shelf you chose is never changed by this stage or by reprocess.
+`pith place [inbox ids]` re-runs it over notes with no shelf or a rule/default one. Benchmark: `eval/notes`
+(gemma4:e4b, 36 notes: model 94%, rules 81%).
+
+## entries
+
+After placement, each `resource` unit of a note becomes an entry that can be ticked off on its own (a reel naming
+five films is one note and five entries). Reprocess keeps entries, and their done marks, by matching text.
+
 ## save, entities, embed, dedupe
 
 - Source, segments and items are written in one transaction (FTS rows in the same transaction). Items that
@@ -106,4 +126,4 @@ only from numbered excerpts. Retrieved text is delimited and labelled as untrust
 marker is validated: markers naming a nonexistent excerpt are removed and reported; if no valid marker
 remains the generated text is discarded and the result is `retrieval-only` with the excerpts. With no
 answer backend the result is also `retrieval-only` with a message. The prompt-injection defence is
-delimiting plus validation, not proof (see limitations).
+delimiting plus validation, not proof.

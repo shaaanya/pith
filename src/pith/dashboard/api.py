@@ -16,7 +16,9 @@ from pith.domain.display import inbox_label
 from pith.inbox.ingest import handle
 from pith.retrieval import ask as ask_mod
 from pith.retrieval import search as search_mod
-from pith.store import knowledge
+from pith import resurface as resurface_mod
+from pith.pipeline import place as place_mod, runner as runner_mod
+from pith.store import entries as entry_store, knowledge, shelves as shelf_store, state as state_store
 
 MAX_TEXT = 200_000  # clarification / body edits
 MAX_TITLE = 500
@@ -196,6 +198,14 @@ def _live_item(s, item_id):
     return it
 
 
+def _placement(by, why) -> dict:
+    """Placement as the UI words it: you | model | reason | site | default | none."""
+    ui = {"user": "you", "model": "model", "default": "default"}.get(by, "none")
+    if by == "rule":
+        ui = "site" if (why or "").startswith("Saved from") else "reason"
+    return {"by": ui, "why": why or "Not placed yet"}
+
+
 def item_detail(s, item_id: str) -> dict:
     """A knowledge item with its source, provenance, links and related items."""
     it = _live_item(s, item_id)
@@ -236,6 +246,11 @@ def item_detail(s, item_id: str) -> dict:
         "kind": it["kind"],
         "title": it["title"],
         "body": it["body"],
+        "shelf": it["shelf_id"] or "other",
+        "placement": _placement(it["placement_by"], it["placement_why"]),
+        "state": state_store.get(c, it["source_id"] or it["id"]),
+        "last_viewed_at": it["last_viewed_at"],
+        "entries": entry_store.for_item(c, it["id"]),
         "provenance": it["provenance"],
         "confidence": it["confidence"],
         "user_edited": bool(it["user_edited"]),
@@ -294,17 +309,85 @@ def _note_extra(c, it) -> dict:
 
 
 def item_update(s, item_id: str, body) -> dict:
-    """Edit an item; user edits are preserved on reprocess."""
-    if not isinstance(body, dict) or not body or set(body) - {"title", "body"}:
-        raise ValueError("body must be an object with title and/or body")
+    """Edit an item (title/body) and/or move it to a shelf; user edits and moves are preserved on
+    reprocess."""
+    keys = {"title", "body", "shelf", "done", "snooze_until", "hidden"}
+    if not isinstance(body, dict) or not body or set(body) - keys:
+        raise ValueError("body must be an object with title, body, shelf, done, snooze_until "
+                         "and/or hidden")
+    flags = {}
+    for k in ("done", "hidden"):
+        if k in body:
+            if not isinstance(body[k], bool):
+                raise ValueError(f"{k} must be true or false")
+            flags[k] = body[k]
+    if "snooze_until" in body:
+        flags["snooze_until"] = body["snooze_until"]  # validated by the store: ISO string or null
     fields = {}
     if "title" in body:
         fields["title"] = _str(body, "title", cap=MAX_TITLE)
     if "body" in body:
         fields["body"] = _str(body, "body")
-    _live_item(s, item_id)
-    knowledge.update_item(s.conn, item_id, **fields)
+    again = "shelf" in body and body["shelf"] is None  # let Pith decide again
+    shelf = _str(body, "shelf", cap=64) if "shelf" in body and not again else None
+    it = _live_item(s, item_id)
+    if again:
+        src = s.conn.execute("SELECT url FROM sources WHERE id=?", (it["source_id"],)).fetchone()
+        host = urlparse(src["url"]).netloc if src and src["url"] else None
+        try:
+            intent = runner_mod.intent_of(s.inbox.get(_inbox_id_of(s, item_id)))
+        except KeyError:
+            intent = None
+        shelf_id, by, why = place_mod.rules(intent, host, True)
+        shelf_store.set_placement(s.conn, item_id, shelf_id, by, why)
+    if shelf is not None:
+        try:
+            shelf_store.set_placement(s.conn, item_id, shelf, "user", "You put it here")
+        except KeyError as e:
+            raise ValueError(f"unknown shelf {shelf!r}") from e
+    if flags:
+        state_store.set_state(s.conn, state_store.owner_of(s.conn, item_id), **flags)
+    if fields:
+        knowledge.update_item(s.conn, item_id, **fields)
     return item_detail(s, item_id)
+
+
+def item_viewed(s, item_id: str) -> dict:
+    """Record that the note was opened (feeds "pick up where you left off")."""
+    _live_item(s, item_id)
+    state_store.mark_viewed(s.conn, item_id)
+    return {"ok": True}
+
+
+def entries(s, q: dict) -> dict:
+    """Entries across notes (newest note first), optionally for one shelf and done or not."""
+    where, args = ["k.deleted_at IS NULL"], []
+    if q.get("shelf"):
+        where.append("COALESCE(k.shelf_id,'other')=?")
+        args.append(q["shelf"])
+    if q.get("done") in ("0", "1"):
+        where.append("e.done_at IS " + ("NOT NULL" if q["done"] == "1" else "NULL"))
+    lim = int(q["limit"]) if str(q.get("limit", "")).isdigit() else 200
+    rows = s.conn.execute(
+        "SELECT e.id, e.text, e.done_at, e.position, k.id AS nid, k.title, k.shelf_id"
+        " FROM entries e JOIN knowledge_items k ON k.id=e.item_id WHERE " + " AND ".join(where) +
+        " ORDER BY k.created_at DESC, k.id, e.position LIMIT ?", (*args, max(1, min(lim, 1000)))
+    ).fetchall()
+    return {"entries": [{"id": r["id"], "text": r["text"], "done_at": r["done_at"],
+                         "note": {"id": r["nid"], "title": r["title"],
+                                  "shelf": r["shelf_id"] or "other"}} for r in rows]}
+
+
+def resurface(s) -> dict:
+    """Older notes worth bringing back, each with the reason (never a random pick); may be empty."""
+    return {"items": resurface_mod.resurface(s.conn)}
+
+
+def entry_update(s, entry_id: str, body) -> dict:
+    """Tick or untick one entry."""
+    if not isinstance(body, dict) or set(body) != {"done"} or not isinstance(body["done"], bool):
+        raise ValueError("expected {done: true|false}")
+    return entry_store.set_done(s.conn, entry_id, body["done"])
 
 
 def item_delete(s, item_id: str) -> dict:
@@ -314,8 +397,8 @@ def item_delete(s, item_id: str) -> dict:
     return {"ok": True}
 
 
-def item_reprocess(s, item_id: str) -> dict:
-    """Re-run the pipeline for the item source."""
+def _inbox_id_of(s, item_id: str) -> str:
+    """The inbox row that produced this item's source (KeyError when there is none)."""
     it = _live_item(s, item_id)
     row = (
         s.conn.execute(
@@ -327,8 +410,25 @@ def item_reprocess(s, item_id: str) -> dict:
     )
     if row is None:
         raise KeyError("no inbox item to reprocess")
-    s.inbox.retry(row["id"])
-    return {"ok": True, "inbox_id": row["id"]}
+    return row["id"]
+
+
+def item_reprocess(s, item_id: str) -> dict:
+    """Re-run the pipeline for the item source."""
+    iid = _inbox_id_of(s, item_id)
+    s.inbox.retry(iid)
+    return {"ok": True, "inbox_id": iid}
+
+
+def item_note(s, item_id: str, body) -> dict:
+    """Add the user's own words (why it was saved, what to keep) and re-run the pipeline."""
+    if not isinstance(body, dict) or set(body) - {"text"}:
+        raise ValueError("expected {text}")
+    text = _str(body, "text")
+    iid = _inbox_id_of(s, item_id)
+    s.inbox.add_note(iid, text)
+    s.inbox.retry(iid)
+    return {"ok": True, "inbox_id": iid}
 
 
 # ---- search / ask
@@ -415,19 +515,32 @@ def library(s, q: dict, limit: int = 40) -> dict:
     if q.get("type"):
         where.append("src.content_type=?")
         args.append(q["type"])
+    if q.get("shelf"):
+        where.append("COALESCE(k.shelf_id,'other')=?")
+        args.append(q["shelf"])
+    if q.get("done") in ("0", "1"):
+        where.append("ns.done_at IS " + ("NOT NULL" if q["done"] == "1" else "NULL"))
+    viewed = q.get("viewed") == "1"
+    if viewed:
+        where.append("k.last_viewed_at IS NOT NULL")
     base = " AND ".join(where)
-    total = s.conn.execute("SELECT count(*) FROM knowledge_items k LEFT JOIN sources src"
-                           f" ON src.id=k.source_id WHERE {base}", args).fetchone()[0]
-    cur = q.get("before")
+    join = (" LEFT JOIN sources src ON src.id=k.source_id"
+            " LEFT JOIN note_state ns ON ns.owner=COALESCE(k.source_id, k.id)")
+    total = s.conn.execute(f"SELECT count(*) FROM knowledge_items k{join} WHERE {base}",
+                           args).fetchone()[0]
+    cur = None if viewed else q.get("before")
     if cur:
         ts, _, last = cur.partition("|")
         base += " AND (k.created_at < ? OR (k.created_at = ? AND k.id < ?))"
         args += [ts, ts, last]
     rows = s.conn.execute(
         "SELECT k.id, k.title, k.kind, k.body, k.provenance, k.confidence, k.flagged, k.created_at,"
+        " k.shelf_id, k.placement_by, k.placement_why, k.last_viewed_at,"
+        " ns.done_at, ns.snooze_until, ns.hidden,"
         " src.url, src.platform, src.content_type FROM knowledge_items k"
-        f" LEFT JOIN sources src ON src.id=k.source_id WHERE {base}"
-        " ORDER BY k.created_at DESC, k.id DESC LIMIT ?", (*args, limit + 1)).fetchall()
+        f"{join} WHERE {base}"
+        " ORDER BY " + ("k.last_viewed_at DESC" if viewed else "k.created_at DESC") +
+        ", k.id DESC LIMIT ?", (*args, limit + 1)).fetchall()
     more = len(rows) > limit
     rows = rows[:limit]
     ids = [r["id"] for r in rows]
@@ -446,10 +559,15 @@ def library(s, q: dict, limit: int = 40) -> dict:
             "intent": m[1] if m else None, "created_at": r["created_at"],
             "provenance": r["provenance"], "confidence": r["confidence"],
             "flagged": bool(r["flagged"]), "url": url,
+            "shelf": r["shelf_id"] or "other",
+            "placement": _placement(r["placement_by"], r["placement_why"]),
+            "state": {"done_at": r["done_at"], "snooze_until": r["snooze_until"],
+                      "hidden": bool(r["hidden"])},
+            "last_viewed_at": r["last_viewed_at"],
             "host": urlparse(url).netloc.removeprefix("www.") if url else None,
             "platform": r["platform"], "type": r["content_type"], "topics": tops[r["id"]]})
     out = {"items": items, "total": total,
-           "next": f"{items[-1]['created_at']}|{items[-1]['id']}" if more else None}
+           "next": f"{items[-1]['created_at']}|{items[-1]['id']}" if more and not viewed else None}
     if not cur:
         out["types"] = {r[0]: r[1] for r in s.conn.execute(
             "SELECT src.content_type, count(*) FROM knowledge_items k JOIN sources src"
@@ -460,6 +578,47 @@ def library(s, q: dict, limit: int = 40) -> dict:
         out["attention"] = [_inbox_row(r) for st in ("needs_clarification", "failed")
                             for r in s.inbox.list(st, 200)]
     return out
+
+
+def _shelf_view(s, shelf: dict) -> dict:
+    n = s.conn.execute(
+        "SELECT count(*) FROM knowledge_items k WHERE " + _NOTE +
+        " AND k.deleted_at IS NULL AND COALESCE(k.shelf_id,'other')=?", (shelf["id"],)).fetchone()[0]
+    todo = s.conn.execute(
+        "SELECT count(*) FROM knowledge_items k LEFT JOIN note_state ns"
+        " ON ns.owner=COALESCE(k.source_id, k.id) WHERE " + _NOTE +
+        " AND k.deleted_at IS NULL AND COALESCE(k.shelf_id,'other')=? AND ns.done_at IS NULL",
+        (shelf["id"],)).fetchone()[0]
+    return {**shelf, "count": n, "todo_count": todo if shelf["todo"] else 0}
+
+
+def shelves(s) -> dict:
+    """All shelves with how many notes sit on each."""
+    return {"shelves": [_shelf_view(s, x) for x in shelf_store.list_shelves(s.conn)]}
+
+
+def shelf_create(s, body) -> dict:
+    """A custom shelf: a name and a one-line description (which the placement model reads)."""
+    if not isinstance(body, dict) or set(body) - {"name", "blurb"}:
+        raise ValueError("expected {name, blurb}")
+    name = _str(body, "name", cap=MAX_TITLE)
+    blurb = _str(body, "blurb", required=False, cap=200) or ""
+    return _shelf_view(s, shelf_store.create_shelf(s.conn, name, blurb))
+
+
+def shelf_update(s, shelf_id: str, body) -> dict:
+    """Rename a custom shelf and/or change its description."""
+    if not isinstance(body, dict) or not body or set(body) - {"name", "blurb"}:
+        raise ValueError("expected {name} and/or {blurb}")
+    fields = {k: _str(body, k, cap=200 if k == "blurb" else MAX_TITLE, required=k == "name")
+              for k in body}
+    return _shelf_view(s, shelf_store.update_shelf(s.conn, shelf_id, **fields))
+
+
+def shelf_delete(s, shelf_id: str) -> dict:
+    """Delete a custom shelf; its notes move to Other."""
+    shelf_store.delete_shelf(s.conn, shelf_id)
+    return {"ok": True}
 
 
 def topics(s) -> list[dict]:

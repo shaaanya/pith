@@ -36,7 +36,7 @@ def test_digest_sections(svc):
     d = digest.data(svc, now=NOW, since_days=7, seed="s")
     assert d["new"]["total"] >= 1 and {i["title"] for i in d["new"]["items"]}
     assert {a["id"] for a in d["attention"]} == {bad, nc}
-    assert 1 <= len(d["resurfaced"]) <= 5
+    assert d["resurfaced"] == []  # old notes with no reason are not dragged back at random
     md = digest.build(svc, since_days=7, now=NOW, seed="s")
     for h in ("## New", "## Needs attention", "## Worth revisiting", "## Possible duplicates"):
         assert h in md
@@ -44,14 +44,21 @@ def test_digest_sections(svc):
     assert "HTTP 404" in md and "quokkas" in md.lower()
 
 
-def test_resurfacing_deterministic_with_seed_and_capped(svc):
-    load(svc, [f"Old fact number {i} about topic{i} things." for i in range(12)])
+def test_resurfacing_needs_a_reason_and_says_it(svc):
+    ids = load(svc, ["Try the fm-lite tool for file management and bulk renaming of many files."] * 1)
     age(svc, 30)
-    a = digest.build(svc, now=NOW, seed="x")
-    assert a == digest.build(svc, now=NOW, seed="x")
-    assert a.count("\n- ") <= 5 + 1 + 20  # resurfaced capped at 5
-    assert len(digest.data(svc, now=NOW, seed="x")["resurfaced"]) == 5
-    assert digest.data(svc, now=NOW, seed="y")["resurfaced"] != digest.data(svc, now=NOW, seed="x")["resurfaced"]
+    row = svc.conn.execute("SELECT id, data_json FROM knowledge_items WHERE kind IN ('note','summary')"
+                           " AND deleted_at IS NULL").fetchone()
+    import json
+    data = json.loads(row["data_json"] or "{}")
+    data["intent"] = {"state": "explicit", "text": "try this tool"}
+    svc.conn.execute("UPDATE knowledge_items SET data_json=?, shelf_id='try', placement_by='user'"
+                     " WHERE id=?", (json.dumps(data), row["id"]))
+    d = digest.data(svc, now=NOW)
+    assert [r["id"] for r in d["resurfaced"]] == [row["id"]]
+    assert "try this tool" in d["resurfaced"][0]["why"]
+    assert "haven't marked it done" in digest.build(svc, now=NOW)
+    assert ids
 
 
 def test_max_items_caps_new_section(svc):

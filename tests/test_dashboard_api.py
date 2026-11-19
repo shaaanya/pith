@@ -185,3 +185,160 @@ def test_search_hits_open_a_note(svc):
     hits = api.search(svc, "quokkas", {})["hits"]
     notes = {i["id"] for i in api.library(svc, {})["items"]}
     assert hits and all(h["note_id"] in notes for h in hits)
+
+
+def test_item_note_appends_context_and_requeues(svc):
+    """A note added after saving is kept as context and the item is processed again."""
+    r = api.inbox_submit(svc, {"text": NOTE})
+    process(svc, r["id"])
+    iid = api.inbox_get(svc, r["id"])["items"][0]["id"]
+    out = api.item_note(svc, iid, {"text": "only the island"})
+    assert out == {"ok": True, "inbox_id": r["id"]}
+    assert api.inbox_get(svc, r["id"])["status"] == "pending"
+    api.item_note(svc, iid, {"text": "only the island"})  # same text is not stored twice
+    ctx = svc.conn.execute("SELECT user_note FROM inbox_items WHERE id=?", (r["id"],)).fetchone()
+    assert ctx[0] == "only the island"
+    for bad in ({}, {"text": ""}, {"text": 5}, {"text": "x", "extra": 1}):
+        with pytest.raises(ValueError):
+            api.item_note(svc, iid, bad)
+    with pytest.raises(KeyError):
+        api.item_note(svc, "nope", {"text": "x"})
+
+
+def test_item_note_counts_as_the_reason_even_for_machine_written_adapters(svc):
+    """Drop-folder items carry "from a.txt" as provenance; a note you add is still your reason."""
+    r = svc.inbox.submit(adapter="fs", text=NOTE, user_context="from a.txt")
+    process(svc)
+    assert runner.intent_of(svc.inbox.get(r.id)) is None
+    iid = api.inbox_get(svc, r.id)["items"][0]["id"]
+    api.item_note(svc, iid, {"text": "only the island"})
+    assert runner.intent_of(svc.inbox.get(r.id)) == "only the island"
+    api.item_note(svc, iid, {"text": "only the island"})
+    api.item_note(svc, iid, {"text": "and the grass"})
+    assert runner.intent_of(svc.inbox.get(r.id)) == "only the island\n\nand the grass"
+
+
+def _processed_note(svc, text=NOTE, **kw):
+    r = api.inbox_submit(svc, {"text": text, **kw})
+    process(svc, r["id"])
+    return r["id"], api.inbox_get(svc, r["id"])["items"][0]["id"]
+
+
+def test_items_carry_shelf_and_placement_and_can_be_moved(svc):
+    inbox_id, iid = _processed_note(svc)
+    lib = api.library(svc, {})["items"][0]
+    assert lib["shelf"] in ("reference", "other") and lib["placement"]["by"] in ("default", "none")
+    assert api.item_detail(svc, iid)["shelf"] == lib["shelf"]
+    out = api.item_update(svc, iid, {"shelf": "try"})
+    assert out["shelf"] == "try" and out["placement"] == {"by": "you", "why": "You put it here"}
+    assert api.library(svc, {"shelf": "try"})["total"] == 1
+    assert api.library(svc, {"shelf": "watch"})["total"] == 0
+    api.item_update(svc, iid, {"shelf": "read", "title": "Renamed"})
+    assert api.item_detail(svc, iid)["title"] == "Renamed"
+    api.item_reprocess(svc, iid)
+    process(svc)
+    assert api.library(svc, {"shelf": "read"})["total"] == 1  # the move survives reprocess
+    with pytest.raises(ValueError):
+        api.item_update(svc, iid, {"shelf": "nope"})
+    with pytest.raises(ValueError):
+        api.item_update(svc, iid, {"shelf": 5})
+    assert inbox_id
+
+
+def test_rule_placement_is_reported_as_reason_or_site(svc):
+    _, iid = _processed_note(svc, context="a film to watch")
+    assert api.item_detail(svc, iid)["placement"]["by"] == "reason"
+    assert api.item_detail(svc, iid)["shelf"] == "watch"
+
+
+def test_shelves_crud_counts_and_rules(svc):
+    _, iid = _processed_note(svc)
+    got = api.shelves(svc)["shelves"]
+    assert [s["id"] for s in got][-1] == "other" and all("count" in s for s in got)
+    assert sum(s["count"] for s in got) == 1
+    made = api.shelf_create(svc, {"name": "Recipes", "blurb": "Dishes to cook"})
+    assert made["id"] == "recipes" and made["count"] == 0
+    api.item_update(svc, iid, {"shelf": "recipes"})
+    assert {s["id"]: s["count"] for s in api.shelves(svc)["shelves"]}["recipes"] == 1
+    assert api.shelf_update(svc, "recipes", {"blurb": "x"})["blurb"] == "x"
+    for bad in ({}, {"name": ""}, {"name": "Recipes"}, {"name": 5}):
+        with pytest.raises(ValueError):
+            api.shelf_create(svc, bad)
+    with pytest.raises(ValueError):
+        api.shelf_update(svc, "recipes", {"bogus": 1})
+    with pytest.raises(KeyError):
+        api.shelf_update(svc, "nope", {"name": "x"})
+    api.shelf_delete(svc, "recipes")
+    assert api.item_detail(svc, iid)["shelf"] == "other"
+    for builtin in ("other", "watch"):
+        with pytest.raises(ValueError):
+            api.shelf_delete(svc, builtin)
+    with pytest.raises(KeyError):
+        api.shelf_delete(svc, "nope")
+
+
+def test_note_state_done_snooze_hidden_viewed_and_filters(svc):
+    _, iid = _processed_note(svc)
+    d = api.item_detail(svc, iid)
+    assert d["state"] == {"done_at": None, "snooze_until": None, "hidden": False}
+    assert d["last_viewed_at"] is None
+    out = api.item_update(svc, iid, {"done": True, "hidden": True,
+                                     "snooze_until": "2031-01-01T00:00:00Z"})
+    assert out["state"]["done_at"] and out["state"]["hidden"]
+    it = api.library(svc, {})["items"][0]
+    assert it["state"]["done_at"] and it["last_viewed_at"] is None
+    assert api.library(svc, {"done": "1"})["total"] == 1 and api.library(svc, {"done": "0"})["total"] == 0
+    api.item_viewed(svc, iid)
+    assert api.item_detail(svc, iid)["last_viewed_at"]
+    assert [i["id"] for i in api.library(svc, {"viewed": "1"})["items"]] == [iid]
+    api.item_update(svc, iid, {"done": False, "snooze_until": None})
+    assert api.library(svc, {"done": "0"})["total"] == 1
+    assert api.library(svc, {"viewed": "1"})["total"] == 1
+    for bad in ({"done": "yes"}, {"hidden": 1}, {"snooze_until": "soon"}):
+        with pytest.raises(ValueError):
+            api.item_update(svc, iid, bad)
+    with pytest.raises(KeyError):
+        api.item_viewed(svc, "nope")
+
+
+def test_state_survives_reprocess_and_shelf_todo_count_follows_done(svc):
+    _, iid = _processed_note(svc, context="a film to watch")
+    watch = lambda: next(s for s in api.shelves(svc)["shelves"] if s["id"] == "watch")
+    assert watch()["todo_count"] == 1
+    api.item_update(svc, iid, {"done": True})
+    assert watch()["count"] == 1 and watch()["todo_count"] == 0
+    api.item_reprocess(svc, iid)
+    process(svc)
+    assert api.library(svc, {"done": "1"})["total"] == 1
+
+
+def test_entries_listing_ticking_and_survive_reprocess(svc):
+    from pith.store import entries as ent
+    _, iid = _processed_note(svc, context="a film to watch")
+    owner = svc.conn.execute("SELECT source_id FROM knowledge_items WHERE id=?", (iid,)).fetchone()[0]
+    ent.sync(svc.conn, owner, iid, ["Paper Moon Harbor", "The Long Dissolve"])
+    d = api.item_detail(svc, iid)
+    assert [e["text"] for e in d["entries"]] == ["Paper Moon Harbor", "The Long Dissolve"]
+    eid = d["entries"][0]["id"]
+    assert api.entry_update(svc, eid, {"done": True})["done_at"]
+    got = api.entries(svc, {"shelf": "watch"})["entries"]
+    assert len(got) == 2 and got[0]["note"]["id"] == iid and got[0]["note"]["shelf"] == "watch"
+    assert [e["text"] for e in api.entries(svc, {"done": "0"})["entries"]] == ["The Long Dissolve"]
+    assert api.entries(svc, {"shelf": "play"})["entries"] == []
+    with pytest.raises(ValueError):
+        api.entry_update(svc, eid, {"done": "x"})
+    with pytest.raises(KeyError):
+        api.entry_update(svc, "nope", {"done": True})
+
+
+def test_resurface_endpoint_is_empty_without_a_reason(svc):
+    _processed_note(svc)
+    assert api.resurface(svc) == {"items": []}
+
+
+def test_shelf_null_lets_pith_decide_again(svc):
+    _, iid = _processed_note(svc, context="a film to watch")
+    api.item_update(svc, iid, {"shelf": "play"})
+    assert api.item_detail(svc, iid)["placement"]["by"] == "you"
+    out = api.item_update(svc, iid, {"shelf": None})
+    assert out["shelf"] == "watch" and out["placement"]["by"] == "reason"
