@@ -450,20 +450,23 @@ def _run(a):
     import threading
     from pith import run_all
     import webbrowser
+    import shlex
     cfg = _cfg(a)
     _make_dirs(cfg)
     stop = threading.Event()
-    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    previous = {sig: signal.signal(sig, lambda *_: stop.set())
+                for sig in (signal.SIGTERM, signal.SIGINT)}
     # a terminal launch opens the browser; launchd/cron (no TTY) does not
     opening = sys.stdout.isatty() if a.open is None else a.open
 
     def ready(info):
+        stopping = f"Ctrl-C or pith stop --home {shlex.quote(str(cfg.home))} to stop"
         if info["url"]:
-            print(f"dashboard: {info['url']}\n(Ctrl-C to stop)", flush=True)
+            print(f"dashboard: {info['url']}\n({stopping})", flush=True)
             if opening:
                 webbrowser.open(info["url"])
         else:
-            print("running (no dashboard); Ctrl-C to stop", flush=True)
+            print(f"running (no dashboard); {stopping}", flush=True)
     try:
         run_all.run(cfg, a.port, dashboard=not a.no_dashboard, watch=not a.no_watch,
                     stop=stop, on_ready=ready)
@@ -471,6 +474,24 @@ def _run(a):
         stop.set()
     except run_all.RunError as e:
         sys.exit(f"error: {e}")
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
+def _stop(a):
+    from pith.config import resolve_home
+    from pith.run_control import RunError, stop
+    env = dict(os.environ)
+    if home := resolved(a, "home"):
+        env["PITH_HOME"] = home
+    config = resolved(a, "config")
+    home = resolve_home(Path(config) if config else None, env)
+    try:
+        stopped = stop(home, a.timeout)
+    except RunError as e:
+        sys.exit(f"error: {e}")
+    print(f"{'stopped' if stopped else 'not running'}: {home}")
 
 
 @_in_use
@@ -546,6 +567,8 @@ COMMANDS = {
                    _arg("--no-watch", action="store_true"),
                    _arg("--open", action=argparse.BooleanOptionalAction, default=None,
                         help="open the browser (default: only when run in a terminal)")]),
+    "stop": (_stop, [_arg("--timeout", type=float, default=30,
+                         help="seconds to wait for graceful shutdown (default: 30)")]),
     "dashboard": (_dashboard, [_PORT]),
 }
 

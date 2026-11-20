@@ -16,8 +16,9 @@ It is for the moment you see something worth keeping and do not want to file it.
    text from PDFs and Office files. If it cannot read something, it tells you plainly and asks for help.
 3. **It writes one note**: a small model extracts the facts, and code checks every one against the source.
    A fact the source does not support is dropped. Incomplete beats wrong.
-4. **You read and find**: a dashboard to read notes, search them and ask questions, or plain Markdown files
-   you can open in any editor.
+4. **You return to your desk**: contextual groups keep mixed saved knowledge within reach. Open several
+   groups, choose which belong in Focus, and read complete notes with sources. Search, Ask and purpose-based
+   Shelves browse your real library; plain Markdown files also open in any editor.
 
 ## What it is, and is not
 
@@ -27,7 +28,7 @@ It is for the moment you see something worth keeping and do not want to file it.
 - **Model-optional.** Works with no model at all (it still stores and searches). Tuned for a small local
   model (`gemma4:e4b` through Ollama); local servers and API keys plug in too.
 - **Not a chat bot, a feed or a note-taking app.** It does not reply to what you send, and you do not
-  organise anything: topics are automatic.
+  need to file every capture: topics and shelf placement are automatic. Desk groups are yours to arrange.
 - **Early (v0.1).** A single user on one machine. Some paths are not yet verified against the real services
   (Instagram/TikTok fetching, whisper transcription). Where it is going: the [roadmap](docs/roadmap.md).
 
@@ -39,9 +40,15 @@ pith init                        # then: pith (worker + dashboard + channels)
 pith submit "<url or text>" --why "what I want from it"
 pith search "keywords"
 pith ask "question about what I saved"
+pith stop                        # from another terminal; waits for a clean shutdown
 ```
 
 Step by step, including the model and the Telegram bot: [getting started](docs/getting-started.md).
+
+`pith run` opens the V5 product dashboard. Groups, membership, order and Focus are stored in your Pith
+database; the first desk starts empty so you can choose your own contexts. New captures remain available
+in Recently saved and All knowledge. Removing a group keeps its notes. After updating a running checkout,
+restart Pith (`pith stop`, then `pith run`) to load the new built dashboard.
 
 ## How it works
 

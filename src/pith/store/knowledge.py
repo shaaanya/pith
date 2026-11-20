@@ -8,6 +8,7 @@ import json
 
 from pith.domain.models import Candidate, SegmentIn
 from pith.ids import new_id, utcnow
+from pith.store import desk
 from pith.store.db import transaction
 
 _EDITABLE = {"title", "body", "data"}
@@ -177,9 +178,11 @@ def save_items(  # pylint: disable=too-many-locals  # one transaction, one pass
             )
             _fts_set(conn, cur.lastrowid, c.title, c.body)
             ids.append(iid)
+        kinds = [c.kind for c in candidates]
+        pick = next((k for k in ("note", "summary") if k in kinds), None)
+        desk.rebind(conn, [r["id"] for r in old if r["kind"] in ("note", "summary")],
+                    ids[kinds.index(pick)] if pick else None)
         if carry:
-            kinds = [c.kind for c in candidates]
-            pick = next((k for k in ("note", "summary") if k in kinds), None)
             if pick:
                 conn.execute(
                     "UPDATE knowledge_items SET shelf_id=?, placement_by='user', placement_why=?,"

@@ -5,7 +5,7 @@ import { Reader } from "@/features/reader";
 import { Search } from "@/features/search";
 import { Settings } from "@/features/settings";
 import { ShelfPage, Shelves } from "@/features/shelf";
-import { Today } from "@/features/today";
+import { Desk } from "@/features/desk";
 import { RouteError, Shell } from "./shell";
 
 /**
@@ -17,7 +17,7 @@ export const router = createHashRouter([
     element: <Shell />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <Today /> },
+      { index: true, element: <Desk /> },
       { path: "inbox", element: <Inbox /> },
       { path: "shelves", element: <Shelves /> },
       { path: "shelf/:id", element: <ShelfPage /> },

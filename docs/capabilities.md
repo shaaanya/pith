@@ -56,3 +56,14 @@ are assigned automatically; you can edit, reprocess or delete a note, and edits 
   exactly what was sent.
 - **Yours.** One folder, SQLite plus plain files. `pith backup`, `pith verify` and `pith restore` protect it;
   `pith doctor` checks health.
+
+## V5 working desk
+
+`pith run` serves the V5 product dashboard. Create contextual groups from real saved notes, mix knowledge
+kinds, open several groups independently, keep chosen contexts in Focus, and change their order with
+Arrange. Undo reverses the last organization change. Groups persist in SQLite across browser and server
+restarts; removing a group keeps its knowledge. A new desk starts empty without illustrative content.
+
+Selecting a desk item opens complete extracted knowledge and evidence in a modal reader; related notes
+stay within the same reader. Capture, Inbox recovery, Search and Ask, purpose-based Shelves, the complete
+library, model settings and direct note links continue to use the real application APIs.

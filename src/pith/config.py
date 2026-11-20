@@ -121,6 +121,31 @@ def _find_config(env: Mapping) -> Path | None:
     return found if found.is_file() else None
 
 
+def resolve_home(path: Path | None = None, env: Mapping | None = None) -> Path:
+    """Locate a run for shutdown without validating model/channel settings.
+
+    An explicit home works even when its config is broken. Automatically discovered
+    <home>/config.toml cannot redirect its home, matching load_config().
+    """
+    env = _compat(os.environ if env is None else env)
+    home = env.get("PITH_HOME")
+    if not home:
+        explicit = path or env.get("PITH_CONFIG")
+        data = {}
+        if explicit:
+            try:
+                data = tomllib.loads(Path(explicit).expanduser().read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as e:
+                raise ConfigError(f"cannot read config {explicit}: {e}; "
+                                  "use `pith stop --home PATH` to select the running home") from e
+        home = data.get("home", "")
+        if not isinstance(home, str):
+            raise ConfigError("home must be a path string; use `pith stop --home PATH`")
+        home = home or _default_home()
+    found = Path(home).expanduser()
+    return found if found.is_absolute() else Path.home() / found
+
+
 def load_config(path: Path | None = None, env: Mapping | None = None) -> Config:
     """Load the config file (path, else PITH_CONFIG, else <home>/config.toml, else none)
     with env overrides. A <home>/config.toml found that way always lives in its own home: its

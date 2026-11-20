@@ -158,7 +158,9 @@ export const useClarify = () =>
 export const useReprocess = () => useInvalidating((id: string) => request(S.Ok, "POST", `/api/items/${id}/reprocess`, {}), ...refresh);
 
 export const useDeleteItem = () =>
-  useInvalidating((id: string) => request(S.Ok, "DELETE", `/api/items/${id}`), ["library"], keys.state, keys.topics, keys.duplicates);
+  useInvalidating((id: string) => request(S.Ok, "DELETE", `/api/items/${id}`), ["library"], keys.state, keys.topics, keys.duplicates, [
+    "desk",
+  ]);
 
 export function useUpdateItem(id: string) {
   const qc = useQueryClient();
@@ -167,6 +169,7 @@ export function useUpdateItem(id: string) {
     onSuccess: (data) => {
       qc.setQueryData(keys.item(id), data);
       void qc.invalidateQueries({ queryKey: ["library"] });
+      void qc.invalidateQueries({ queryKey: ["desk"] });
     },
   });
 }
@@ -214,3 +217,22 @@ export const useRecentlyOpened = (limit = 6) =>
     queryFn: ({ signal }) => request(S.LibraryPage, "GET", `/api/library${qs({ viewed: "1", limit })}`, undefined, signal),
     staleTime: 10_000,
   });
+
+export const useDesk = () =>
+  useQuery({
+    queryKey: ["desk"],
+    staleTime: 0,
+    queryFn: ({ signal }) => request(S.Desk, "GET", "/api/desk", undefined, signal),
+  });
+
+export function useSaveDesk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (desk: S.Desk) =>
+      request(S.Desk, "PATCH", "/api/desk", {
+        revision: desk.revision,
+        groups: desk.groups.map(({ items: _items, ...group }) => group),
+      }),
+    onSuccess: (data) => qc.setQueryData(["desk"], data),
+  });
+}

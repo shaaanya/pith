@@ -10,15 +10,15 @@ TABLES = {
     "inbox_items", "jobs", "processing_events", "sources", "segments",
     "knowledge_items", "knowledge_versions", "topics", "entities",
     "item_topics", "item_entities", "relations", "embeddings",
-    "provenance_log", "segments_fts", "items_fts",
+    "provenance_log", "segments_fts", "items_fts", "desk_state", "desk_groups", "desk_group_items",
 }
 
 
 def test_migrate_fresh_creates_all_tables(tmp_path):
     """A fresh migrate creates every table and the FTS indexes work."""
     conn = connect(tmp_path / "t.db")
-    assert migrate(conn) == 7
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 7
+    assert migrate(conn) == 8
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 8
     names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master")}
     assert TABLES <= names
     conn.execute("INSERT INTO segments_fts(rowid, text) VALUES (1, 'hello world')")
@@ -32,8 +32,8 @@ def test_migrate_fresh_creates_all_tables(tmp_path):
 def test_migrate_idempotent(tmp_path):
     """Migrating twice changes nothing."""
     conn = connect(tmp_path / "t.db")
-    assert migrate(conn) == 7
-    assert migrate(conn) == 7
+    assert migrate(conn) == 8
+    assert migrate(conn) == 8
 
 
 def test_wal_enabled(tmp_path):
@@ -75,7 +75,7 @@ def test_migrate_concurrent_fresh_db(tmp_path):
         t.start()
     for t in ts:
         t.join()
-    assert not errs and out == [7, 7]
+    assert not errs and out == [8, 8]
 
 
 def test_knowledge_items_source_id_is_indexed(tmp_path):

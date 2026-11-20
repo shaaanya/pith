@@ -1,6 +1,10 @@
 # Pith Home V5 — contextual desk checkpoint
 
-**Status: working design checkpoint, approved to save by the user on 19 November 2026. Further refinement is expected.**
+**Status: V5 design checkpoint, integrated into the production dashboard on 19 November 2026.**
+
+`pith run` serves the product implementation in `frontend/src`: real saved knowledge, database-backed
+contextual groups, Focus and order, complete note overlays, and working capture/search/shelves/settings.
+The files below remain the original isolated design reference, with illustrative content only.
 
 Prototype: [`desk-next/`](desk-next/README.md). Run `node prototype/desk-next/run.mjs` from the repository root, then open **http://127.0.0.1:5175/**. It reuses dependencies installed in `frontend/`; no separate installation is needed. The earlier V4 prototype remains in `prototype/index.html` with its own notes.
 
@@ -32,12 +36,12 @@ The rail collapses to a reachable navigation menu at narrower widths; groups bec
 
 This is an isolated frontend prototype with illustrative fixtures, including a five-item collection and a 3,000-item library with a long group. All changes use only `pith.prototype.desk-next.v1` on the separate strict loopback port. Blocked storage falls back to visit-local memory. There are no Pith API calls, production state imports, credentials, backend changes or package/lockfile changes.
 
-Runtime, tests, config, cache and build output belong to `prototype/desk-next/`. Generated output/evidence are ignored. Production frontend/backend and the previous V4 remain unchanged. This checkpoint does not replace the production dashboard.
+Runtime, tests, config, cache and build output belong to `prototype/desk-next/`. Generated output/evidence are ignored. Production frontend/backend and the previous V4 remain unchanged. The isolated checkpoint stays unchanged; the product implementation now replaces the previous dashboard Home.
 
 ## Verification and next decisions
 
 See [`desk-next/VERIFICATION.md`](desk-next/VERIFICATION.md) for detailed evidence and limits. The original build passed strict TypeScript, isolated Vite build, 17 Chromium journeys, axe checks across data/theme states, and six check groups each in matching installed Firefox/WebKit. Quick checkpoint verification is recorded there separately.
 
-Next design work: evaluate group recognition and descriptors, expansion whitespace, Focus/Overview usefulness, and the complete reading experience with the user. Physical touch, actual OS Safari, screen readers, real extraction fidelity, production nonce CSP, group persistence APIs and cross-device synchronization remain outside verified prototype support. Production integration needs its own implementation plan.
+Next design work: evaluate group recognition and descriptors, expansion whitespace, Focus/Overview usefulness, and the complete reading experience with the user. Physical touch, actual OS Safari, screen readers, real extraction fidelity, production nonce CSP, group persistence APIs and cross-device synchronization remain outside verified prototype support. Production integration uses authenticated desk APIs with revision-checked atomic persistence in SQLite, independent of shelves. View expansion and workspace scroll remain browser preferences.
 
 The raw Stitch HTML, skill inventory, audit and detailed initial brief are local supplemental artifacts under ignored `docs/design/`. This tracked document preserves the checkpoint's decisions and run instructions independently of those files. Product and visual context also live in root `PRODUCT.md` and `DESIGN.md`.

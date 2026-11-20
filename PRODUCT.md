@@ -12,9 +12,9 @@ Pith is a local-first personal knowledge base. A person saves links, videos, PDF
 
 ## Capabilities and constraints
 
-The existing React dashboard has purpose-based Shelves, a library, search/Ask, structured notes, entries, capture recovery, and settings backed by the Python application. Contextual Home groups are a new design concept, separate from long-term Shelves. Group membership, group order, Focus workspace, and pins do not yet have production persistence APIs.
+The existing React dashboard has purpose-based Shelves, a library, search/Ask, structured notes, entries, capture recovery, and settings backed by the Python application. Contextual Home groups are a new design concept, separate from long-term Shelves. Group membership, group order, and Focus choice now persist in SQLite through revision-checked desk APIs. Expansion and workspace view remain browser preferences.
 
-Production builds are one nonce-protected HTML file, with system font stacks and no external assets, eval, or route chunks. Prototype code lives separately in prototype/desk-next, uses illustrative fixture data, and must not contact the production API or use production storage keys. No production deployment is authorized.
+Production builds are one nonce-protected HTML file, with system font stacks and no external assets, eval, or route chunks. Prototype code lives separately in prototype/desk-next, uses illustrative fixture data, and must not contact the production API or use production storage keys. The user explicitly authorized V5 product integration on 19 November 2026; pith run now serves the product implementation.
 
 ## Confirmed principles
 
@@ -28,4 +28,4 @@ Production builds are one nonce-protected HTML file, with system font stacks and
 
 The user requests low cognitive load, keyboard access, responsiveness, and reduced-motion support. The playbook targets WCAG 2.2 AA and 44px hit areas. This is a usability intent, not a clinical ADHD claim.
 
-The user authorized the isolated prototype and subsequently approved saving it as the V5 design checkpoint. [prototype/HOME-V5.md](prototype/HOME-V5.md) preserves its decisions and scope; production integration remains separate. Original A/B1/B2/C HTML, audits and the initial brief are local supplemental artifacts under ignored docs/design/.
+The user authorized the isolated prototype and subsequently approved saving it as the V5 design checkpoint. [prototype/HOME-V5.md](prototype/HOME-V5.md) preserves its decisions and scope; production integration is now implemented in frontend/src and served by pith run. Original A/B1/B2/C HTML, audits and the initial brief are local supplemental artifacts under ignored docs/design/.

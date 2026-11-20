@@ -15,6 +15,31 @@ pith                              # same as `pith run`: worker + dashboard + ena
 `pith` prints the dashboard address (loopback only, with a token). Open it, press `n` and paste a link or a
 note. It works at once with no model: Pith stores and searches the text with a deterministic fallback.
 
+The V5 dashboard opens on **Your Working Desk**. Use **New group** to choose notes from your real library,
+then open groups independently. Group options let you edit membership or add a context to **Focus**;
+**Arrange** changes their order, and **Undo last change** reverses the last organization change. Groups
+and Focus are saved in the Pith database across browser and app restarts. Removing a group keeps its
+notes. Recently saved and All knowledge remain available before you organize anything.
+
+To stop the running app from another terminal:
+
+```sh
+pith stop
+pith stop --home /path/to/Pith       # use the same home as the running instance
+pith stop --timeout 120              # allow more time for active work to finish
+```
+
+`pith stop` shuts down bare `pith` / `pith run`: its dashboard, worker and enabled channels. It waits
+up to 30 seconds and reports success only after those threads finish. If a job takes longer, the
+command reports that shutdown is still in progress; it does not kill the job. A repeated stop is safe
+and says “not running” when the instance is already stopped. Ctrl-C in the original terminal also
+requests clean shutdown. Use the matching `--home` or `--config` for a nondefault home; an explicit
+`--home` works even with a broken config file.
+
+Separately launched `pith worker`, `watch`, `dashboard`, `serve-http`, frontend development and prototype
+servers remain separate processes; stop them in their own terminals with Ctrl-C. Instances started
+with an older version without shutdown metadata need Ctrl-C once, then can use `pith stop` after restart.
+
 ## 2. Add a model (optional, recommended)
 
 A model is what turns a source into a good note. Pith is tuned for a small local model, `gemma4:e4b` via

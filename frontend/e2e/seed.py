@@ -79,7 +79,7 @@ note(
     [("fact", "ripgrep respects .gitignore by default and skips binary files"),
      ("resource", "Config file via the RIPGREP_CONFIG_PATH environment variable")],
 )
-note(
+replication_note = note(
     "Postgres logical replication, step by step", "https://example.com/blog/pg-logical", "web", "web", 3,
     ["postgres", "databases", "replication"],
     [("step", "Set `wal_level = logical` on the primary and restart it"),
@@ -112,11 +112,15 @@ note(
     [("step", "Keep 50g starter, add 50g flour and 50g water at 24C"), ("fact", "It doubles in 4 to 6 hours")],
     intent="weekend baking",
 )
-note(
+kubernetes_note = note(
     "Kubernetes debugging cheatsheet", None, "unknown", "note", 2, ["kubernetes", "postgres"],
     [("step", "kubectl describe pod, then kubectl logs --previous"),
      ("fact", "Exit code 137 usually means OOMKilled; raise the memory limit")],
 )
+# Explicit relation exercises real related-note navigation inside the V5 reader.
+conn.execute("INSERT INTO relations(item_a,item_b,type,score) VALUES (?,?,?,?)",
+             (replication_note, kubernetes_note, "related", 0.8))
+
 note("A random thought about naming things", None, "unknown", "note", 1, [], [("claim", "Names should say what, not how")])
 
 # A failed Instagram item: login-walled, the classic reel failure.

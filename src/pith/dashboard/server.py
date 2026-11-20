@@ -33,6 +33,7 @@ from pith.inbox.service import Inbox
 from pith.jobs import JobQueue
 from pith.providers.registry import Registry
 from pith.store.db import connect
+from pith.store.desk import ConflictError
 
 MAX_JSON = 1_000_000
 _ID = r"([0-9A-Za-z]{1,64})"
@@ -119,6 +120,8 @@ class _Handler(QuietHandler):
     def _handle(self) -> None:
         try:
             self._handle_checked()
+        except ConflictError as e:
+            self._err(409, str(e))
         except ValueError as e:
             self._err(400, str(e))
         except KeyError:
@@ -307,6 +310,8 @@ def _blob(h, svc, x, _q):
 # (path regex, {method: handler(h, svc, match, query)}, 405 vs 404 for an unsupported method).
 # A handler returns the JSON body (None is JSON null), or RESPONDED once it wrote the response.
 _ROUTES = (
+    ("/api/desk", {"GET": lambda h, s, x, q: api.desk(s),
+                   "PATCH": lambda h, s, x, q: api.desk_update(s, h.json_body())}, True),
     ("/api/inbox", {"GET": lambda h, s, x, q: api.inbox_list(s, q.get("status")),
                     "POST": lambda h, s, x, q: api.inbox_submit(s, h.submission())}, True),
     (rf"/api/inbox/{_ID}", {"GET": _inbox_item}, True),

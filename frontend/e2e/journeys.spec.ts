@@ -19,20 +19,14 @@ test.beforeEach(({ page }) => {
 });
 test.afterEach(() => expect(errors, "console errors / CSP violations").toEqual([]));
 
-test("1 · Home after several items were captured shows what happened and what needs me", async ({ page }) => {
+test("1 · V5 desk opens real knowledge and directs capture problems to Inbox", async ({ page }) => {
   await open(page);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Good (morning|afternoon|evening)|Late night/);
-  // The reel without a transcriber is a real "needs you" state, named in plain language.
-  const needs = page.getByRole("region", { name: "Needs attention" });
-  await expect(needs).toContainText("pasta-reel.mp4");
-  await expect(needs).toContainText("instagram.com/reel/C9failed");
-  await expect(needs.getByRole("button", { name: "Try again" }).first()).toBeVisible();
-  await expect(page.getByRole("region", { name: "Recently saved" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Up next" })).toBeVisible();
-  // Shelves are navigation, not content: Home must not repeat them, nor carry a second save form.
-  await expect(page.getByRole("region", { name: "Browse" })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Save", exact: true })).toHaveCount(0);
-  await expect(page.getByLabel(/\d+ need you/).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your Working Desk");
+  await expect(page.getByRole("button", { name: "New group", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Workspace" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /captures need your attention/ })).toBeVisible();
+  await page.getByRole("link", { name: /captures need your attention/ }).click();
+  await expect(page.getByRole("button", { name: /pasta-reel/ })).toBeVisible();
 });
 
 test("2 · Inspect a waiting item and recover it by pasting the text", async ({ page }) => {
@@ -104,7 +98,7 @@ test("5 · Find an older note by search, read it, edit it and see the edit persi
 
 test("6 · Find a tool mentioned once, then open the whole note from the passage", async ({ page }) => {
   await open(page, "/search");
-  await page.getByRole("searchbox").fill("pgbadger");
+  await page.locator("#main").getByRole("searchbox").fill("pgbadger");
   const hit = page.getByRole("region", { name: "Search results" });
   await expect(hit.locator("mark.hit").first()).toHaveText(/pgbadger/i);
   await hit.getByRole("link").first().click();
@@ -136,7 +130,7 @@ test("8 · Keyboard only: go-to sequences, search focus, help, capture, escape",
   await expect(page).toHaveURL(/#\/inbox/);
   await page.keyboard.press("/");
   await expect(page).toHaveURL(/#\/search/);
-  await expect(page.getByRole("searchbox")).toBeFocused();
+  await expect(page.locator("#main").getByRole("searchbox")).toBeFocused();
   await page.keyboard.press("Escape"); // typing target: does not leave the page
   await page.locator("#main").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("?");
@@ -159,16 +153,27 @@ test("8 · Keyboard only: go-to sequences, search focus, help, capture, escape",
 
 test("9 · Settings: theme switch applies instantly; model settings load from the real config", async ({ page }) => {
   await open(page, "/settings");
-  await page.getByLabel("Theme").selectOption("dark");
+  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByLabel("Theme").selectOption("system");
+  await page.getByLabel("Theme", { exact: true }).selectOption("system");
   await expect(page.getByRole("heading", { name: "Models" })).toBeVisible();
   await expect(page.getByText("What each job uses")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save settings" })).toBeDisabled(); // nothing changed
 });
 
 test("10 · Accessibility: no serious or critical axe violations on the main screens", async ({ page }) => {
-  for (const hash of ["/", "/shelves", "/shelf/try", "/shelf/watch", "/shelf/reference", "/shelf/other", "/inbox", "/library", "/search?q=pgbadger", "/settings"]) {
+  for (const hash of [
+    "/",
+    "/shelves",
+    "/shelf/try",
+    "/shelf/watch",
+    "/shelf/reference",
+    "/shelf/other",
+    "/inbox",
+    "/library",
+    "/search?q=pgbadger",
+    "/settings",
+  ]) {
     await open(page, hash);
     await page.waitForTimeout(400);
     const res = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
@@ -180,24 +185,26 @@ test("10 · Accessibility: no serious or critical axe violations on the main scr
   }
 });
 
-test("11 · @mobile narrow viewport: tab bar, no horizontal scroll, reader usable", async ({ page }) => {
+test("11 · @mobile V5 menu reaches every real route without horizontal scroll", async ({ page }) => {
   await open(page);
-  await expect(page.getByRole("navigation", { name: "Primary" }).last()).toBeVisible();
   for (const [name, hash] of [
-    ["Shelves", "/shelves"],
+    ["All shelves", "/shelves"],
     ["Search", "/search"],
-    ["All", "/library"],
+    ["All knowledge", "/library"],
     ["Inbox", "/inbox"],
     ["Settings", "/settings"],
   ] as const) {
-    // Four places to find things live in the tab bar; Inbox and Settings are icons in the top bar.
-    const link = ["Inbox", "Settings"].includes(name)
-      ? page.getByRole("link", { name: new RegExp(`^${name}`) }).first()
-      : page.getByRole("navigation", { name: "Primary" }).last().getByRole("link", { name: new RegExp(name) });
-    await link.click();
+    await page.getByRole("button", { name: "Open navigation" }).click();
+    await page
+      .getByRole("dialog", { name: "Your Pith" })
+      .getByRole("link", { name: new RegExp(`^${name}`) })
+      .click();
     await expect(page).toHaveURL(new RegExp(`#${hash}`));
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow, `horizontal overflow on ${hash}`).toBeLessThanOrEqual(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      `horizontal overflow on ${hash}`,
+    ).toBeLessThanOrEqual(0);
   }
   await open(page, "/library");
   await page.getByTestId("note-row").first().getByRole("link").click();
@@ -243,12 +250,12 @@ test("13 · A reel that names five films keeps its note and five independently t
   await expect(page.getByText("1 of 5 done")).toBeVisible(); // saved by the backend
 });
 
-test("14 · An old unfinished intention shows in Up next as waiting, and is not repeated under Worth revisiting", async ({ page }) => {
+test("14 · Desk contexts stay distinct from the real purpose-based shelves", async ({ page }) => {
   await open(page);
-  const up = page.getByRole("region", { name: "Up next" });
-  await expect(up).toContainText("ripgrep");
-  await expect(up).toContainText(/Waiting \d+ weeks?/);
-  await expect(page.getByRole("region", { name: "Worth revisiting" }).filter({ hasText: "ripgrep" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your Working Desk" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Up next" })).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Shelves" }).getByRole("link", { name: /^Try/ }).click();
+  await expect(page.getByTestId("shelf-row").filter({ hasText: "ripgrep" })).toBeVisible();
 });
 
 test("15 · A custom shelf can be made, filled by hand, and deleted without deleting notes", async ({ page }) => {
@@ -278,7 +285,14 @@ test("16 · State kept in this browser by older versions is imported once, then 
     sessionStorage.setItem("seeded", "1");
     localStorage.setItem(
       "pith.mind.v1",
-      JSON.stringify({ notes: { [id]: { shelf: "reference", done: new Date().toISOString() } }, entries: {}, opened: [id], shelves: [], hidden: ["play"], collapsed: false }),
+      JSON.stringify({
+        notes: { [id]: { shelf: "reference", done: new Date().toISOString() } },
+        entries: {},
+        opened: [id],
+        shelves: [],
+        hidden: ["play"],
+        collapsed: false,
+      }),
     );
   }, uv.id);
   await open(page);
@@ -290,7 +304,9 @@ test("16 · State kept in this browser by older versions is imported once, then 
   await request.patch(`/api/items/${uv.id}`, { headers, data: { shelf: null, done: false } });
 });
 
-test("17 · Shelves are workspaces: Watch lists each film to pick from, Reference has no to-do state, the sidebar lists only shelves with notes", async ({ page }) => {
+test("17 · Shelves are workspaces: Watch lists each film to pick from, Reference has no to-do state, the sidebar lists only shelves with notes", async ({
+  page,
+}) => {
   await open(page, "/shelf/watch");
   // The five films in one reel are five separate cards (not a checklist buried in one row), each tickable.
   await expect(page.getByTestId("shelf-row").filter({ hasText: "Zodiac (2007)" })).toBeVisible();

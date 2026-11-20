@@ -45,3 +45,15 @@ removes vectors of other models. Vectors are never required for correctness.
 
 A segment's vectors are deleted in the same transaction that changes or removes its text (reprocess), and
 the next embedding pass refills the changed ones, so a vector never outlives the text it encodes.
+
+## Contextual desk (V5)
+
+Migration 008 adds `desk_state` (organization revision), ordered `desk_groups` (title, context,
+icon, Focus choice), and ordered `desk_group_items` (references to real knowledge items). A note may
+belong to several groups independently of its purpose-based shelf. Removing a group deletes only its
+memberships. Reprocessing transfers memberships to the replacement note within the knowledge transaction.
+
+`GET /api/desk` returns a consistent revision and all groups, including light metadata for every live
+member. `PATCH /api/desk` atomically replaces organization using the supplied revision; stale edits return
+409. The frontend carries the original revision through editors and Undo. Workspace selection, expansion,
+reader position and appearance are view preferences; organization is stored in the Pith database.

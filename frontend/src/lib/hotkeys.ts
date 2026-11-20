@@ -20,6 +20,8 @@ export function useHotkeys(map: Keymap, enabled = true) {
     let pending: string | null = null;
     let timer: number | undefined;
     const onKey = (e: KeyboardEvent) => {
+      // Native modal owns Escape and makes the page inert, including its shortcuts.
+      if (document.querySelector("dialog[open]")) return;
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (e.altKey) return;

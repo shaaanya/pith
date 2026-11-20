@@ -1,59 +1,26 @@
 """`pith run`: dashboard + worker loop + one thread per enabled channel in one process, clean shutdown.
 
 One `run` per home: <home>/run.lock is held with flock (released by the OS if we die, so no
-stale-lock or PID-reuse races); the PID inside is only for the error message. Each thread owns
+stale-lock or PID-reuse races); metadata also identifies cooperative stop requests. Each thread owns
 its SQLite connection. A thread that crashes prints its traceback to stderr and stops the whole
 run (RunError), so the dashboard never keeps serving a dead worker. Not included: http ingest
 (use `pith serve-http`)."""
 from __future__ import annotations
 
-import fcntl
-import os
 import sys
 import threading
 import traceback
 from pathlib import Path
 
-from pith import locks
 from pith.adapters import build_channel, enabled_channels
 from pith.adapters.base import ChannelState, run_channel
 from pith.dashboard.server import make_server
 from pith.pipeline import runner
 from pith.services import build
+from pith.run_control import POLL_SECONDS, RunError, RunLock as _Lock
 from pith.worker import Worker
 
 JOIN_SECONDS = 30
-
-
-class RunError(Exception):
-    """`run` cannot start or a thread crashed."""
-
-
-class _Lock:  # pylint: disable=too-few-public-methods  # acquire in __init__, release()
-    """The per-home run.lock, held with flock until release()."""
-
-    def __init__(self, home: Path):
-        locks.ensure_private_home(home)
-        self.path = home / "run.lock"
-        # held for the lifetime of the run, closed in release(): a `with` block cannot express that
-        self.f = open(self.path, "a+", encoding="utf-8")  # pylint: disable=consider-using-with
-        try:
-            fcntl.flock(self.f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            self.f.seek(0)
-            pid = self.f.read().strip() or "?"
-            self.f.close()
-            raise RunError(f"already running for {home} (pid {pid}); stop it first") from None
-        self.f.seek(0)
-        self.f.truncate()
-        self.f.write(str(os.getpid()))
-        self.f.flush()
-
-    def release(self) -> None:
-        """Drop the lock. The file is never unlinked while a flock may be held (avoids
-        lock-on-orphan-inode races)."""
-        self.f.truncate(0)
-        self.f.close()
 
 
 class _Threads:
@@ -88,8 +55,10 @@ class _Threads:
             t.join(JOIN_SECONDS)
             if t.is_alive():
                 print(f"warning: thread {t.name} did not stop within {JOIN_SECONDS}s; "
-                      "leaving its connection open", file=sys.stderr)
-                continue
+                      "waiting for active work to finish", file=sys.stderr)
+                # Keep run.lock until shutdown is real. `pith stop` can time out
+                # without falsely reporting success or admitting a second worker.
+                t.join()
             for c in conns:
                 c.close()
 
@@ -152,7 +121,9 @@ def run(cfg, port: int = 8777, *,  # pylint: disable=too-many-arguments  # publi
                 serve_started = True
         if on_ready:
             on_ready(info)
-        stop.wait()
+        while not stop.wait(POLL_SECONDS):
+            if lock.stop_requested():
+                stop.set()
     finally:
         stop.set()
         if server is not None:

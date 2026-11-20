@@ -263,3 +263,19 @@ export type Resurfaced = z.infer<typeof Resurfaced>;
 export const EntryRows = z.object({
   entries: z.array(Entry.extend({ note: z.object({ id: str, title: str, shelf: str }) })),
 });
+
+/** Contextual desk organization lives in Pith's database, independently of shelves. */
+export const DeskItem = z.object({ id: str, title: str, kind: str, created_at: str, type: optStr, shelf: str });
+export type DeskItem = z.infer<typeof DeskItem>;
+export const DeskGroup = z.object({
+  id: str,
+  title: str,
+  description: str,
+  icon: str,
+  focused: z.boolean(),
+  item_ids: z.array(str),
+  items: z.array(DeskItem),
+});
+export type DeskGroup = z.infer<typeof DeskGroup>;
+export const Desk = z.object({ revision: z.number().int(), groups: z.array(DeskGroup) });
+export type Desk = z.infer<typeof Desk>;

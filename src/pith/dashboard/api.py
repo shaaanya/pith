@@ -19,6 +19,7 @@ from pith.retrieval import search as search_mod
 from pith import resurface as resurface_mod
 from pith.pipeline import place as place_mod, runner as runner_mod
 from pith.store import entries as entry_store, knowledge, shelves as shelf_store, state as state_store
+from pith.store import desk as desk_store
 
 MAX_TEXT = 200_000  # clarification / body edits
 MAX_TITLE = 500
@@ -595,6 +596,16 @@ def _shelf_view(s, shelf: dict) -> dict:
 def shelves(s) -> dict:
     """All shelves with how many notes sit on each."""
     return {"shelves": [_shelf_view(s, x) for x in shelf_store.list_shelves(s.conn)]}
+
+
+def desk(s) -> dict:
+    """Contextual groups and complete light metadata for their live members."""
+    return desk_store.read(s.conn)
+
+
+def desk_update(s, body) -> dict:
+    """Save one revision-checked organization snapshot."""
+    return desk_store.replace(s.conn, body)
 
 
 def shelf_create(s, body) -> dict:

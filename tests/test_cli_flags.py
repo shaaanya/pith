@@ -25,13 +25,14 @@ RUNNABLE = [
     (["doctor"], False),
     (["egress"], False),
     (["adapters", "list"], False),
+    (["stop"], False),
 ]
 # every subcommand with minimal valid arguments (parse-level coverage; nothing is executed)
 ALL = [["init"], ["submit", "x"], ["inbox"], ["retry", "i"], ["worker"], ["search", "q"],
        ["ask", "q"], ["show", "i"], ["reindex"], ["doctor"], ["egress"], ["export"],
        ["backup"], ["restore", "a.tgz"], ["verify", "a.tgz"], ["digest"], ["adapters", "list"],
        ["adapters", "run", "fs"], ["watch"], ["import-telegram", "p"], ["serve-http"],
-       ["run"], ["dashboard"]]
+       ["run"], ["stop"], ["dashboard"]]
 
 
 def _run(tmp_path, argv, extra_env=None):

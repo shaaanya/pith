@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Confirm } from "@/components/overlay";
+import { DeskDialog } from "@/components/desk-dialog";
 import { useToast } from "@/components/toast";
 import { DoneToggle, MoveMenu, ShelfIcon } from "@/components/shelf-bits";
 import { Button, Checkbox, Chip, EmptyState, ErrorState, Input, Label, Skeleton, Textarea } from "@/components/ui";
@@ -47,33 +48,61 @@ const Edit = z.object({
 
 export function Reader() {
   const { id = "" } = useParams();
+  const nav = useNavigate();
+  return <ReaderContent key={id} id={id} onBack={() => (history.length > 1 ? nav(-1) : nav("/library"))} />;
+}
+
+export function ReaderContent({
+  id,
+  onBack,
+  onNavigateRelated,
+  embedded = false,
+}: {
+  id: string;
+  onBack?: () => void;
+  onNavigateRelated?: (id: string) => void;
+  embedded?: boolean;
+}) {
   const q = useItem(id);
   const nav = useNavigate();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [message, setMessage] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const notify = (text: string, bad = false) => {
+    if (embedded) setMessage(text);
+    else toast(text, { bad });
+  };
+  useEffect(() => {
+    if (!embedded) return;
+    const error = (event: Event) => setMessage(String((event as CustomEvent<unknown>).detail ?? "That did not save."));
+    window.addEventListener("pith:error", error);
+    return () => window.removeEventListener("pith:error", error);
+  }, [embedded]);
   const del = useDeleteItem();
   const re = useReprocess();
 
   useEffect(() => {
     if (id) mind.opened(id);
   }, [id]);
-  const back = () => (history.length > 1 ? nav(-1) : nav("/library"));
+  const back = onBack ?? (() => nav("/library"));
   const d = q.data;
   const copy = async () => {
     if (!d) return;
     try {
       await navigator.clipboard.writeText(asMarkdown(cleanTitle(d.title), d.body));
-      toast("Copied as Markdown.");
+      notify("Copied as Markdown.");
     } catch {
-      toast("Copying is blocked by the browser.", { bad: true });
+      notify("Copying is blocked by the browser.", true);
     }
   };
   useHotkeys(
     {
       e: () => d && setEditing(true),
       c: () => void copy(),
-      Escape: () => (editing ? setEditing(false) : document.querySelector('[role="dialog"]') ? undefined : back()),
+      Escape: () =>
+        embedded ? undefined : editing ? setEditing(false) : document.querySelector('[role="dialog"], dialog[open]') ? undefined : back(),
     },
     !!d,
   );
@@ -95,7 +124,7 @@ export function Reader() {
   const item = q.data;
 
   return (
-    <article className="enter">
+    <article className={cn("enter", embedded && "v5-reader-content")}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={back} className="-ml-2">
           <ArrowLeft className="size-4" aria-hidden /> Back
@@ -113,39 +142,93 @@ export function Reader() {
               loading={re.isPending}
               onClick={() =>
                 re.mutate(item.id, {
-                  onSuccess: () => toast("Reading it again. Your edits are kept."),
-                  onError: (e) => toast(e instanceof ApiError ? e.message : "Could not queue that.", { bad: true }),
+                  onSuccess: () => notify("Reading it again. Your edits are kept."),
+                  onError: (e) => notify(e instanceof ApiError ? e.message : "Could not queue that.", true),
                 })
               }
             >
               <RotateCcw className="size-3.5" aria-hidden /> Read again
             </Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirm(true)}>
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => {
+                setDeleteError("");
+                setConfirm(true);
+              }}
+            >
               <Trash2 className="size-3.5" aria-hidden /> Delete
             </Button>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-x-12 gap-y-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0">{editing ? <Editor item={item} done={() => setEditing(false)} /> : <NoteBody item={item} />}</div>
-        {!editing && <Rail item={item} />}
+      {embedded && (
+        <p role="status" className="mb-4 text-[13px] text-soft">
+          {message}
+        </p>
+      )}
+      <div className={cn("grid grid-cols-1 gap-x-12 gap-y-8", !embedded && "xl:grid-cols-[minmax(0,1fr)_20rem]")}>
+        <div className="min-w-0">
+          {editing ? (
+            <Editor key={item.id} item={item} done={() => setEditing(false)} onMessage={embedded ? notify : undefined} />
+          ) : (
+            <NoteBody key={item.id} item={item} embedded={embedded} />
+          )}
+        </div>
+        {!editing && <Rail item={item} embedded={embedded} onNavigateRelated={onNavigateRelated} />}
       </div>
 
-      <Confirm
-        open={confirm}
-        onOpenChange={setConfirm}
-        title="Delete this note?"
-        body="It disappears from the library and search. The original file is kept."
-        confirmLabel="Delete"
-        busy={del.isPending}
-        onConfirm={() =>
-          del.mutate(item.id, {
-            onSuccess: () => (toast("Note deleted."), nav("/library", { replace: true })),
-            onError: () => toast("Could not delete.", { bad: true }),
-          })
-        }
-      />
+      {embedded ? (
+        confirm && (
+          <DeskDialog title="Delete this note?" onClose={() => setConfirm(false)}>
+            <div className="v5-dialog-body">
+              <p>It disappears from the library and search. The original file is kept.</p>
+              {deleteError && (
+                <p role="alert" className="mt-3 text-bad">
+                  {deleteError}
+                </p>
+              )}
+              <div className="mt-5 flex justify-end gap-2">
+                <Button data-initial-focus onClick={() => setConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  loading={del.isPending}
+                  onClick={() =>
+                    del.mutate(item.id, {
+                      onSuccess: () => {
+                        setConfirm(false);
+                        toast("Note deleted.");
+                        back();
+                      },
+                      onError: () => setDeleteError("Could not delete. Try again."),
+                    })
+                  }
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </DeskDialog>
+        )
+      ) : (
+        <Confirm
+          open={confirm}
+          onOpenChange={setConfirm}
+          title="Delete this note?"
+          body="It disappears from the library and search. The original file is kept."
+          confirmLabel="Delete"
+          busy={del.isPending}
+          onConfirm={() =>
+            del.mutate(item.id, {
+              onSuccess: () => (toast("Note deleted."), nav("/library", { replace: true })),
+              onError: () => toast("Could not delete.", { bad: true }),
+            })
+          }
+        />
+      )}
     </article>
   );
 }
@@ -163,14 +246,15 @@ function ReaderSkeleton() {
   );
 }
 
-function Editor({ item, done }: { item: ItemDetail; done: () => void }) {
+function Editor({ item, done, onMessage }: { item: ItemDetail; done: () => void; onMessage?: (message: string, bad?: boolean) => void }) {
   const upd = useUpdateItem(item.id);
   const toast = useToast();
+  const notify = onMessage ?? ((message: string, bad = false) => toast(message, { bad }));
   const form = useForm<z.infer<typeof Edit>>({ resolver: zodResolver(Edit), defaultValues: { title: item.title, body: item.body } });
   const save = form.handleSubmit((v) =>
     upd.mutate(v, {
-      onSuccess: () => (toast("Saved."), done()),
-      onError: (e) => toast(e instanceof ApiError ? e.message : "Could not save.", { bad: true }),
+      onSuccess: () => (notify("Saved."), done()),
+      onError: (e) => notify(e instanceof ApiError ? e.message : "Could not save.", true),
     }),
   );
   return (
@@ -218,7 +302,7 @@ const UNIT_TITLE: Record<string, string> = {
   other: "More",
 };
 
-function NoteBody({ item }: { item: ItemDetail }) {
+function NoteBody({ item, embedded = false }: { item: ItemDetail; embedded?: boolean }) {
   const noteIntent = item.note?.intent;
   const inboxId = noteIntent?.text ? null : (item.inbox[0]?.inbox_id ?? null);
   const saved = useInboxDetail(inboxId);
@@ -249,7 +333,7 @@ function NoteBody({ item }: { item: ItemDetail }) {
         {item.flagged && <Chip tone="warn">Flagged</Chip>}
       </p>
 
-      <ShelfBar detail={item} />
+      <ShelfBar detail={item} embedded={embedded} />
 
       {intent?.text && (
         <aside className="mt-5 max-w-[68ch] rounded-lg border border-acc/30 bg-acc-tint/60 px-4 py-3" aria-label="Why you saved this">
@@ -298,9 +382,11 @@ function NoteBody({ item }: { item: ItemDetail }) {
 function Inline({ text }: { text?: string | null }) {
   return (
     <>
-      {(text ?? "").split(/(`[^`]+`)/g).map((t, i) =>
-        t.startsWith("`") && t.endsWith("`") && t.length > 2 ? <code key={i}>{t.slice(1, -1)}</code> : <span key={i}>{t}</span>,
-      )}
+      {(text ?? "")
+        .split(/(`[^`]+`)/g)
+        .map((t, i) =>
+          t.startsWith("`") && t.endsWith("`") && t.length > 2 ? <code key={i}>{t.slice(1, -1)}</code> : <span key={i}>{t}</span>,
+        )}
     </>
   );
 }
@@ -428,13 +514,17 @@ function Units({ units, platform, url, entries }: { units: NoteUnit[]; platform?
 }
 
 /** Where this note lives and its to-do state. Placement is automatic; this is where it is corrected. */
-function ShelfBar({ detail }: { detail: ItemDetail }) {
+function ShelfBar({ detail, embedded = false }: { detail: ItemDetail; embedded?: boolean }) {
   const data = useShelfData();
   // the note index is capped, so an older note comes from its own detail
   const p: Placed = data.byId.get(detail.id) ?? {
     item: { id: detail.id } as LibraryItem,
     placement: { shelf: detail.shelf, by: detail.placement.by, why: detail.placement.why },
-    state: { done: detail.state.done_at ?? undefined, snooze: detail.state.snooze_until ?? undefined, hide: detail.state.hidden || undefined },
+    state: {
+      done: detail.state.done_at ?? undefined,
+      snooze: detail.state.snooze_until ?? undefined,
+      hide: detail.state.hidden || undefined,
+    },
   };
   const shelf = shelfById(data.shelves, p.placement.shelf);
   return (
@@ -450,13 +540,40 @@ function ShelfBar({ detail }: { detail: ItemDetail }) {
       <span className="text-mut">{p.placement.why}</span>
       <span className="ml-auto flex items-center gap-1">
         {shelf?.todo && <DoneToggle placed={p} doneLabel={shelf.doneLabel} />}
-        <MoveMenu placed={p} label="Move" />
+        {embedded ? (
+          <label className="inline-flex items-center gap-2">
+            Move
+            <select
+              aria-label="Move to another shelf"
+              className="min-h-11 max-w-40 rounded border border-line bg-paper px-2"
+              value={detail.shelf}
+              onChange={(event) => mind.move(detail.id, event.target.value || undefined)}
+            >
+              {data.shelves.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+              <option value="">Let Pith decide again</option>
+            </select>
+          </label>
+        ) : (
+          <MoveMenu placed={p} label="Move" />
+        )}
       </span>
     </div>
   );
 }
 
-function Rail({ item }: { item: ItemDetail }) {
+function Rail({
+  item,
+  embedded = false,
+  onNavigateRelated,
+}: {
+  item: ItemDetail;
+  embedded?: boolean;
+  onNavigateRelated?: (id: string) => void;
+}) {
   const src = item.source;
   const href = safeHref(src?.url);
   const isImage = src?.content_type === "image";
@@ -468,7 +585,10 @@ function Rail({ item }: { item: ItemDetail }) {
   const note = item.note;
 
   return (
-    <aside className="space-y-6 text-[13.5px] xl:border-l xl:border-hair xl:pl-6" aria-label="About this note">
+    <aside
+      className={cn("space-y-6 text-[13.5px]", embedded ? "border-t border-line pt-6" : "xl:border-l xl:border-hair xl:pl-6")}
+      aria-label="About this note"
+    >
       <Block title="Source">
         <p className="font-medium break-words">{cleanTitle(src?.title ?? item.title)}</p>
         {href && (
@@ -534,9 +654,15 @@ function Rail({ item }: { item: ItemDetail }) {
           <ul className="space-y-1.5">
             {item.related.map((r) => (
               <li key={r.id}>
-                <Link to={`/note/${r.id}`} className="hover:text-acc">
-                  {cleanTitle(r.title)}
-                </Link>{" "}
+                {onNavigateRelated ? (
+                  <button type="button" className="min-h-11 text-left hover:text-acc" onClick={() => onNavigateRelated(r.id)}>
+                    {cleanTitle(r.title)}
+                  </button>
+                ) : (
+                  <Link to={`/note/${r.id}`} className="hover:text-acc">
+                    {cleanTitle(r.title)}
+                  </Link>
+                )}{" "}
                 {r.type === "duplicate" && <Chip tone="warn">very similar</Chip>}
               </li>
             ))}
